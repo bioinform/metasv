@@ -1,4 +1,4 @@
-metasvmerge
+MetaSV
 ===========
 
-MetaSVMerge: An accurate method-aware merging algorithm for structural variations
+MetaSV: An accurate and integrative structural-variant caller for next generation sequencing
