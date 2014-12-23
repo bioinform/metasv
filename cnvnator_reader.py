@@ -1,5 +1,6 @@
 import logging
 import re
+from sv_interval import SVInterval
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,8 @@ q0            -- fraction of reads mapped with q0 quality
 '''
 
 pattern = re.compile("(:|-)")
+
+cnvnator_source = set(["CNVnator"])
 
 sv_type_dict = {"deletion": "DEL", "duplication": "DUP"}
 class CNVnatorRecord:
@@ -40,6 +43,10 @@ class CNVnatorRecord:
 
   def __str__(self):
     return str(self.__dict__)
+
+  def to_sv_interval(self):
+    sv_type = sv_type_dict[self.sv_type]
+    return SVInterval(self.chromosome, self.start, self.end, "CNVnator", sv_type = sv_type, length = self.sv_len, sources = cnvnator_source, native_sv = self)
 
 class CNVnatorReader:
   def __init__(self, file_name):
