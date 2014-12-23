@@ -5,9 +5,23 @@ import pybedtools
 import pysam
 import vcf
 import logging
+import fasta_utils
+import sys
+import datetime
+from collections import OrderedDict, namedtuple
 
-def convert_metasv_bed_to_vcf(bedfile = None, vcf_out = None, vcf_template = None, sample = None):
+def convert_metasv_bed_to_vcf(bedfile = None, vcf_out = None, vcf_template = None, sample = None, reference = None):
   vcf_template_reader = vcf.Reader(open(vcf_template, "r"))
+
+  # The following are hacks to ensure sample name and contig names are put in the VCF header
+  vcf_template_reader.samples = [sample]
+  if reference:
+    contigs = fasta_utils.get_contigs(reference)
+    vcf_template_reader.contigs = OrderedDict([(contig.name, (contig.name, contig.length)) for contig in contigs])
+    vcf_template_reader.metadata["reference"] = reference
+    vcf_template_reader.metadata["fileDate"] = str(datetime.date.today())
+    vcf_template_reader.metadata["source"] = [" ".join(sys.argv)]
+
   vcf_writer = vcf.Writer(open(vcf_out, "w"), vcf_template_reader)
 
   for interval in pybedtools.BedTool(bedfile):
@@ -66,7 +80,8 @@ if __name__ == "__main__":
   parser.add_argument("--bed", help = "MetaSV final BED", required = True)
   parser.add_argument("--vcf", help = "Final VCF to output", required = True)
   parser.add_argument("--vcf_template", help = "VCF template", required = True)
+  parser.add_argument("--reference", help = "Reference FASTA", required = False)
 
   args = parser.parse_args()
 
-  convert_metasv_bed_to_vcf(bedfile = args.bed, vcf_out = args.vcf, vcf_template = args.vcf_template, sample = args.sample)
+  convert_metasv_bed_to_vcf(bedfile = args.bed, vcf_out = args.vcf, vcf_template = args.vcf_template, sample = args.sample, reference = args.reference)
