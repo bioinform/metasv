@@ -247,4 +247,7 @@ if not args.disable_assembly:
   else:
     pybedtools.BedTool(breakpoints_bed).saveas(final_bed)
 
+  final_vcf = os.path.join(args.workdir, "final.vcf")
+  convert_metasv_bed_to_vcf(bedfile = final_bed, vcf_out = final_vcf, vcf_template = out_vcf + ".gz", sample = args.sample)
+
 pybedtools.cleanup(remove_all = True)
