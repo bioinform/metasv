@@ -51,6 +51,7 @@ parser.add_argument("--age", help = "Path to AGE executable", required = True)
 parser.add_argument("--disable_assembly", action = "store_true", help = "Disable assembly")
 
 args = parser.parse_args()
+mydir = os.path.dirname(os.path.realpath(__file__))
 
 if not os.path.isdir(args.outdir):
   logger.info("Creating directory %s" % (args.outdir))
@@ -97,7 +98,6 @@ sv_types = set()
 
 gap_intervals = []
 if args.filter_gaps:
-  mydir = os.path.dirname(os.path.realpath(__file__))
   if args.gaps is None:
     # Try to guess
     if "chr1" in contig_whitelist: gap_intervals = load_gap_intervals(os.path.join(mydir, "resources/hg19.gaps.bed"))
@@ -221,15 +221,16 @@ for contig in contigs:
     if bed_interval is not None:
       bed_intervals.append(bed_interval)
 
+pybedtools.BedTool(bed_intervals).saveas(merged_bed)
 outfd.close()
-pysam.tabix_index(out_vcf, force=True, preset="vcf")
+#pysam.tabix_index(out_vcf, force=True, preset="vcf")
 
 for key in sorted(final_stats.keys()):
   logger.info(str(key) + ":" + str(final_stats[key]))
 
 if not args.disable_assembly:
   assembly_bed = merged_bed
-  pybedtools.BedTool(bed_intervals).saveas(merged_bed)
+  #pybedtools.BedTool(bed_intervals).saveas(merged_bed)
 
   if args.boost_ins:
     logger.info("Generating intervals for insertions")
@@ -246,8 +247,10 @@ if not args.disable_assembly:
     pybedtools.BedTool(breakpoints_bed).cat(pybedtools.BedTool(ignored_bed), postmerge = False).sort().saveas(final_bed)
   else:
     pybedtools.BedTool(breakpoints_bed).saveas(final_bed)
+else:
+  final_bed = merged_bed
 
-  final_vcf = os.path.join(args.workdir, "final.vcf")
-  convert_metasv_bed_to_vcf(bedfile = final_bed, vcf_out = final_vcf, vcf_template = out_vcf + ".gz", sample = args.sample)
+final_vcf = os.path.join(args.workdir, "final.vcf")
+convert_metasv_bed_to_vcf(bedfile = final_bed, vcf_out = final_vcf, vcf_template = os.path.join(mydir, "resources/template.vcf"), sample = args.sample)
 
 pybedtools.cleanup(remove_all = True)
