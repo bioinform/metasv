@@ -42,7 +42,7 @@ parser.add_argument("--wiggle", help="Wiggle for interval overlap", default=100,
 parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=0.5, type=float, required=False)
 parser.add_argument("--workdir", help = "Scratch directory for working", default = "work", required = False)
 parser.add_argument("--boost_ins", help = "Use soft-clips for improving insertion detection", action = "store_true")
-parser.add_argument("--bam", help = "BAMs", type = file)
+parser.add_argument("--bam", help = "BAM", type = file)
 parser.add_argument("--chromosomes", help = "Chromosome list to process. If unspecified, then all chromosomes will be considered.", nargs = "+", default = [])
 parser.add_argument("--num_threads", help = "Number of threads to use", type = int, default = 1)
 parser.add_argument("--outdir", help = "Output directory", required = True)
