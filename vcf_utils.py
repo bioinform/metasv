@@ -53,7 +53,7 @@ def get_gt(gt, fmt):
   fmt_index = [i for i, field in enumerate(fmt.split(":")) if field == "GT"][0]
   return gt.split(":")[fmt_index]
 
-def load_intervals(in_vcf, intervals={}, gap_intervals=[], source=None, contig_whitelist=[], is_gatk=False):
+def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[], source=None, contig_whitelist=[], is_gatk=False):
   if not os.path.isfile(in_vcf): return intervals
   logger.info("Loading SV intervals from %s" % (in_vcf))
   tabix_file = pysam.Tabixfile(in_vcf, parser=pysam.asVCF())
@@ -97,6 +97,9 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], source=None, contig_w
       interval = SVInterval(vcf_record.contig, vcf_record.pos, int(info_dict["END"][0]), source, sv_type, svlen, sources=set([source]), wiggle=wiggle, gt=gt)
     if interval_overlaps_interval_list(interval, gap_intervals):
       logger.warn("Skipping " + str(interval) + " due to overlap with gaps")
+      continue
+    if not interval_overlaps_interval_list(interval, include_intervals, min_fraction_self = 1.0):
+      logger.warn("Skipping " + str(interval) + " due to being outside the include regions")
       continue
     interval.info_dict = info_dict
 

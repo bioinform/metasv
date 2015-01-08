@@ -18,6 +18,7 @@ import pybedtools
 from generate_sv_intervals import parallel_generate_sc_intervals
 from run_spades import run_spades_parallel
 from run_age import run_age_parallel
+from generate_final_vcf import convert_metasv_bed_to_vcf
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -74,6 +75,8 @@ if not os.path.isfile(args.reference + ".fai"):
 
 fasta_handle = pysam.Fastafile(args.reference)
 contigs = get_contigs(args.reference)
+include_intervals = sorted([SVInterval(contig.name, 0, contig.length, contig.name, "include", length = contig.length) for contig in contigs])
+logger.info(include_intervals)
 
 contig_whitelist = set(args.chromosomes) if args.chromosomes else set([contig.name for contig in contigs])
 if args.keep_standard_contigs:
@@ -94,7 +97,7 @@ if args.filter_gaps:
     elif "1" in contig_whitelist: gap_intervals = load_gap_intervals(os.path.join(mydir, "resources/b37.gaps.bed"))
     else: logger.error("Couldn't guess gaps file for reference. No gap filtering will be done")
   else:
-    gap_intervals = load_gap_intervals(args.gaps)
+    gap_intervals = sorted(load_gap_intervals(args.gaps))
 
 pindel_lis = []
 if args.pindel_native is not None:
@@ -133,7 +136,7 @@ for toolname, vcfname in vcf_name_list:
       vcf_list.append(vcf)
 
   for vcf in vcf_list:
-    load_intervals(vcf, intervals[toolname], gap_intervals, toolname, contig_whitelist, toolname == "HaplotypeCaller")
+    load_intervals(vcf, intervals[toolname], gap_intervals, include_intervals, toolname, contig_whitelist, toolname == "HaplotypeCaller")
   sv_types |= set(intervals[toolname].keys())
 
 logger.info("SV types are %s" % (str(sv_types)))
