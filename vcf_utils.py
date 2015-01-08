@@ -147,7 +147,7 @@ def print_vcf_header(outfd, reference, contigs, sample):
 ##INFO=<ID=SOURCES,Number=.,Type=String,Description=\"List of original raw SV calls as Toolname:Start:End:Size\">
 ##INFO=<ID=NUM_SVMETHODS,Number=1,Type=Integer,Description=\"Number of methods supporting the event\">
 ##INFO=<ID=VT,Number=1,Type=String,Description=\"indicates what type of variant the line represents\">
-##INFO=<ID=SVMETHOD,Number=.,Type=String,Description=\"Type of approach used to detect SV: RP (read pair), RD (read depth), SR (split read), JT (junction) or AS (assembly)\">
+##INFO=<ID=SVMETHOD,Number=.,Type=String,Description=\"Type of approach used to detect SV: RP (read pair), RD (read depth), SR (split read), JM (junction) or AS (assembly)\">
 ##INFO=<ID=natorRD,Number=1,Type=Float,Description=\"CNVnator: Normalized RD\">
 ##INFO=<ID=natorP1,Number=1,Type=Float,Description=\"CNVnator: e-val by t-test\">
 ##INFO=<ID=natorP2,Number=1,Type=Float,Description=\"CNVnator: e-val by Gaussian tail\">
