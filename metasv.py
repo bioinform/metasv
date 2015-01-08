@@ -213,7 +213,6 @@ for contig in contigs:
 
 pybedtools.BedTool(bed_intervals).saveas(merged_bed)
 outfd.close()
-#pysam.tabix_index(out_vcf, force=True, preset="vcf")
 
 for key in sorted(final_stats.keys()):
   logger.info(str(key) + ":" + str(final_stats[key]))
@@ -238,7 +237,6 @@ if not args.disable_assembly:
     os.makedirs(age_tmpdir)
 
   assembly_bed = merged_bed
-  #pybedtools.BedTool(bed_intervals).saveas(merged_bed)
 
   if args.boost_ins:
     logger.info("Generating intervals for insertions")
