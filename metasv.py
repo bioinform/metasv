@@ -153,7 +153,7 @@ for toolname, tool_out in [("BreakDancer", bd_out), ("Pindel", pindel_out), ("CN
       if sv_type in intervals[toolname]:
         intervals_tool.extend([copy.deepcopy(interval) for interval in intervals[toolname][sv_type]])
     for interval in intervals_tool:
-      interval.do_validation()
+      interval.do_validation(args.overlap_ratio)
       interval.fix_pos()
       chr_intervals_tool[interval.chrom].append(interval)
     print_vcf_header(tool_out_fd, args.reference, contigs, args.sample)
@@ -177,7 +177,7 @@ for sv_type in sv_types:
   intervals1 = []
   intervals2 = []
   for interval in tool_merged_intervals[sv_type]:
-    if interval_overlaps_interval_list(interval, merged_intervals, 0.5, 0.5):
+    if interval_overlaps_interval_list(interval, merged_intervals, args.overlap_ratio, args.overlap_ratio):
       intervals2.append(interval)
     else:
       intervals1.append(interval)
@@ -187,7 +187,7 @@ for sv_type in sv_types:
 final_chr_intervals = {}
 for contig in contigs: final_chr_intervals[contig.name] = []
 for interval in final_intervals:
-  interval.do_validation()
+  interval.do_validation(args.overlap_ratio)
   interval.fix_pos()
   final_chr_intervals[interval.chrom].append(interval)
 
