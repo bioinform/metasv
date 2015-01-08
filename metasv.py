@@ -46,8 +46,8 @@ parser.add_argument("--bam", help = "BAM", type = file)
 parser.add_argument("--chromosomes", help = "Chromosome list to process. If unspecified, then all chromosomes will be considered.", nargs = "+", default = [])
 parser.add_argument("--num_threads", help = "Number of threads to use", type = int, default = 1)
 parser.add_argument("--outdir", help = "Output directory", required = True)
-parser.add_argument("--spades", help = "Path to SPAdes executable", required = True)
-parser.add_argument("--age", help = "Path to AGE executable", required = True)
+parser.add_argument("--spades", help = "Path to SPAdes executable", required = False)
+parser.add_argument("--age", help = "Path to AGE executable", required = False)
 parser.add_argument("--disable_assembly", action = "store_true", help = "Disable assembly")
 
 args = parser.parse_args()
@@ -62,16 +62,6 @@ if not os.path.isdir(args.workdir):
   os.makedirs(args.workdir)
 
 bedtools_tmpdir = os.path.join(args.workdir, "bedtools")
-
-spades_tmpdir = os.path.join(args.workdir, "spades")
-if not os.path.isdir(spades_tmpdir):
-  logger.info("Creating directory %s" % (spades_tmpdir))
-  os.makedirs(spades_tmpdir)
-
-age_tmpdir = os.path.join(args.workdir, "age")
-if not os.path.isdir(age_tmpdir):
-  logger.info("Creating directory %s" % (age_tmpdir))
-  os.makedirs(age_tmpdir)
 
 # Initial checks
 if (args.pindel_vcf is None) and (args.breakseq_vcf is None) and (args.breakdancer_vcf is None) and (args.cnvnator_vcf is None) and (args.pindel_native is None):
@@ -229,6 +219,24 @@ for key in sorted(final_stats.keys()):
   logger.info(str(key) + ":" + str(final_stats[key]))
 
 if not args.disable_assembly:
+  if args.spades is None:
+    logger.error("Spades executable not specified")
+    exit(1)
+
+  if args.age is None:
+    logger.error("AGE executable not specified")
+    exit(1)
+
+  spades_tmpdir = os.path.join(args.workdir, "spades")
+  if not os.path.isdir(spades_tmpdir):
+    logger.info("Creating directory %s" % (spades_tmpdir))
+    os.makedirs(spades_tmpdir)
+
+  age_tmpdir = os.path.join(args.workdir, "age")
+  if not os.path.isdir(age_tmpdir):
+    logger.info("Creating directory %s" % (age_tmpdir))
+    os.makedirs(age_tmpdir)
+
   assembly_bed = merged_bed
   #pybedtools.BedTool(bed_intervals).saveas(merged_bed)
 
