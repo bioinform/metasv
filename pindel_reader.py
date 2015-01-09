@@ -64,6 +64,18 @@ reads supporting the SV (in practice, these numbers are the same)
 total number of unique supporting reads whose anchors are upstream, the total number of supporting reads whose anchors
  are downstream, and finally the total number of unique supporting reads whose anchors are downstream.
 
+----
+
+The reported larger insertion (LI) record is rather different than other types of variants. Here is the format:
+index, type(LI), ChrID, chrName, left breakpoint, number of supporting reads for the left coordinate,
+right breakpoint, number of supporting reads for the right coordinate.
+
+For example:
+
+190 LI ChrID chr1 1000002 5 1000000 6
+As there may be sequence similarity around the breakpoint, we may see that the right coordinate may be
+smaller than the left one.
+
 '''
 
 
