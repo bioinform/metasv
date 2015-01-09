@@ -58,6 +58,7 @@ Real SV breakpoints are expected to reside within the predicted boundaries with 
 valid_breakdancer_svs = set(["DEL", "INS", "INV"])
 breakdancer_source = set(["BreakDancer"])
 
+
 class BreakDancerHeader:
   def __init__(self):
     self.header_dict = {}
@@ -118,6 +119,7 @@ class BreakDancerRecord:
     vcf_record = vcf.model._Record(self.chr1, self.pos1, ".", "N", alt, ".", ".", info, "GT", [vcf.model._Call(None, sample, ["1/1"])])
     return vcf_record 
 
+
 class BreakDancerReader:
   def __init__(self, file_name):
     logger.info("File is " + str(file_name))
@@ -137,6 +139,7 @@ class BreakDancerReader:
 
   def get_header(self):
     return self.header
+
 
 def convert_breakdancer_to_vcf(file_name, sample, out_vcf):
   vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))

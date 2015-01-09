@@ -1,5 +1,6 @@
 import logging
 import pysam
+import vcf
 from sv_interval import SVInterval
 
 logger = logging.getLogger(__name__)
@@ -99,6 +100,7 @@ GT_HOM = "1/1"
 
 PINDEL_TO_SV_TYPE = {"I": "INS", "D": "DEL", "LI": "INS", "TD": "DUP:TANDEM", "INV": "INV"}
 
+
 class PindelRecord:
   def __init__(self, record_string, reference_handle):
     fields = record_string.split()
@@ -166,8 +168,22 @@ class PindelRecord:
     else:
       return SVInterval(self.chromosome, self.start_pos, self.start_pos, "Pindel", sv_type=sv_type, length=self.sv_len, sources=pindel_source, native_sv=self, wiggle=100, gt=self.gt)
 
+  def to_vcf_record(self, sample):
+    alt = ["<%s>" % (self.sv_type)]
+    info = {"SVLEN": self.sv_len, "SVTYPE": self.sv_type, "BD_CHR1": self.chr1, "BD_POS1": self.pos1, "BD_ORI1": self.ori1, "BD_CHR2": self.chr2, "BD_POS2": self.pos2, "BD_ORI2": self.ori2, "BD_SCORE": self.score, "BD_SUPPORTING_READ_PAIRS": self.supporting_read_pairs}
+    if self.sv_type == "DEL" or self.sv_type == "INV":
+      info["END"] = self.pos1 + self.sv_len
+    elif self.sv_type == "INS":
+      info["END"] = self.pos1
+    else:
+      return None
+
+    vcf_record = vcf.model._Record(self.chr1, self.pos1, ".", "N", alt, ".", ".", info, "GT", [vcf.model._Call(None, sample, ["1/1"])])
+    return vcf_record
+
   def __str__(self):
     return str(self.__dict__)
+
 
 class PindelReader:
   def __init__(self, file_name, reference_handle):
@@ -183,3 +199,15 @@ class PindelReader:
       line = self.file_fd.next()
       if line.find("ChrID") >= 1:
         return PindelRecord(line.strip(), self.reference_handle)
+
+def convert_pindel_to_vcf(file_name, sample, out_vcf):
+  vcf_template_reader = vcf.Reader(open("resources/template.vcf", "r"))
+  vcf_template_reader.samples = [sample]
+
+  vcf_writer = vcf.Writer(open(out_vcf, "w"), vcf_template_reader)
+
+  for pd_record in PindelReader(file_name):
+    vcf_record = pd_record.to_vcf_record(sample)
+    if vcf_record is None: continue
+    vcf_writer.write_record(vcf_record)
+  vcf_writer.close()
