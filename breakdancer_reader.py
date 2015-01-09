@@ -1,8 +1,13 @@
 import logging
 import vcf
+import sys
+import argparse
+import os
 from sv_interval import SVInterval
 
 logger = logging.getLogger(__name__)
+
+mydir = os.path.dirname(os.path.realpath(__file__))
 
 '''
 From https://github.com/genome/breakdancer, the format is described as 
@@ -80,7 +85,7 @@ class BreakDancerRecord:
     self.pos2 = int(fields[4])
     self.ori2 = fields[5]
     self.sv_type = fields[6]
-    self.sv_len = int(fields[7])
+    self.sv_len = abs(int(fields[7]))
     self.score = float(fields[8])
     self.supporting_read_pairs = int(fields[9])
     self.supporting_reads_pairs_lib = dict(map(lambda l: (l[0], int(l[1])), (s.split("|") for s in fields[10].split(":"))))
@@ -101,7 +106,8 @@ class BreakDancerRecord:
 
   def to_vcf_record(self, sample):
     alt = ["<%s>" % (self.sv_type)]
-    info = {"SVLEN": self.sv_len, "SVTYPE": self.sv_type, "BD_CHR1": self.chr1, "BD_POS1": self.pos1, "BD_ORI1": self.ori1, "BD_CHR2": self.chr2, "BD_POS2": self.pos2, "BD_ORI2": self.ori2, "BD_SCORE": self.score, "BD_SUPPORTING_READ_PAIRS": self.supporting_read_pairs}
+    sv_len = -self.sv_len if self.sv_type == "DEL" else self.sv_len
+    info = {"SVLEN": sv_len, "SVTYPE": self.sv_type, "BD_CHR1": self.chr1, "BD_POS1": self.pos1, "BD_ORI1": self.ori1, "BD_CHR2": self.chr2, "BD_POS2": self.pos2, "BD_ORI2": self.ori2, "BD_SCORE": self.score, "BD_SUPPORTING_READ_PAIRS": self.supporting_read_pairs}
     if self.sv_type == "DEL" or self.sv_type == "INV":
       info["END"] = self.pos1 + self.sv_len
     elif self.sv_type == "INS":
@@ -114,8 +120,8 @@ class BreakDancerRecord:
 
 class BreakDancerReader:
   def __init__(self, file_name):
-    logger.info("File is " + file_name)
-    self.file_fd = open(file_name)
+    logger.info("File is " + str(file_name))
+    self.file_fd = open(file_name) if file_name is not None else sys.stdin
     self.header = BreakDancerHeader()
 
   def __iter__(self):
@@ -133,14 +139,24 @@ class BreakDancerReader:
     return self.header
 
 def convert_breakdancer_to_vcf(file_name, sample, out_vcf):
-  vcf_template_reader = vcf.Reader(open("resources/template.vcf", "r"))
+  vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
   vcf_template_reader.samples = [sample]
 
-  vcf_writer = vcf.Writer(open(out_vcf, "w"), vcf_template_reader)
+  vcf_fd = open(out_vcf, "w") if out_vcf is not None else sys.stdout
+  vcf_writer = vcf.Writer(vcf_fd, vcf_template_reader)
 
   for bd_record in BreakDancerReader(file_name):
     vcf_record = bd_record.to_vcf_record(sample)
     if vcf_record is None: continue
     vcf_writer.write_record(vcf_record)
   vcf_writer.close()
-  
+
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser("Convert BreakDancer output file to VCF")
+  parser.add_argument("--breakdancer_in", help = "BreakDancer output file", required = False)
+  parser.add_argument("--vcf_out", help = "Output VCF to create", required = False)
+  parser.add_argument("--sample", help = "Sample name", required = True)
+
+  args = parser.parse_args()
+  convert_breakdancer_to_vcf(args.breakdancer_in, args.sample, args.vcf_out)
