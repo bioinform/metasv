@@ -4,6 +4,69 @@ from sv_interval import SVInterval
 
 logger = logging.getLogger(__name__)
 
+'''
+from http://gmt.genome.wustl.edu/packages/pindel/user-manual.html
+
+There is a head line for each variant reported, followed by the alignment of supporting reads to the reference on the
+second line. The example variants are a 1671bp deletion and a 10bp insertion on chr20. The breakpoints are specified
+after “BP”. Due to microhomology around the breakpoints, the breakpoint coordinates may shift both upstream and
+downstream,’BP_range’ is used to indicate the range of this shift. The header line contains the following data:
+
+1) The index of the indel/SV (57 means that 57 insertions precede this insertion in the file)
+
+2) The type of indel/SV: I for insertion, D for deletion, INV for inversion, TD for tandem duplication
+
+3) The length of the SV
+
+4) “NT” (to indicate that the next number is the length of non-template sequences inserted; insertions are fully covered
+ by the NT-fields, deletions can have NT bases if the deletion is not ‘pure’, meaning that while bases have been
+ deleted, some bases have been inserted between the breakpoints)
+
+5) the length(s) of the NT fragment(s)
+
+6) the sequence(s) of the NT fragment(s)
+
+7-8) the identifier of the chromosome the read was found on
+
+9-10-11) BP: the start and end positions of the SV
+
+12-13-14) BP_range: if the exact position of the SV is unclear since bases at the edge of one read-half could equally
+well be appended to the other read-half. In the deletion example, ACA could be on any side of the gap, so the original
+deletion could have been between 1337143 and 1338815, between 1337144 and 1338816, or between 1337145 and 133817, or
+between 1337146 and 133818. BP-range is used to indicate this range.
+
+15) “Supports”: announces that the total count of reads supporting the SV follow.
+
+16) The number of reads supporting the SV
+
+17) The number of unique reads supporting the SV (so not counting duplicate reads)
+
+18) +: supports from reads whose anchors are upstream of the SV
+
+19-20) total number of supporting reads and unique number of supporting reads whose anchors are upstream of the SV.
+
+21) -: supports from reads whose anchors are downstream of the SV
+
+22-23) total number of supporting reads and unique number of supporting reads whose anchors are downstream of the SV
+
+24-25) S1: a simple score, (“# +” + 1)* (“# -” + 1) ;
+
+26-27) SUM_MS: sum of mapping qualities of anchor reads, The reads with variants or unmapped are called split-read,
+whose mate is called anchor reads. We use anchor reads to narrow down the search space to speed up and increase
+sensitivity;
+
+28) the number of different samples scanned
+
+29-30-31) NumSupSamples?: the number of samples supporting the SV, as well as the number of samples having unique
+reads supporting the SV (in practice, these numbers are the same)
+
+32+) Per sample: the sample name, followed by the total number of supporting reads whose anchors are upstream, the
+total number of unique supporting reads whose anchors are upstream, the total number of supporting reads whose anchors
+ are downstream, and finally the total number of unique supporting reads whose anchors are downstream.
+
+'''
+
+
 pindel_source = set(["Pindel"])
 min_coverage = 10
 het_cutoff = 0.2
