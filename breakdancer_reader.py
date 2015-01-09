@@ -150,7 +150,8 @@ def convert_breakdancer_to_vcf(file_name, sample, out_vcf):
 
   for bd_record in BreakDancerReader(file_name):
     vcf_record = bd_record.to_vcf_record(sample)
-    if vcf_record is None: continue
+    if vcf_record is None:
+        continue
     vcf_writer.write_record(vcf_record)
   vcf_writer.close()
 

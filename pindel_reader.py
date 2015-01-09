@@ -2,6 +2,9 @@ import logging
 import pysam
 import vcf
 from sv_interval import SVInterval
+import sys
+import argparse
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +173,26 @@ class PindelRecord:
 
   def to_vcf_record(self, sample):
     alt = ["<%s>" % (self.sv_type)]
-    info = {"SVLEN": self.sv_len, "SVTYPE": self.sv_type, "BD_CHR1": self.chr1, "BD_POS1": self.pos1, "BD_ORI1": self.ori1, "BD_CHR2": self.chr2, "BD_POS2": self.pos2, "BD_ORI2": self.ori2, "BD_SCORE": self.score, "BD_SUPPORTING_READ_PAIRS": self.supporting_read_pairs}
+    info = {"SVLEN": self.sv_len,
+            "SVTYPE": self.sv_type,
+            "PD_NUM_NT_ADDED": self.num_nt_added,
+            "PD_NT_ADDED": self.nt_added,
+            "PD_BP_RANGE_START": self.bp_range[0],
+            "PD_BP_RANGE_END": self.bp_range[1],
+            "PD_READ_SUPP": self.read_supp,
+            "PD_UNIQ_READ_SUPP": self.uniq_read_supp,
+            "PD_UP_READ_SUPP": self.up_read_supp,
+            "PD_UP_UNIQ_READ_SUPP": self.up_uniq_read_supp,
+            "PD_DOWN_READ_SUPP": self.down_read_supp,
+            "PD_DOWN_UNIQ_READ_SUPP": self.down_uniq_read_supp,
+            "PD_SIMPLE_SCORE": self.simple_score,
+            "PD_SUM_MAPQ": self.sum_mapq,
+            "PD_NUM_SAMPLE": self.num_sample,
+            "PD_NUM_SAMPLE_SUPP": self.num_sample_supp,
+            "PD_NUM_SAMPLE_UNIQ_SUPP": self.num_sample_uniq_supp,
+            "PD_HOMLEN": self.homlen,
+            "PD_HOMSEQ": self.homseq
+            }
     if self.sv_type == "DEL" or self.sv_type == "INV":
       info["END"] = self.pos1 + self.sv_len
     elif self.sv_type == "INS":
@@ -178,7 +200,7 @@ class PindelRecord:
     else:
       return None
 
-    vcf_record = vcf.model._Record(self.chr1, self.pos1, ".", "N", alt, ".", ".", info, "GT", [vcf.model._Call(None, sample, ["1/1"])])
+    vcf_record = vcf.model._Record(self.chr1, self.pos1, ".", "N", alt, ".", ".", info, "GT", [vcf.model._Call(None, sample, [self.derive_genotype()])])
     return vcf_record
 
   def __str__(self):
@@ -188,7 +210,7 @@ class PindelRecord:
 class PindelReader:
   def __init__(self, file_name, reference_handle):
     logger.info("File is " + file_name)
-    self.file_fd = open(file_name)
+    self.file_fd = open(file_name) if file_name is not None else sys.stdin
     self.reference_handle = reference_handle
 
   def __iter__(self):
@@ -208,6 +230,17 @@ def convert_pindel_to_vcf(file_name, sample, out_vcf):
 
   for pd_record in PindelReader(file_name):
     vcf_record = pd_record.to_vcf_record(sample)
-    if vcf_record is None: continue
+    if vcf_record is None:
+        continue
     vcf_writer.write_record(vcf_record)
   vcf_writer.close()
+
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser("Convert Pindel output file to VCF")
+  parser.add_argument("--pindel_in", help = "Pindel output file", required = False)
+  parser.add_argument("--vcf_out", help = "Output VCF to create", required = False)
+  parser.add_argument("--sample", help = "Sample name", required = True)
+
+  args = parser.parse_args()
+  convert_pindel_to_vcf(args.pindel_in, args.sample, args.vcf_out)
