@@ -93,7 +93,7 @@ class SVInterval:
 
     return max([interval.get_end() for interval in self.sub_intervals])
 
-  def do_validation(self):
+  def do_validation(self, overlap_ratio = 0.5):
     self.start = self.get_start()
     self.end = self.get_end()
 
@@ -115,7 +115,7 @@ class SVInterval:
 
     for source in sv_sources:
       if len(lists[source]) == 1:
-        if self.overlaps(lists[source][0], 0.5, 0.5) or interval_overlaps_interval_list(lists[source][0], precise_merged, 0.5, 0.5):
+        if self.overlaps(lists[source][0], overlap_ratio, overlap_ratio) or interval_overlaps_interval_list(lists[source][0], precise_merged, overlap_ratio, overlap_ratio):
           self.is_validated = len(self.sources) > 1
           self.validating_interval = lists[source][0]
           self.is_precise = source in precise_sv_sources

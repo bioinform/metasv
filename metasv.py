@@ -18,6 +18,7 @@ import pybedtools
 from generate_sv_intervals import parallel_generate_sc_intervals
 from run_spades import run_spades_parallel
 from run_age import run_age_parallel
+from generate_final_vcf import convert_metasv_bed_to_vcf
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -42,12 +43,12 @@ parser.add_argument("--wiggle", help="Wiggle for interval overlap", default=100,
 parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=0.5, type=float, required=False)
 parser.add_argument("--workdir", help = "Scratch directory for working", default = "work", required = False)
 parser.add_argument("--boost_ins", help = "Use soft-clips for improving insertion detection", action = "store_true")
-parser.add_argument("--bam", help = "BAMs", type = file)
+parser.add_argument("--bam", help = "BAM", type = file)
 parser.add_argument("--chromosomes", help = "Chromosome list to process. If unspecified, then all chromosomes will be considered.", nargs = "+", default = [])
 parser.add_argument("--num_threads", help = "Number of threads to use", type = int, default = 1)
 parser.add_argument("--outdir", help = "Output directory", required = True)
-parser.add_argument("--spades", help = "Path to SPAdes executable", required = True)
-parser.add_argument("--age", help = "Path to AGE executable", required = True)
+parser.add_argument("--spades", help = "Path to SPAdes executable", required = False)
+parser.add_argument("--age", help = "Path to AGE executable", required = False)
 parser.add_argument("--disable_assembly", action = "store_true", help = "Disable assembly")
 
 args = parser.parse_args()
@@ -63,16 +64,6 @@ if not os.path.isdir(args.workdir):
 
 bedtools_tmpdir = os.path.join(args.workdir, "bedtools")
 
-spades_tmpdir = os.path.join(args.workdir, "spades")
-if not os.path.isdir(spades_tmpdir):
-  logger.info("Creating directory %s" % (spades_tmpdir))
-  os.makedirs(spades_tmpdir)
-
-age_tmpdir = os.path.join(args.workdir, "age")
-if not os.path.isdir(age_tmpdir):
-  logger.info("Creating directory %s" % (age_tmpdir))
-  os.makedirs(age_tmpdir)
-
 # Initial checks
 if (args.pindel_vcf is None) and (args.breakseq_vcf is None) and (args.breakdancer_vcf is None) and (args.cnvnator_vcf is None) and (args.pindel_native is None):
   logger.error("Nothing to do since no SV data specified")
@@ -84,6 +75,8 @@ if not os.path.isfile(args.reference + ".fai"):
 
 fasta_handle = pysam.Fastafile(args.reference)
 contigs = get_contigs(args.reference)
+include_intervals = sorted([SVInterval(contig.name, 0, contig.length, contig.name, "include", length = contig.length) for contig in contigs])
+logger.info(include_intervals)
 
 contig_whitelist = set(args.chromosomes) if args.chromosomes else set([contig.name for contig in contigs])
 if args.keep_standard_contigs:
@@ -104,7 +97,7 @@ if args.filter_gaps:
     elif "1" in contig_whitelist: gap_intervals = load_gap_intervals(os.path.join(mydir, "resources/b37.gaps.bed"))
     else: logger.error("Couldn't guess gaps file for reference. No gap filtering will be done")
   else:
-    gap_intervals = load_gap_intervals(args.gaps)
+    gap_intervals = sorted(load_gap_intervals(args.gaps))
 
 pindel_lis = []
 if args.pindel_native is not None:
@@ -143,7 +136,7 @@ for toolname, vcfname in vcf_name_list:
       vcf_list.append(vcf)
 
   for vcf in vcf_list:
-    load_intervals(vcf, intervals[toolname], gap_intervals, toolname, contig_whitelist, toolname == "HaplotypeCaller")
+    load_intervals(vcf, intervals[toolname], gap_intervals, include_intervals, toolname, contig_whitelist, toolname == "HaplotypeCaller")
   sv_types |= set(intervals[toolname].keys())
 
 logger.info("SV types are %s" % (str(sv_types)))
@@ -163,7 +156,7 @@ for toolname, tool_out in [("BreakDancer", bd_out), ("Pindel", pindel_out), ("CN
       if sv_type in intervals[toolname]:
         intervals_tool.extend([copy.deepcopy(interval) for interval in intervals[toolname][sv_type]])
     for interval in intervals_tool:
-      interval.do_validation()
+      interval.do_validation(args.overlap_ratio)
       interval.fix_pos()
       chr_intervals_tool[interval.chrom].append(interval)
     print_vcf_header(tool_out_fd, args.reference, contigs, args.sample)
@@ -187,7 +180,7 @@ for sv_type in sv_types:
   intervals1 = []
   intervals2 = []
   for interval in tool_merged_intervals[sv_type]:
-    if interval_overlaps_interval_list(interval, merged_intervals, 0.5, 0.5):
+    if interval_overlaps_interval_list(interval, merged_intervals, args.overlap_ratio, args.overlap_ratio):
       intervals2.append(interval)
     else:
       intervals1.append(interval)
@@ -197,7 +190,7 @@ for sv_type in sv_types:
 final_chr_intervals = {}
 for contig in contigs: final_chr_intervals[contig.name] = []
 for interval in final_intervals:
-  interval.do_validation()
+  interval.do_validation(args.overlap_ratio)
   interval.fix_pos()
   final_chr_intervals[interval.chrom].append(interval)
 
@@ -223,14 +216,30 @@ for contig in contigs:
 
 pybedtools.BedTool(bed_intervals).saveas(merged_bed)
 outfd.close()
-#pysam.tabix_index(out_vcf, force=True, preset="vcf")
 
 for key in sorted(final_stats.keys()):
   logger.info(str(key) + ":" + str(final_stats[key]))
 
 if not args.disable_assembly:
+  if args.spades is None:
+    logger.error("Spades executable not specified")
+    exit(1)
+
+  if args.age is None:
+    logger.error("AGE executable not specified")
+    exit(1)
+
+  spades_tmpdir = os.path.join(args.workdir, "spades")
+  if not os.path.isdir(spades_tmpdir):
+    logger.info("Creating directory %s" % (spades_tmpdir))
+    os.makedirs(spades_tmpdir)
+
+  age_tmpdir = os.path.join(args.workdir, "age")
+  if not os.path.isdir(age_tmpdir):
+    logger.info("Creating directory %s" % (age_tmpdir))
+    os.makedirs(age_tmpdir)
+
   assembly_bed = merged_bed
-  #pybedtools.BedTool(bed_intervals).saveas(merged_bed)
 
   if args.boost_ins:
     logger.info("Generating intervals for insertions")

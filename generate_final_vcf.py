@@ -30,7 +30,7 @@ def convert_metasv_bed_to_vcf(bedfile = None, vcf_out = None, vcf_template = Non
     end = interval.end
 
     sub_names = interval.name.split(":")
-    sub_lengths = map(int, interval.fields[5].split(":"))
+    sub_lengths = map(lambda x: int(x.split(",")[1]), sub_names)
 
     sub_types = map(lambda x: x.split(",")[0], sub_names)
     sub_methods = [name.split(",")[2] for name in sub_names]
@@ -62,7 +62,7 @@ def convert_metasv_bed_to_vcf(bedfile = None, vcf_out = None, vcf_template = Non
     alt = ["<%s>" % (sv_type)]
     qual = "."
     sv_filter = "."
-    info = {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods}
+    info = {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)}
     sv_format = "GT"
     sample_indexes = [0]
     samples = [vcf.model._Call(None, sample, ["1/1"])]
