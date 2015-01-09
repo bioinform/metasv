@@ -1,4 +1,5 @@
 import logging
+import vcf
 from sv_interval import SVInterval
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ Real SV breakpoints are expected to reside within the predicted boundaries with 
 
 '''
 
-valid_breakdancer_svs = set(["DEL", "INS"])
+valid_breakdancer_svs = set(["DEL", "INS", "INV"])
 breakdancer_source = set(["BreakDancer"])
 
 class BreakDancerHeader:
@@ -98,6 +99,19 @@ class BreakDancerRecord:
     else:
       return SVInterval(self.chr1, self.pos1, self.pos1, sv_type="INS", length=self.sv_len, sources=breakdancer_source, cipos=[0, self.pos2 - self.pos1], native_sv=self)
 
+  def to_vcf_record(self, sample):
+    alt = ["<%s>" % (self.sv_type)]
+    info = {"SVLEN": self.sv_len, "SVTYPE": self.sv_type, "BD_CHR1": self.chr1, "BD_POS1": self.pos1, "BD_ORI1": self.ori1, "BD_CHR2": self.chr2, "BD_POS2": self.pos2, "BD_ORI2": self.ori2, "BD_SCORE": self.score, "BD_SUPPORTING_READ_PAIRS": self.supporting_read_pairs}
+    if self.sv_type == "DEL" or self.sv_type == "INV":
+      info["END"] = self.pos1 + self.sv_len
+    elif self.sv_type == "INS":
+      info["END"] = self.pos1
+    else:
+      return None
+    
+    vcf_record = vcf.model._Record(self.chr1, self.pos1, ".", "N", alt, ".", ".", info, "GT", [vcf.model._Call(None, sample, ["1/1"])])
+    return vcf_record 
+
 class BreakDancerReader:
   def __init__(self, file_name):
     logger.info("File is " + file_name)
@@ -117,3 +131,16 @@ class BreakDancerReader:
 
   def get_header(self):
     return self.header
+
+def convert_breakdancer_to_vcf(file_name, sample, out_vcf):
+  vcf_template_reader = vcf.Reader(open("resources/template.vcf", "r"))
+  vcf_template_reader.samples = [sample]
+
+  vcf_writer = vcf.Writer(open(out_vcf, "w"), vcf_template_reader)
+
+  for bd_record in BreakDancerReader(file_name):
+    vcf_record = bd_record.to_vcf_record(sample)
+    if vcf_record is None: continue
+    vcf_writer.write_record(vcf_record)
+  vcf_writer.close()
+  
