@@ -1,6 +1,10 @@
 import logging
 import re
+import vcf
 from sv_interval import SVInterval
+import sys
+import argparse
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +50,34 @@ class CNVnatorRecord:
 
   def to_sv_interval(self):
     sv_type = sv_type_dict[self.sv_type]
-    return SVInterval(self.chromosome, self.start, self.end, "CNVnator", sv_type = sv_type, length = self.sv_len, sources = cnvnator_source, native_sv = self)
+    return SVInterval(self.chromosome,
+                      self.start,
+                      self.end,
+                      "CNVnator",
+                      sv_type = sv_type,
+                      length = self.sv_len,
+                      sources = cnvnator_source,
+                      native_sv = self)
+
+  def to_vcf_record(self, sample):
+    alt = ["<%s>" % (self.sv_type)]
+    sv_len = -self.sv_len if self.sv_type == "DEL" else self.sv_len
+    info = {"SVLEN": sv_len,
+            "SVTYPE": self.sv_type,
+            "CN_NORMALIZED_RD": self.normalized_rd,
+            "CN_EVAL1": self.e_val1,
+            "CN_EVAL2": self.e_val2,
+            "CN_EVAL3": self.e_val3,
+            "CN_EVAL4": self.e_val4,
+            "CN_Q0": self.q0
+    }
+    if self.sv_type == "DEL" or self.sv_type == "DUP":
+      info["END"] = self.pos1 + self.sv_len
+    else:
+      return None
+
+    vcf_record = vcf.model._Record(self.chr1, self.pos1, ".", "N", alt, ".", ".", info, "GT", [vcf.model._Call(None, sample, ["1/1"])])
+    return vcf_record
 
 class CNVnatorReader:
   def __init__(self, file_name):
@@ -61,3 +92,26 @@ class CNVnatorReader:
       line = self.file_fd.next()
       if line[0] != "#":
         return CNVnatorRecord(line.strip())
+
+def convert_cnvnator_to_vcf(file_name, sample, out_vcf):
+  vcf_template_reader = vcf.Reader(open("resources/template.vcf", "r"))
+  vcf_template_reader.samples = [sample]
+
+  vcf_writer = vcf.Writer(open(out_vcf, "w"), vcf_template_reader)
+
+  for cn_record in CNVnatorReader(file_name):
+    vcf_record = cn_record.to_vcf_record(sample)
+    if vcf_record is None:
+        continue
+    vcf_writer.write_record(vcf_record)
+  vcf_writer.close()
+
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser("Convert CNVnator output file to VCF")
+  parser.add_argument("--cnvnator_in", help = "CNVnator output file", required = False)
+  parser.add_argument("--vcf_out", help = "Output VCF to create", required = False)
+  parser.add_argument("--sample", help = "Sample name", required = True)
+
+  args = parser.parse_args()
+  convert_cnvnator_to_vcf(args.cnvnator_in, args.sample, args.vcf_out)

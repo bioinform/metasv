@@ -147,11 +147,11 @@ class PindelRecord:
 
   def derive_genotype(self):
     if self.sv_type == "LI" or self.sv_type == "I":
-      self.gt = GT_HET if sum([sample["plus_support"] + sample["minus_support"] for sample in self.samples]) > 0 else GT_REF
+      self.gt = GT_HET if (self.up_read_supp + self.down_read_supp) > 0 else GT_REF
       return
 
-    total_event_reads = sum([sample["plus_support"] + sample["minus_support"] for sample in self.samples])
-    total_ref_reads = sum([sample["ref_support_at_start"] + sample["ref_support_at_end"] for sample in self.samples])
+    total_event_reads = self.uniq_read_supp
+    total_ref_reads = self.up_uniq_read_supp + self.down_uniq_read_supp
     if total_event_reads + total_ref_reads < min_coverage:
       self.gt = GT_REF
       return
@@ -193,7 +193,8 @@ class PindelRecord:
             "PD_HOMLEN": self.homlen,
             "PD_HOMSEQ": self.homseq
             }
-    if self.sv_type == "DEL" or self.sv_type == "INV":
+
+    if self.sv_type == "DEL" or self.sv_type == "INV" or self.sv_type == "DUP:TANDEM":
       info["END"] = self.pos1 + self.sv_len
     elif self.sv_type == "INS":
       info["END"] = self.pos1
