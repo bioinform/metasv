@@ -67,14 +67,23 @@ total number of unique supporting reads whose anchors are upstream, the total nu
 ----
 
 The reported larger insertion (LI) record is rather different than other types of variants. Here is the format:
-index, type(LI), ChrID, chrName, left breakpoint, number of supporting reads for the left coordinate,
-right breakpoint, number of supporting reads for the right coordinate.
+1) index,
+2) type(LI),
+3) "ChrID",
+4) chrName,
+5) left breakpoint,
+6) "+"
+7) number of supporting reads for the left coordinate,
+8) right breakpoint,
+9) "-"
+10) number of supporting reads for the right coordinate.
 
-For example:
-
-190 LI ChrID chr1 1000002 5 1000000 6
-As there may be sequence similarity around the breakpoint, we may see that the right coordinate may be
-smaller than the left one.
+Following lines are repeated for each sample
+11) Sample name
+12) "+"
+13) upstream supporting reads
+14) "-"
+15) downstream supporting reads
 
 '''
 
@@ -103,6 +112,17 @@ class PindelRecord:
       self.start_pos = int(fields[9])
       self.end_pos = int(fields[10])
       self.bp_range = (int(fields[12]), int(fields[13]))
+      self.read_supp = int(fields[15]) # The number of reads supporting the SV
+      self.uniq_read_supp = int(fields[16]) # The number of unique reads supporting SV (not count duplicate reads)
+      self.up_read_supp = int(fields[18]) # upstream
+      self.up_uniq_read_supp = int(fields[19])
+      self.down_read_supp = int(fields[21]) # downstream
+      self.down_uniq_read_supp = int(fields[22])
+      self.simple_score = int(fields[24])
+      self.sum_mapq = int(fields[26]) # sum of mapping qualities of anchor reads
+      self.num_sample = int(fields[27]) # number of samples
+      self.num_sample_supp = int(fields[29]) # number of samples with supporting reads
+      self.num_sample_uniq_supp = int(fields[30]) # number of sample with unique supporting readas
       self.homlen = self.bp_range[1] - self.end_pos
       self.homseq = reference_handle.fetch(self.chromosome, self.end_pos-1, self.bp_range[1]-1)
       self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i+1]), "ref_support_at_end": int(fields[i+2]), "plus_support": int(fields[i+3]), "minus_support": int(fields[i+4])} for i in xrange(31, len(fields), 5)]
@@ -110,7 +130,9 @@ class PindelRecord:
       self.sv_len = 0
       self.chromosome = fields[3]
       self.start_pos = int(fields[4])
+      self.up_read_supp = int(fields[6]) # upstream
       self.end_pos = int(fields[7])
+      self.down_read_supp = int(fields[8]) # downstream
       self.bp_range = (self.start_pos, self.end_pos)
       self.homlen = 0
       self.homseq = ""
