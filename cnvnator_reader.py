@@ -78,7 +78,7 @@ class CNVnatorRecord:
     else:
       return None
 
-    vcf_record = vcf.model._Record(self.chr1, self.pos1, ".", "N", alt, ".", ".", info, "GT", [vcf.model._Call(None, sample, ["1/1"])])
+    vcf_record = vcf.model._Record(self.chr1, self.pos1, ".", "N", alt, ".", ".", info, "GT",[0], [vcf.model._Call(None, sample, {"GT":"1/1"})])
     return vcf_record
 
 class CNVnatorReader:
