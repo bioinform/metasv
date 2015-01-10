@@ -8,6 +8,8 @@ import os
 
 logger = logging.getLogger(__name__)
 
+mydir = os.path.dirname(os.path.realpath(__file__))
+
 '''
 from http://gmt.genome.wustl.edu/packages/pindel/user-manual.html
 
@@ -224,7 +226,7 @@ class PindelReader:
         return PindelRecord(line.strip(), self.reference_handle)
 
 def convert_pindel_to_vcf(file_name, sample, out_vcf):
-  vcf_template_reader = vcf.Reader(open("resources/template.vcf", "r"))
+  vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
   vcf_template_reader.samples = [sample]
 
   vcf_writer = vcf.Writer(open(out_vcf, "w"), vcf_template_reader)
