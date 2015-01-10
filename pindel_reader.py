@@ -197,7 +197,7 @@ class PindelRecord:
             "PD_HOMSEQ": self.homseq
     }
 
-    vcf_record = vcf.model._Record(self.chromosome, self.start_pos, ".", "N", alt, ".", ".", info, "GT", [vcf.model._Call(None, sample, [self.derive_genotype()])])
+    vcf_record = vcf.model._Record(self.chromosome, self.start_pos, ".", "N", alt, ".", ".", info, "GT", [vcf.model._Call(None, sample, [self.gt])])
     return vcf_record
 
   def __str__(self):
