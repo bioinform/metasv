@@ -229,7 +229,8 @@ def convert_pindel_to_vcf(file_name, sample, out_vcf):
   vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
   vcf_template_reader.samples = [sample]
 
-  vcf_writer = vcf.Writer(open(out_vcf, "w"), vcf_template_reader)
+  vcf_fd = open(out_vcf, "w") if out_vcf is not None else sys.stdout
+  vcf_writer = vcf.Writer(vcf_fd, vcf_template_reader)
 
   for pd_record in PindelReader(file_name):
     vcf_record = pd_record.to_vcf_record(sample)
