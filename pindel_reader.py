@@ -174,9 +174,10 @@ class PindelRecord:
       return SVInterval(self.chromosome, self.start_pos, self.start_pos, "Pindel", sv_type=sv_type, length=self.sv_len, sources=pindel_source, native_sv=self, wiggle=100, gt=self.gt)
 
   def to_vcf_record(self, sample):
-    alt = ["<%s>" % (self.sv_type)]
+    alt = ["<%s>" % (PINDEL_TO_SV_TYPE[self.sv_type])]
     info = {"SVLEN": self.sv_len,
             "SVTYPE": self.sv_type,
+            "END": self.end_pos,
             "PD_NUM_NT_ADDED": self.num_nt_added,
             "PD_NT_ADDED": self.nt_added,
             "PD_BP_RANGE_START": self.bp_range[0],
@@ -194,18 +195,9 @@ class PindelRecord:
             "PD_NUM_SAMPLE_UNIQ_SUPP": self.num_sample_uniq_supp,
             "PD_HOMLEN": self.homlen,
             "PD_HOMSEQ": self.homseq
-            }
+    }
 
-    sv_type = PINDEL_TO_SV_TYPE[self.sv_type]
-
-    if sv_type == "DEL" or sv_type == "INV" or sv_type == "DUP:TANDEM":
-      info["END"] = self.pos1 + self.sv_len
-    elif sv_type == "INS":
-      info["END"] = self.pos1
-    else:
-      return None
-
-    vcf_record = vcf.model._Record(self.chr1, self.pos1, ".", "N", alt, ".", ".", info, "GT", [vcf.model._Call(None, sample, [self.derive_genotype()])])
+    vcf_record = vcf.model._Record(self.chromosome, self.start_pos, ".", "N", alt, ".", ".", info, "GT", [vcf.model._Call(None, sample, [self.derive_genotype()])])
     return vcf_record
 
   def __str__(self):
