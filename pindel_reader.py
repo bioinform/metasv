@@ -13,8 +13,8 @@ from http://gmt.genome.wustl.edu/packages/pindel/user-manual.html
 
 There is a head line for each variant reported, followed by the alignment of supporting reads to the reference on the
 second line. The example variants are a 1671bp deletion and a 10bp insertion on chr20. The breakpoints are specified
-after “BP”. Due to microhomology around the breakpoints, the breakpoint coordinates may shift both upstream and
-downstream,’BP_range’ is used to indicate the range of this shift. The header line contains the following data:
+after "BP". Due to microhomology around the breakpoints, the breakpoint coordinates may shift both upstream and
+downstream,'BP_range' is used to indicate the range of this shift. The header line contains the following data:
 
 1) The index of the indel/SV (57 means that 57 insertions precede this insertion in the file)
 
@@ -22,8 +22,8 @@ downstream,’BP_range’ is used to indicate the range of this shift. The heade
 
 3) The length of the SV
 
-4) “NT” (to indicate that the next number is the length of non-template sequences inserted; insertions are fully covered
- by the NT-fields, deletions can have NT bases if the deletion is not ‘pure’, meaning that while bases have been
+4) "NT" (to indicate that the next number is the length of non-template sequences inserted; insertions are fully covered
+ by the NT-fields, deletions can have NT bases if the deletion is not 'pure', meaning that while bases have been
  deleted, some bases have been inserted between the breakpoints)
 
 5) the length(s) of the NT fragment(s)
@@ -39,7 +39,7 @@ well be appended to the other read-half. In the deletion example, ACA could be o
 deletion could have been between 1337143 and 1338815, between 1337144 and 1338816, or between 1337145 and 133817, or
 between 1337146 and 133818. BP-range is used to indicate this range.
 
-15) “Supports”: announces that the total count of reads supporting the SV follow.
+15) "Supports": announces that the total count of reads supporting the SV follow.
 
 16) The number of reads supporting the SV
 
@@ -53,7 +53,7 @@ between 1337146 and 133818. BP-range is used to indicate this range.
 
 22-23) total number of supporting reads and unique number of supporting reads whose anchors are downstream of the SV
 
-24-25) S1: a simple score, (“# +” + 1)* (“# -” + 1) ;
+24-25) S1: a simple score, ("# +" + 1)* ("# -" + 1) ;
 
 26-27) SUM_MS: sum of mapping qualities of anchor reads, The reads with variants or unmapped are called split-read,
 whose mate is called anchor reads. We use anchor reads to narrow down the search space to speed up and increase
