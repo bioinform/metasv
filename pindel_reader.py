@@ -107,7 +107,7 @@ PINDEL_TO_SV_TYPE = {"I": "INS", "D": "DEL", "LI": "INS", "TD": "DUP:TANDEM", "I
 
 
 class PindelRecord:
-  def __init__(self, record_string, reference_handle):
+  def __init__(self, record_string, reference_handle = None):
     fields = record_string.split()
     self.sv_type = fields[1]
 
@@ -131,7 +131,8 @@ class PindelRecord:
       self.num_sample_supp = int(fields[29]) # number of samples with supporting reads
       self.num_sample_uniq_supp = int(fields[30]) # number of sample with unique supporting readas
       self.homlen = self.bp_range[1] - self.end_pos
-      self.homseq = reference_handle.fetch(self.chromosome, self.end_pos-1, self.bp_range[1]-1)
+      if reference_handle:
+        self.homseq = reference_handle.fetch(self.chromosome, self.end_pos-1, self.bp_range[1]-1)
       self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i+1]), "ref_support_at_end": int(fields[i+2]), "plus_support": int(fields[i+3]), "minus_support": int(fields[i+4])} for i in xrange(31, len(fields), 5)]
     else:
       self.sv_len = 0
