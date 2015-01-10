@@ -206,7 +206,7 @@ class PindelRecord:
 
 class PindelReader:
   def __init__(self, file_name, reference_handle = None):
-    logger.info("File is " + file_name)
+    logger.info("File is " + str(file_name))
     self.file_fd = open(file_name) if file_name is not None else sys.stdin
     self.reference_handle = reference_handle
 
