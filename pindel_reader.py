@@ -196,9 +196,11 @@ class PindelRecord:
             "PD_HOMSEQ": self.homseq
             }
 
-    if self.sv_type == "DEL" or self.sv_type == "INV" or self.sv_type == "DUP:TANDEM":
+    sv_type = PINDEL_TO_SV_TYPE[self.sv_type]
+
+    if sv_type == "DEL" or sv_type == "INV" or sv_type == "DUP:TANDEM":
       info["END"] = self.pos1 + self.sv_len
-    elif self.sv_type == "INS":
+    elif sv_type == "INS":
       info["END"] = self.pos1
     else:
       return None
