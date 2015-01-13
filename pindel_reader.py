@@ -196,8 +196,7 @@ class PindelRecord:
             "PD_HOMLEN": self.homlen,
             "PD_HOMSEQ": self.homseq
     }
-    data = vcf.model.make_calldata_tuple("GT")(GT=self.gt)
-    vcf_record = vcf.model._Record(self.chromosome, self.start_pos, ".", "N", alt, ".", ".", info, "GT",[0] ,[vcf.model._Call(None, sample, data)])
+    vcf_record = vcf.model._Record(self.chromosome, self.start_pos, ".", "N", alt, ".", ".", info, "GT",[0] ,[vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT=self.gt))])
     return vcf_record
 
   def __str__(self):
