@@ -127,10 +127,13 @@ if args.cnvnator_native is not None:
       print cnvnator_record
 
 for toolname, vcfname in vcf_name_list:
+  # If no VCF is given, ignore the tool
   if not vcfname: continue
+
   tools.append(toolname)
   intervals[toolname] = {}
 
+  # Handles the pindel long insertion locations
   if toolname == "Pindel" and pindel_list:
     intervals[toolname]["INS"] = pindel_list
     sv_types |= set(["INS"])

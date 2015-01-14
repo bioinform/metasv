@@ -76,9 +76,24 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
       if len(vcf_record.ref) < 50 and len(vcf_record.alt) < 50: continue
       if len(vcf_record.ref) == 1:
         wiggle = 100 if source in ["Pindel", "BreakSeq", "HaplotypeCaller"] else 0
-        interval = SVInterval(vcf_record.contig, vcf_record.pos + 1, vcf_record.pos + 1, source, "INS", len(vcf_record.alt)-1, sources=set([source]), wiggle=wiggle, gt=gt)
+        interval = SVInterval(vcf_record.contig,
+                              vcf_record.pos + 1,
+                              vcf_record.pos + 1,
+                              source,
+                              "INS",
+                              len(vcf_record.alt)-1,
+                              sources=set([source]),
+                              wiggle=wiggle,
+                              gt=gt)
       else:
-        interval = SVInterval(vcf_record.contig, vcf_record.pos, vcf_record.pos + len(vcf_record.ref) - 1, source, "DEL", len(vcf_record.ref)-1, sources=set([source]), gt=gt)
+        interval = SVInterval(vcf_record.contig,
+                              vcf_record.pos,
+                              vcf_record.pos + len(vcf_record.ref) - 1,
+                              source,
+                              "DEL",
+                              len(vcf_record.ref)-1,
+                              sources=set([source]),
+                              gt=gt)
     else:
       if source == "BreakSeq" and vcf_record.filter != "PASS": continue
       if vcf_record.alt.find(",") != -1: continue
@@ -115,8 +130,8 @@ def print_vcf_header(outfd, reference, contigs, sample):
     contig_str += "##contig=<ID=%s,length=%d>\n" % (contig.name, contig.length)
 
   outfd.write("""##fileformat=VCFv4.1
-##reference=%s
-##source=%s
+##reference={0:s}
+##source={1:s}
 ##INFO=<ID=BKPTID,Number=.,Type=String,Description=\"ID of the assembled alternate allele in the assembly file\">
 ##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">
 ##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">
@@ -158,7 +173,7 @@ def print_vcf_header(outfd, reference, contigs, sample):
 ##INFO=<ID=natorP4,Number=1,Type=Float,Description=\"CNVnator: e-val by Gaussian tail (middle)\">
 ##INFO=<ID=natorQ0,Number=1,Type=Float,Description=\"CNVnator: Fraction of reads with 0 mapping quality\">
 ##FILTER=<ID=LowQual,Description=\"Low Quality\">
-%s##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">
+{2:s}##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">
 ##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">
 ##FORMAT=<ID=CNQ,Number=1,Type=Float,Description=\"Copy number genotype quality for imprecise events\">
 ##FORMAT=<ID=CNL,Number=.,Type=Float,Description=\"Copy number genotype likelihood for imprecise events\">
@@ -175,4 +190,5 @@ def print_vcf_header(outfd, reference, contigs, sample):
 ##ALT=<ID=INS:ME:L1,Description=\"Insertion of L1 element\">
 ##ALT=<ID=INV,Description=\"Inversion\">
 ##ALT=<ID=CNV,Description=\"Copy number variable region\">
-#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t%s\n""" % (reference, " ".join(sys.argv), contig_str, sample))
+#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{3:s}\n""".format(reference, " ".join(sys.argv), contig_str,
+                                                                         sample))
