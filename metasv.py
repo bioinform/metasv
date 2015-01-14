@@ -73,22 +73,30 @@ if not os.path.isfile(args.reference + ".fai"):
   logger.error("Reference file %s is not indexed" % (args.reference))
   sys.exit(1)
 
+# These are the included reference intervals
 fasta_handle = pysam.Fastafile(args.reference)
 contigs = get_contigs(args.reference)
 include_intervals = sorted([SVInterval(contig.name, 0, contig.length, contig.name, "include", length = contig.length) for contig in contigs])
 logger.info(include_intervals)
 
+# These are the contigs specified by the user to keep
 contig_whitelist = set(args.chromosomes) if args.chromosomes else set([contig.name for contig in contigs])
+
 if args.keep_standard_contigs:
   contig_whitelist &= set([str(i) for i in xrange(1, 23)] + ["chr%d" % (i) for i in xrange(1, 23)] + ["X", "Y", "MT", "chrX", "chrY", "chrM"])
 logger.info("Only SVs on the following contigs will be reported: %s" % (sorted(list(contig_whitelist))))
 
-vcf_name_list = [("CNVnator", args.cnvnator_vcf), ("Pindel", args.pindel_vcf), ("BreakDancer", args.breakdancer_vcf), ("BreakSeq", args.breakseq_vcf), ("HaplotypeCaller", args.gatk_vcf)]
+vcf_name_list = [("CNVnator", args.cnvnator_vcf),
+                 ("Pindel", args.pindel_vcf),
+                 ("BreakDancer", args.breakdancer_vcf),
+                 ("BreakSeq", args.breakseq_vcf),
+                 ("HaplotypeCaller", args.gatk_vcf)]
 
 tools = []
 intervals = {}
 sv_types = set()
 
+# load gap files for filtering SVs that come from gaps in the reference
 gap_intervals = []
 if args.filter_gaps:
   if args.gaps is None:
@@ -99,14 +107,14 @@ if args.filter_gaps:
   else:
     gap_intervals = sorted(load_gap_intervals(args.gaps))
 
-pindel_lis = []
+pindel_list = []
 if args.pindel_native is not None:
   for pindel_native_file in args.pindel_native:
     for pindel_record in PindelReader(pindel_native_file, fasta_handle):
       if pindel_record.sv_type == "LI":
         interval = pindel_record.to_sv_interval()
         if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
-          pindel_lis.append(pindel_record.to_sv_interval())
+          pindel_list.append(pindel_record.to_sv_interval())
 
 if args.breakdancer_native is not None:
   for breakdancer_native_file in args.breakdancer_native:
@@ -123,8 +131,8 @@ for toolname, vcfname in vcf_name_list:
   tools.append(toolname)
   intervals[toolname] = {}
 
-  if toolname == "Pindel" and pindel_lis:
-    intervals[toolname]["INS"] = pindel_lis
+  if toolname == "Pindel" and pindel_list:
+    intervals[toolname]["INS"] = pindel_list
     sv_types |= set(["INS"])
 
   vcf_list = []
