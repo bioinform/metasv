@@ -115,7 +115,8 @@ class SVInterval:
 
     for source in sv_sources:
       if len(lists[source]) == 1:
-        if self.overlaps(lists[source][0], overlap_ratio, overlap_ratio) or interval_overlaps_interval_list(lists[source][0], precise_merged, overlap_ratio, overlap_ratio):
+        if self.overlaps(lists[source][0], overlap_ratio, overlap_ratio) \
+                or interval_overlaps_interval_list(lists[source][0], precise_merged, overlap_ratio, overlap_ratio):
           self.is_validated = len(self.sources) > 1
           self.validating_interval = lists[source][0]
           self.is_precise = source in precise_sv_sources

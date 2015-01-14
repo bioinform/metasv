@@ -167,7 +167,7 @@ for toolname, tool_out in [("BreakDancer", bd_out), ("Pindel", pindel_out), ("CN
       if sv_type in intervals[toolname]:
         intervals_tool.extend([copy.deepcopy(interval) for interval in intervals[toolname][sv_type]])
     for interval in intervals_tool:
-      interval.do_validation(args.overlap_ratio)
+      interval.do_validation(args.overlap_ratio) # Check if it is supported by at least 2 tools? [Marghoob please confirm this...]
       interval.fix_pos()
       chr_intervals_tool[interval.chrom].append(interval)
     print_vcf_header(tool_out_fd, args.reference, contigs, args.sample)
