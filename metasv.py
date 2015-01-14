@@ -116,15 +116,18 @@ if args.pindel_native is not None:
         if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
           pindel_list.append(pindel_record.to_sv_interval())
 
+# Marghoob... what does this doo?
 if args.breakdancer_native is not None:
   for breakdancer_native_file in args.breakdancer_native:
     for breakdancer_record in BreakDancerReader(breakdancer_native_file):
       print repr(breakdancer_record.to_sv_interval())
 
+# Marghoob... what does this do????
 if args.cnvnator_native is not None:
   for cnvnator_native_file in args.cnvnator_native:
     for cnvnator_record in CNVnatorReader(cnvnator_native_file):
       print cnvnator_record
+
 
 for toolname, vcfname in vcf_name_list:
   # If no VCF is given, ignore the tool
@@ -167,7 +170,9 @@ for toolname, tool_out in [("BreakDancer", bd_out), ("Pindel", pindel_out), ("CN
       if sv_type in intervals[toolname]:
         intervals_tool.extend([copy.deepcopy(interval) for interval in intervals[toolname][sv_type]])
     for interval in intervals_tool:
-      interval.do_validation(args.overlap_ratio) # Check if it is supported by at least 2 tools? [Marghoob please confirm this...]
+      # Check if it is supported by at least 2 tools? [Marghoob please confirm this...]
+      # This is kind of strange since at this point we don't have multiple tools merged?
+      interval.do_validation(args.overlap_ratio)
       interval.fix_pos()
       chr_intervals_tool[interval.chrom].append(interval)
     print_vcf_header(tool_out_fd, args.reference, contigs, args.sample)
@@ -201,7 +206,7 @@ for sv_type in sv_types:
 final_chr_intervals = {}
 for contig in contigs: final_chr_intervals[contig.name] = []
 for interval in final_intervals:
-  interval.do_validation(args.overlap_ratio)
+  interval.do_validation(args.overlap_ratio) # [Marghoob..] I'm pretty sure it checks for 2 tools support here
   interval.fix_pos()
   final_chr_intervals[interval.chrom].append(interval)
 
@@ -217,7 +222,10 @@ for contig in contigs:
   for interval in final_chr_intervals[contig.name]:
     vcf_record = interval.to_vcf_record(fasta_handle)
     if vcf_record is not None:
-      key = (interval.sv_type, "PASS" if interval.is_validated else "LowQual", "PRECISE" if interval.is_precise else "IMPRECISE", tuple(sorted(list(interval.sources))))
+      key = (interval.sv_type,
+             "PASS" if interval.is_validated else "LowQual",
+             "PRECISE" if interval.is_precise else "IMPRECISE",
+             tuple(sorted(list(interval.sources))))
       if key not in final_stats: final_stats[key] = 0
       final_stats[key] += 1
       outfd.write("%s\n" % (vcf_record))
@@ -230,6 +238,8 @@ outfd.close()
 
 for key in sorted(final_stats.keys()):
   logger.info(str(key) + ":" + str(final_stats[key]))
+
+# Work on assembly after this point
 
 if not args.disable_assembly:
   if args.spades is None:
