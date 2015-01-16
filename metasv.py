@@ -8,17 +8,17 @@ import pysam
 import shutil
 import logging
 import copy
-from fasta_utils import *
-from vcf_utils import *
-import sv_interval
-from pindel_reader import PindelReader
-from breakdancer_reader import BreakDancerReader
-from cnvnator_reader import CNVnatorReader
 import pybedtools
-from generate_sv_intervals import parallel_generate_sc_intervals
-from run_spades import run_spades_parallel
-from run_age import run_age_parallel
-from generate_final_vcf import convert_metasv_bed_to_vcf
+from metasv.fasta_utils import *
+from metasv.vcf_utils import *
+from metasv.sv_interval import SVInterval, get_gaps_file, interval_overlaps_interval_list, merge_intervals
+from metasv.pindel_reader import PindelReader
+from metasv.breakdancer_reader import BreakDancerReader
+from metasv.cnvnator_reader import CNVnatorReader
+from metasv.generate_sv_intervals import parallel_generate_sc_intervals
+from metasv.run_spades import run_spades_parallel
+from metasv.run_age import run_age_parallel
+from metasv.generate_final_vcf import convert_metasv_bed_to_vcf
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -52,7 +52,6 @@ parser.add_argument("--age", help = "Path to AGE executable", required = False)
 parser.add_argument("--disable_assembly", action = "store_true", help = "Disable assembly")
 
 args = parser.parse_args()
-mydir = os.path.dirname(os.path.realpath(__file__))
 
 if not os.path.isdir(args.outdir):
   logger.info("Creating directory %s" % (args.outdir))
@@ -92,9 +91,10 @@ sv_types = set()
 gap_intervals = []
 if args.filter_gaps:
   if args.gaps is None:
-    # Try to guess
-    if "chr1" in contig_whitelist: gap_intervals = load_gap_intervals(os.path.join(mydir, "resources/hg19.gaps.bed"))
-    elif "1" in contig_whitelist: gap_intervals = load_gap_intervals(os.path.join(mydir, "resources/b37.gaps.bed"))
+    gap_intervals = load_gap_intervals(get_gaps_file)
+    # Try 
+    if "chr1" in contig_whitelist: gap_intervals = load_gap_intervals(gaps_hg19)
+    elif "1" in contig_whitelist: gap_intervals = load_gap_intervals(gaps_b37)
     else: logger.error("Couldn't guess gaps file for reference. No gap filtering will be done")
   else:
     gap_intervals = sorted(load_gap_intervals(args.gaps))
@@ -175,8 +175,8 @@ for sv_type in sv_types:
   for tool in tools:
     if sv_type not in intervals[tool]: continue
     logger.info("First level merging for %s for tool %s" % (sv_type, tool))
-    tool_merged_intervals[sv_type] += sv_interval.merge_intervals(intervals[tool][sv_type])
-  merged_intervals = sv_interval.merge_intervals(tool_merged_intervals[sv_type])
+    tool_merged_intervals[sv_type] += merge_intervals(intervals[tool][sv_type])
+  merged_intervals = merge_intervals(tool_merged_intervals[sv_type])
   intervals1 = []
   intervals2 = []
   for interval in tool_merged_intervals[sv_type]:
@@ -185,7 +185,7 @@ for sv_type in sv_types:
     else:
       intervals1.append(interval)
 
-  final_intervals.extend(sv_interval.merge_intervals(intervals1) + sv_interval.merge_intervals(intervals2))
+  final_intervals.extend(merge_intervals(intervals1) + merge_intervals(intervals2))
 
 final_chr_intervals = {}
 for contig in contigs: final_chr_intervals[contig.name] = []
@@ -260,6 +260,6 @@ else:
   final_bed = merged_bed
 
 final_vcf = os.path.join(args.workdir, "final.vcf")
-convert_metasv_bed_to_vcf(bedfile = final_bed, vcf_out = final_vcf, vcf_template = os.path.join(mydir, "resources/template.vcf"), sample = args.sample)
+convert_metasv_bed_to_vcf(bedfile = final_bed, vcf_out = final_vcf, sample = args.sample)
 
 pybedtools.cleanup(remove_all = True)

@@ -14,6 +14,18 @@ sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"
 precise_sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller"]
 sv_sources_to_type = {"Pindel": "SR", "BreakSeq": "JM", "BreakDancer": "RP", "CNVnator": "RD", "HaplotypeCaller": "AS"}
 
+mydir = os.path.dirname(os.path.realpath(__file__))
+gaps_b37 = os.path.join(mydir, "resources/b37.gaps.bed")
+gaps_hg19 = os.path.join(mydir, "resources/hg19.gaps.bed")
+
+def get_gaps_file(contig_names):
+    if "chr1" in contig_names: return gaps_hg19
+    if "1" in contig_names: return gaps_b37
+
+    logger.warn("Could not guess gaps file for reference. No gap filtering will be done.")
+    return None
+      
+
 class SVInterval:
   def __init__(self, chrom=None, start=0, end=0, name=None, sv_type=None, length=0, sources=set(), gt="./1", wiggle=0, info=None, cipos=[], ciend=[], native_sv=None):
     self.chrom = chrom
