@@ -145,6 +145,27 @@ class PindelRecord:
       self.homseq = ""
       self.samples = [{"name": fields[i], "plus_support": int(fields[i+2]), "minus_support": int(fields[i+4])} for i in xrange(10, len(fields), 5)]
 
+    self.info = {
+            "END": self.end_pos,
+            "PD_NUM_NT_ADDED": self.num_nt_added,
+            "PD_NT_ADDED": self.nt_added,
+            "PD_BP_RANGE_START": self.bp_range[0],
+            "PD_BP_RANGE_END": self.bp_range[1],
+            "PD_READ_SUPP": self.read_supp,
+            "PD_UNIQ_READ_SUPP": self.uniq_read_supp,
+            "PD_UP_READ_SUPP": self.up_read_supp,
+            "PD_UP_UNIQ_READ_SUPP": self.up_uniq_read_supp,
+            "PD_DOWN_READ_SUPP": self.down_read_supp,
+            "PD_DOWN_UNIQ_READ_SUPP": self.down_uniq_read_supp,
+            "PD_SIMPLE_SCORE": self.simple_score,
+            "PD_SUM_MAPQ": self.sum_mapq,
+            "PD_NUM_SAMPLE": self.num_sample,
+            "PD_NUM_SAMPLE_SUPP": self.num_sample_supp,
+            "PD_NUM_SAMPLE_UNIQ_SUPP": self.num_sample_uniq_supp,
+            "PD_HOMLEN": self.homlen,
+            "PD_HOMSEQ": self.homseq
+    }
+
     self.derive_genotype()
 
   def derive_genotype(self):
@@ -169,34 +190,47 @@ class PindelRecord:
   def to_sv_interval(self):
     sv_type = PINDEL_TO_SV_TYPE[self.sv_type]
     if sv_type != "INS":
-      return SVInterval(self.chromosome, self.start_pos, self.end_pos, "Pindel", sv_type=sv_type, length=self.sv_len, sources=pindel_source, native_sv=self)
+      return SVInterval(self.chromosome,
+                        self.start_pos,
+                        self.end_pos,
+                        "Pindel",
+                        sv_type=sv_type,
+                        length=self.sv_len,
+                        sources=pindel_source,
+                        info=self.info,
+                        native_sv=self)
     else:
-      return SVInterval(self.chromosome, self.start_pos, self.start_pos, "Pindel", sv_type=sv_type, length=self.sv_len, sources=pindel_source, native_sv=self, wiggle=100, gt=self.gt)
+      return SVInterval(self.chromosome,
+                        self.start_pos,
+                        self.start_pos,
+                        "Pindel",
+                        sv_type=sv_type,
+                        length=self.sv_len,
+                        sources=pindel_source,
+                        native_sv=self,
+                        wiggle=100,
+                        info=self.info,
+                        gt=self.gt)
 
   def to_vcf_record(self, sample):
     alt = ["<%s>" % (PINDEL_TO_SV_TYPE[self.sv_type])]
     info = {"SVLEN": self.sv_len,
-            "SVTYPE": self.sv_type,
-            "END": self.end_pos,
-            "PD_NUM_NT_ADDED": self.num_nt_added,
-            "PD_NT_ADDED": self.nt_added,
-            "PD_BP_RANGE_START": self.bp_range[0],
-            "PD_BP_RANGE_END": self.bp_range[1],
-            "PD_READ_SUPP": self.read_supp,
-            "PD_UNIQ_READ_SUPP": self.uniq_read_supp,
-            "PD_UP_READ_SUPP": self.up_read_supp,
-            "PD_UP_UNIQ_READ_SUPP": self.up_uniq_read_supp,
-            "PD_DOWN_READ_SUPP": self.down_read_supp,
-            "PD_DOWN_UNIQ_READ_SUPP": self.down_uniq_read_supp,
-            "PD_SIMPLE_SCORE": self.simple_score,
-            "PD_SUM_MAPQ": self.sum_mapq,
-            "PD_NUM_SAMPLE": self.num_sample,
-            "PD_NUM_SAMPLE_SUPP": self.num_sample_supp,
-            "PD_NUM_SAMPLE_UNIQ_SUPP": self.num_sample_uniq_supp,
-            "PD_HOMLEN": self.homlen,
-            "PD_HOMSEQ": self.homseq
+            "SVTYPE": self.sv_type
     }
-    vcf_record = vcf.model._Record(self.chromosome, self.start_pos, ".", "N", alt, ".", ".", info, "GT",[0] ,[vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT=self.gt))])
+
+    info.update(self.info)
+
+    vcf_record = vcf.model._Record(self.chromosome,
+                                   self.start_pos,
+                                   ".",
+                                   "N",
+                                   alt,
+                                   ".",
+                                   ".",
+                                   info,
+                                   "GT",
+                                   [0] ,
+                                   [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT=self.gt))])
     return vcf_record
 
   def __str__(self):

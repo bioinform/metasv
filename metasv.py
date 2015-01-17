@@ -128,7 +128,7 @@ if args.cnvnator_native is not None:
     for cnvnator_record in CNVnatorReader(cnvnator_native_file):
       print cnvnator_record
 
-
+# Handles the VCF input cases, we will just deal with these cases
 for toolname, vcfname in vcf_name_list:
   # If no VCF is given, ignore the tool
   if not vcfname: continue

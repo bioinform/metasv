@@ -47,6 +47,15 @@ class CNVnatorRecord:
     self.e_val4 = float(fields[7])
     self.q0 = float(fields[8])
 
+    self.info = {
+            "CN_NORMALIZED_RD": self.normalized_rd,
+            "CN_EVAL1": self.e_val1,
+            "CN_EVAL2": self.e_val2,
+            "CN_EVAL3": self.e_val3,
+            "CN_EVAL4": self.e_val4,
+            "CN_Q0": self.q0
+    }
+
   def __str__(self):
     return str(self.__dict__)
 
@@ -56,29 +65,35 @@ class CNVnatorRecord:
                       self.start,
                       self.end,
                       "CNVnator",
-                      sv_type = sv_type,
-                      length = self.sv_len,
-                      sources = cnvnator_source,
-                      native_sv = self)
+                      sv_type=sv_type,
+                      length=self.sv_len,
+                      sources=cnvnator_source,
+                      info=self.info,
+                      native_sv=self)
 
   def to_vcf_record(self, sample):
     alt = ["<%s>" % (self.sv_type)]
     sv_len = -self.sv_len if self.sv_type == "DEL" else self.sv_len
     info = {"SVLEN": sv_len,
-            "SVTYPE": self.sv_type,
-            "CN_NORMALIZED_RD": self.normalized_rd,
-            "CN_EVAL1": self.e_val1,
-            "CN_EVAL2": self.e_val2,
-            "CN_EVAL3": self.e_val3,
-            "CN_EVAL4": self.e_val4,
-            "CN_Q0": self.q0
-    }
+            "SVTYPE": self.sv_type}
     if self.sv_type == "DEL" or self.sv_type == "DUP":
       info["END"] = self.pos1 + self.sv_len
     else:
       return None
 
-    vcf_record = vcf.model._Record(self.chr1, self.pos1, ".", "N", alt, ".", ".", info, "GT",[0], [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT="1/1"))])
+    info.update(self.info)
+
+    vcf_record = vcf.model._Record(self.chr1,
+                                   self.pos1,
+                                   ".",
+                                   "N",
+                                   alt,
+                                   ".",
+                                   ".",
+                                   info,
+                                   "GT",
+                                   [0],
+                                   [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT="1/1"))])
     return vcf_record
 
 class CNVnatorReader:
