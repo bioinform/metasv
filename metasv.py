@@ -19,6 +19,7 @@ from generate_sv_intervals import parallel_generate_sc_intervals
 from run_spades import run_spades_parallel
 from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
+from collections import defaultdict
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -92,6 +93,11 @@ vcf_name_list = [("CNVnator", args.cnvnator_vcf),
                  ("BreakSeq", args.breakseq_vcf),
                  ("HaplotypeCaller", args.gatk_vcf)]
 
+native_name_list = [("CNVnator", args.cnvnator_native, CNVnatorReader),
+                    ("Pindel", args.pindel_native, PindelReader),
+                    ("BreakDancer", args.breakdancer_native, BreakDancerReader)]
+
+
 tools = []
 intervals = {}
 sv_types = set()
@@ -107,31 +113,21 @@ if args.filter_gaps:
   else:
     gap_intervals = sorted(load_gap_intervals(args.gaps))
 
-pindel_list = []
-if args.pindel_native is not None:
-  for pindel_native_file in args.pindel_native:
-    for pindel_record in PindelReader(pindel_native_file, fasta_handle):
-      interval = pindel_record.to_sv_interval()
-      if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
-        pindel_list.append(interval)
+# Handles native input
+for toolname, nativename, svReader in native_name_list:
+  # If no native file is given, ignore the tool
+  if not nativename: continue
 
-# Marghoob... what does this doo?
-breakdancer_list = []
-if args.breakdancer_native is not None:
-  for breakdancer_native_file in args.breakdancer_native:
-    for breakdancer_record in BreakDancerReader(breakdancer_native_file):
-      interval = breakdancer_record.to_sv_interval()
-      if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
-        breakdancer_list.append(interval)
+  tools.append(toolname)
+  intervals[toolname] = {}
 
-# Marghoob... what does this do????
-cnvnator_list = []
-if args.cnvnator_native is not None:
-  for cnvnator_native_file in args.cnvnator_native:
-    for cnvnator_record in CNVnatorReader(cnvnator_native_file):
-      interval = cnvnator_record.to_sv_interval()
+  for native_file in nativename:
+    for record in svReader(native_file):
+      interval = record.to_sv_interval()
       if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
-        cnvnator_list.append(interval)
+        intervals[toolname][record.sv_type].append(interval)
+
+  sv_types |= set(intervals[toolname].keys())
 
 # Handles the VCF input cases, we will just deal with these cases
 for toolname, vcfname in vcf_name_list:
@@ -140,13 +136,6 @@ for toolname, vcfname in vcf_name_list:
 
   tools.append(toolname)
   intervals[toolname] = {}
-
-  # Handles the pindel long insertion locations
-  if toolname == "Pindel" and pindel_list:
-    intervals[toolname]["INS"] = pindel_list
-    sv_types |= set(["INS"])
-
-
 
   vcf_list = []
   for vcf in vcfname:
