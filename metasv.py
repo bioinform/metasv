@@ -111,22 +111,27 @@ pindel_list = []
 if args.pindel_native is not None:
   for pindel_native_file in args.pindel_native:
     for pindel_record in PindelReader(pindel_native_file, fasta_handle):
-      if pindel_record.sv_type == "LI":
-        interval = pindel_record.to_sv_interval()
-        if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
-          pindel_list.append(pindel_record.to_sv_interval())
+      interval = pindel_record.to_sv_interval()
+      if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
+        pindel_list.append(interval)
 
 # Marghoob... what does this doo?
+breakdancer_list = []
 if args.breakdancer_native is not None:
   for breakdancer_native_file in args.breakdancer_native:
     for breakdancer_record in BreakDancerReader(breakdancer_native_file):
-      print repr(breakdancer_record.to_sv_interval())
+      interval = breakdancer_record.to_sv_interval()
+      if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
+        breakdancer_list.append(interval)
 
 # Marghoob... what does this do????
+cnvnator_list = []
 if args.cnvnator_native is not None:
   for cnvnator_native_file in args.cnvnator_native:
     for cnvnator_record in CNVnatorReader(cnvnator_native_file):
-      print cnvnator_record
+      interval = cnvnator_record.to_sv_interval()
+      if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
+        cnvnator_list.append(interval)
 
 # Handles the VCF input cases, we will just deal with these cases
 for toolname, vcfname in vcf_name_list:
@@ -140,6 +145,8 @@ for toolname, vcfname in vcf_name_list:
   if toolname == "Pindel" and pindel_list:
     intervals[toolname]["INS"] = pindel_list
     sv_types |= set(["INS"])
+
+
 
   vcf_list = []
   for vcf in vcfname:
