@@ -157,7 +157,13 @@ bd_out = os.path.join(args.outdir, "breakdancer.vcf")
 pindel_out = os.path.join(args.outdir, "pindel.vcf")
 cnvnator_out = os.path.join(args.outdir, "cnvnator.vcf")
 breakseq_out = os.path.join(args.outdir, "breakseq.vcf")
-for toolname, tool_out in [("BreakDancer", bd_out), ("Pindel", pindel_out), ("CNVnator", cnvnator_out), ("BreakSeq", breakseq_out)]:
+
+vcf_out_list = [("BreakDancer", bd_out),
+                ("Pindel", pindel_out),
+                ("CNVnator", cnvnator_out),
+                ("BreakSeq", breakseq_out)]
+
+for toolname, tool_out in vcf_out_list:
   if tool_out is not None and toolname in intervals:
     intervals_tool = []
     tool_out_fd = open(tool_out, "w")
