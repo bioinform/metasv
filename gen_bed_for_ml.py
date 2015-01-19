@@ -1,36 +1,25 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
 from __future__ import print_function
-import pysam
 import argparse
-import os
 import sys
 import logging
-import subprocess
-import re
-import hashlib
-import uuid
-import vcf
-from multiprocessing import Process
-import pybedtools
-from pybedtools.parallel import parallel_apply
-import random
-from functools import partial
-from itertools import compress
 
 FORMAT = '%(levelname)s %(asctime)-15s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 logger = logging.getLogger(__name__)
 
-parser = argparse.ArgumentParser("Take all and false MetaSV VCF. Make BED with features out of them.\n", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument("--in_all_vcf", help = "VCF file of all variants", required = True)
-parser.add_argument("--in_false_vcf", help = "VCF file of all variants", required = True)
-parser.add_argument("--out_bed", help = "Output BED file")
+parser = argparse.ArgumentParser("Take all and false MetaSV VCF. Make BED with features out of them.\n",
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("--in_all_vcf", help="VCF file of all variants", required=True)
+parser.add_argument("--in_false_vcf", help="VCF file of all variants", required=True)
+parser.add_argument("--out_bed", help="Output BED file")
 
 args = parser.parse_args()
 
+
 class VcfRec:
-    def __init__(self,line):
+    def __init__(self, line):
         ll = line.split("\t");
         self.chrom = ll[0]
         self.loc = int(ll[1])
@@ -62,11 +51,12 @@ class VcfRec:
         for i in xrange(0, len(form_ll)):
             self.data[form_ll[i]] = data_ll[i]
 
+
 def read_all_vcf(vcf_file):
-    f = open(vcf_file,'r')
-    
+    f = open(vcf_file, 'r')
+
     vcf_list = []
-    
+
     for line in f:
         line = line.strip()
         if len(line) == 0:
@@ -80,7 +70,7 @@ def read_all_vcf(vcf_file):
 
 # read in the false VCF and store in a dictionary
 false_vcf = read_all_vcf(args.in_false_vcf)
-false_vcf_dict = {} # this just stores some things that will make the VCF record unique (chr,loc,alt,SVLEN)
+false_vcf_dict = {}  # this just stores some things that will make the VCF record unique (chr,loc,alt,SVLEN)
 for line in false_vcf:
     false_vcf_dict["-".join([line.chrom, str(line.loc), line.alt, line.info["SVLEN"]])] = 1
 
@@ -88,14 +78,14 @@ for line in false_vcf:
 # open the output file
 outf = sys.stdout
 if not args.out_bed == None:
-    outf = open(args.out_bed,'w')
+    outf = open(args.out_bed, 'w')
 
 # read in all VCF and flag the ones that are false
 # at the same time generate the features
 # and also output the BED file
 
-methods = ["RP","RD","SR","JM","AS"]
-features = ["CHROM","START","END","LEN","TRUE","NUM_METHODS"] + methods
+methods = ["RP", "RD", "SR", "JM", "AS"]
+features = ["CHROM", "START", "END", "LEN", "TRUE", "NUM_METHODS"] + methods
 
 outf.write("#" + "\t".join(features) + "\n")
 
@@ -111,7 +101,7 @@ for line in all_vcf:
 
     out_vec = []
 
-    #CHROM
+    # CHROM
     out_vec.append(line.chrom)
 
     #START
@@ -130,7 +120,7 @@ for line in all_vcf:
     out_vec.append(str(len(method_ll)))
 
     #RP,RD,SR,JT,AS
-    
+
     for m in methods:
         if m in method_ll:
             out_vec.append("1")

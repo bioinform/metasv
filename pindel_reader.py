@@ -1,10 +1,12 @@
 import logging
-import pysam
-import vcf
-from sv_interval import SVInterval
 import sys
 import argparse
 import os
+
+import pysam
+import vcf
+from sv_interval import SVInterval
+
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +95,6 @@ Following lines are repeated for each sample
 
 '''
 
-
 pindel_source = set(["Pindel"])
 min_coverage = 10
 het_cutoff = 0.2
@@ -107,45 +108,50 @@ PINDEL_TO_SV_TYPE = {"I": "INS", "D": "DEL", "LI": "INS", "TD": "DUP:TANDEM", "I
 
 
 class PindelRecord:
-  def __init__(self, record_string, reference_handle = None):
-    fields = record_string.split()
-    self.sv_type = fields[1]
+    def __init__(self, record_string, reference_handle=None):
+        fields = record_string.split()
+        self.sv_type = fields[1]
 
-    if self.sv_type != "LI":
-      self.sv_len = int(fields[2])
-      self.num_nt_added = map(int, fields[4].split(":"))
-      self.nt_added = map(lambda x: x.replace('"', ''), fields[5].split(":"))
-      self.chromosome = fields[7]
-      self.start_pos = int(fields[9])
-      self.end_pos = int(fields[10])
-      self.bp_range = (int(fields[12]), int(fields[13]))
-      self.read_supp = int(fields[15]) # The number of reads supporting the SV
-      self.uniq_read_supp = int(fields[16]) # The number of unique reads supporting SV (not count duplicate reads)
-      self.up_read_supp = int(fields[18]) # upstream
-      self.up_uniq_read_supp = int(fields[19])
-      self.down_read_supp = int(fields[21]) # downstream
-      self.down_uniq_read_supp = int(fields[22])
-      self.simple_score = int(fields[24])
-      self.sum_mapq = int(fields[26]) # sum of mapping qualities of anchor reads
-      self.num_sample = int(fields[27]) # number of samples
-      self.num_sample_supp = int(fields[29]) # number of samples with supporting reads
-      self.num_sample_uniq_supp = int(fields[30]) # number of sample with unique supporting readas
-      self.homlen = self.bp_range[1] - self.end_pos
-      self.homseq = reference_handle.fetch(self.chromosome, self.end_pos-1, self.bp_range[1]-1) if reference_handle else ""
-      self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i+1]), "ref_support_at_end": int(fields[i+2]), "plus_support": int(fields[i+3]), "minus_support": int(fields[i+4])} for i in xrange(31, len(fields), 5)]
-    else:
-      self.sv_len = 0
-      self.chromosome = fields[3]
-      self.start_pos = int(fields[4])
-      self.up_read_supp = int(fields[6]) # upstream
-      self.end_pos = int(fields[7])
-      self.down_read_supp = int(fields[8]) # downstream
-      self.bp_range = (self.start_pos, self.end_pos)
-      self.homlen = 0
-      self.homseq = ""
-      self.samples = [{"name": fields[i], "plus_support": int(fields[i+2]), "minus_support": int(fields[i+4])} for i in xrange(10, len(fields), 5)]
+        if self.sv_type != "LI":
+            self.sv_len = int(fields[2])
+            self.num_nt_added = map(int, fields[4].split(":"))
+            self.nt_added = map(lambda x: x.replace('"', ''), fields[5].split(":"))
+            self.chromosome = fields[7]
+            self.start_pos = int(fields[9])
+            self.end_pos = int(fields[10])
+            self.bp_range = (int(fields[12]), int(fields[13]))
+            self.read_supp = int(fields[15])  # The number of reads supporting the SV
+            self.uniq_read_supp = int(
+                fields[16])  # The number of unique reads supporting SV (not count duplicate reads)
+            self.up_read_supp = int(fields[18])  # upstream
+            self.up_uniq_read_supp = int(fields[19])
+            self.down_read_supp = int(fields[21])  # downstream
+            self.down_uniq_read_supp = int(fields[22])
+            self.simple_score = int(fields[24])
+            self.sum_mapq = int(fields[26])  # sum of mapping qualities of anchor reads
+            self.num_sample = int(fields[27])  # number of samples
+            self.num_sample_supp = int(fields[29])  # number of samples with supporting reads
+            self.num_sample_uniq_supp = int(fields[30])  # number of sample with unique supporting readas
+            self.homlen = self.bp_range[1] - self.end_pos
+            self.homseq = reference_handle.fetch(self.chromosome, self.end_pos - 1,
+                                                 self.bp_range[1] - 1) if reference_handle else ""
+            self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i + 1]),
+                             "ref_support_at_end": int(fields[i + 2]), "plus_support": int(fields[i + 3]),
+                             "minus_support": int(fields[i + 4])} for i in xrange(31, len(fields), 5)]
+        else:
+            self.sv_len = 0
+            self.chromosome = fields[3]
+            self.start_pos = int(fields[4])
+            self.up_read_supp = int(fields[6])  # upstream
+            self.end_pos = int(fields[7])
+            self.down_read_supp = int(fields[8])  # downstream
+            self.bp_range = (self.start_pos, self.end_pos)
+            self.homlen = 0
+            self.homseq = ""
+            self.samples = [{"name": fields[i], "plus_support": int(fields[i + 2]), "minus_support": int(fields[i + 4])}
+                            for i in xrange(10, len(fields), 5)]
 
-    self.info = {
+        self.info = {
             "END": self.end_pos,
             "PD_NUM_NT_ADDED": self.num_nt_added,
             "PD_NT_ADDED": self.nt_added,
@@ -164,114 +170,115 @@ class PindelRecord:
             "PD_NUM_SAMPLE_UNIQ_SUPP": self.num_sample_uniq_supp,
             "PD_HOMLEN": self.homlen,
             "PD_HOMSEQ": self.homseq
-    }
+        }
 
-    self.derive_genotype()
+        self.derive_genotype()
 
-  def derive_genotype(self):
-    if self.sv_type == "LI" or self.sv_type == "I":
-      self.gt = GT_HET if (self.up_read_supp + self.down_read_supp) > 0 else GT_REF
-      return
+    def derive_genotype(self):
+        if self.sv_type == "LI" or self.sv_type == "I":
+            self.gt = GT_HET if (self.up_read_supp + self.down_read_supp) > 0 else GT_REF
+            return
 
-    total_event_reads = self.uniq_read_supp
-    total_ref_reads = self.up_uniq_read_supp + self.down_uniq_read_supp
-    if total_event_reads + total_ref_reads < min_coverage:
-      self.gt = GT_REF
-      return
+        total_event_reads = self.uniq_read_supp
+        total_ref_reads = self.up_uniq_read_supp + self.down_uniq_read_supp
+        if total_event_reads + total_ref_reads < min_coverage:
+            self.gt = GT_REF
+            return
 
-    allele_fraction = float(total_event_reads) / (float(total_event_reads) + float(total_ref_reads))
-    if allele_fraction < het_cutoff:
-      self.gt = GT_REF
-    elif allele_fraction < hom_cutoff:
-      self.gt = GT_HET
-    else:
-      self.gt = GT_HOM
+        allele_fraction = float(total_event_reads) / (float(total_event_reads) + float(total_ref_reads))
+        if allele_fraction < het_cutoff:
+            self.gt = GT_REF
+        elif allele_fraction < hom_cutoff:
+            self.gt = GT_HET
+        else:
+            self.gt = GT_HOM
 
-  def to_sv_interval(self):
-    sv_type = PINDEL_TO_SV_TYPE[self.sv_type]
-    if sv_type != "INS":
-      return SVInterval(self.chromosome,
-                        self.start_pos,
-                        self.end_pos,
-                        "Pindel",
-                        sv_type=sv_type,
-                        length=self.sv_len,
-                        sources=pindel_source,
-                        info=self.info,
-                        native_sv=self)
-    else:
-      return SVInterval(self.chromosome,
-                        self.start_pos,
-                        self.start_pos,
-                        "Pindel",
-                        sv_type=sv_type,
-                        length=self.sv_len,
-                        sources=pindel_source,
-                        native_sv=self,
-                        wiggle=100,
-                        info=self.info,
-                        gt=self.gt)
+    def to_sv_interval(self):
+        sv_type = PINDEL_TO_SV_TYPE[self.sv_type]
+        if sv_type != "INS":
+            return SVInterval(self.chromosome,
+                              self.start_pos,
+                              self.end_pos,
+                              "Pindel",
+                              sv_type=sv_type,
+                              length=self.sv_len,
+                              sources=pindel_source,
+                              info=self.info,
+                              native_sv=self)
+        else:
+            return SVInterval(self.chromosome,
+                              self.start_pos,
+                              self.start_pos,
+                              "Pindel",
+                              sv_type=sv_type,
+                              length=self.sv_len,
+                              sources=pindel_source,
+                              native_sv=self,
+                              wiggle=100,
+                              info=self.info,
+                              gt=self.gt)
 
-  def to_vcf_record(self, sample):
-    alt = ["<%s>" % (PINDEL_TO_SV_TYPE[self.sv_type])]
-    info = {"SVLEN": self.sv_len,
-            "SVTYPE": self.sv_type
-    }
+    def to_vcf_record(self, sample):
+        alt = ["<%s>" % (PINDEL_TO_SV_TYPE[self.sv_type])]
+        info = {"SVLEN": self.sv_len,
+                "SVTYPE": self.sv_type
+        }
 
-    info.update(self.info)
+        info.update(self.info)
 
-    vcf_record = vcf.model._Record(self.chromosome,
-                                   self.start_pos,
-                                   ".",
-                                   "N",
-                                   alt,
-                                   ".",
-                                   ".",
-                                   info,
-                                   "GT",
-                                   [0] ,
-                                   [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT=self.gt))])
-    return vcf_record
+        vcf_record = vcf.model._Record(self.chromosome,
+                                       self.start_pos,
+                                       ".",
+                                       "N",
+                                       alt,
+                                       ".",
+                                       ".",
+                                       info,
+                                       "GT",
+                                       [0],
+                                       [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT=self.gt))])
+        return vcf_record
 
-  def __str__(self):
-    return str(self.__dict__)
+    def __str__(self):
+        return str(self.__dict__)
 
 
 class PindelReader:
-  def __init__(self, file_name, reference_handle = None):
-    logger.info("File is " + str(file_name))
-    self.file_fd = open(file_name) if file_name is not None else sys.stdin
-    self.reference_handle = reference_handle
+    def __init__(self, file_name, reference_handle=None):
+        logger.info("File is " + str(file_name))
+        self.file_fd = open(file_name) if file_name is not None else sys.stdin
+        self.reference_handle = reference_handle
 
-  def __iter__(self):
-    return self
+    def __iter__(self):
+        return self
 
-  def next(self):
-    while True:
-      line = self.file_fd.next()
-      if line.find("ChrID") >= 1:
-        return PindelRecord(line.strip(), self.reference_handle)
+    def next(self):
+        while True:
+            line = self.file_fd.next()
+            if line.find("ChrID") >= 1:
+                return PindelRecord(line.strip(), self.reference_handle)
+
 
 def convert_pindel_to_vcf(file_name, sample, out_vcf):
-  vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
-  vcf_template_reader.samples = [sample]
+    vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
+    vcf_template_reader.samples = [sample]
 
-  vcf_fd = open(out_vcf, "w") if out_vcf is not None else sys.stdout
-  vcf_writer = vcf.Writer(vcf_fd, vcf_template_reader)
+    vcf_fd = open(out_vcf, "w") if out_vcf is not None else sys.stdout
+    vcf_writer = vcf.Writer(vcf_fd, vcf_template_reader)
 
-  for pd_record in PindelReader(file_name):
-    vcf_record = pd_record.to_vcf_record(sample)
-    if vcf_record is None:
-        continue
-    vcf_writer.write_record(vcf_record)
-  vcf_writer.close()
+    for pd_record in PindelReader(file_name):
+        vcf_record = pd_record.to_vcf_record(sample)
+        if vcf_record is None:
+            continue
+        vcf_writer.write_record(vcf_record)
+    vcf_writer.close()
 
 
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser("Convert Pindel output file to VCF")
-  parser.add_argument("--pindel_in", help = "Pindel output file", required = False)
-  parser.add_argument("--vcf_out", help = "Output VCF to create", required = False)
-  parser.add_argument("--sample", help = "Sample name", required = True)
+    parser = argparse.ArgumentParser("Convert Pindel output file to VCF")
+    parser.add_argument("--pindel_in", help="Pindel output file", required=False)
+    parser.add_argument("--vcf_out", help="Output VCF to create", required=False)
+    parser.add_argument("--sample", help="Sample name", required=True)
 
-  args = parser.parse_args()
-  convert_pindel_to_vcf(args.pindel_in, args.sample, args.vcf_out)
+    args = parser.parse_args()
+    convert_pindel_to_vcf(args.pindel_in, args.sample, args.vcf_out)
