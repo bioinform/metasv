@@ -201,9 +201,10 @@ def interval_overlaps_interval_list(interval, interval_list, min_fraction_self=1
     return False
 
 def merge_intervals(interval_list):
+  if not interval_list: return []
+
   interval_list.sort()
   merged_intervals = []
-  if not interval_list: return []
 
   current_merged_interval = copy.deepcopy(interval_list[0])
   for i in xrange(len(interval_list)-1):
