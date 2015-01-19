@@ -4,6 +4,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+import os
 import copy
 import bisect
 import pysam
@@ -19,8 +20,10 @@ gaps_b37 = os.path.join(mydir, "resources/b37.gaps.bed")
 gaps_hg19 = os.path.join(mydir, "resources/hg19.gaps.bed")
 
 def get_gaps_file(contig_names):
-    if "chr1" in contig_names: return gaps_hg19
-    if "1" in contig_names: return gaps_b37
+    hg19_major = set(["chr%d" % i for i in xrange(1,23)] + ["chrX", "chrY", "chrM"])
+    b37_major = set([str(i) for i in xrange(1, 23)] + ["X", "Y", "MT"])
+    if set(contig_names) & hg19_major: return gaps_hg19
+    if set(contig_names) & b37_major: return gaps_b37
 
     logger.warn("Could not guess gaps file for reference. No gap filtering will be done.")
     return None
@@ -160,7 +163,7 @@ class SVInterval:
         self.start = mid
         self.end = mid
 
-  def to_vcf_record(self, fasta_handle):
+  def to_vcf_record(self, fasta_handle = None):
     if self.start <= 0: return None
     if self.sv_type not in svs_of_interest: return None
     if not self.sub_intervals and list(self.sources)[0] == "HaplotypeCaller": return None
@@ -168,7 +171,7 @@ class SVInterval:
 
     #logger.debug("Converting interval %s to VCF record" % (str(self)))
 
-    vcf_record_ref = fasta_handle.fetch(self.chrom, self.start - 1, self.start)
+    vcf_record_ref = fasta_handle.fetch(self.chrom, self.start - 1, self.start) if fasta_handle else "N"
     vcf_record_alt = "<%s>" % (self.sv_type)
     vcf_record_filter = "PASS" if self.is_validated else "LowQual"
 

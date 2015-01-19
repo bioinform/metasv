@@ -16,7 +16,7 @@ GT_HOM = "1/1"
 PINDEL_TO_SV_TYPE = {"I": "INS", "D": "DEL", "LI": "INS", "TD": "DUP:TANDEM", "INV": "INV"}
 
 class PindelRecord:
-  def __init__(self, record_string, reference_handle):
+  def __init__(self, record_string, reference_handle = None):
     fields = record_string.split()
     self.sv_type = fields[1]
 
@@ -29,7 +29,7 @@ class PindelRecord:
       self.end_pos = int(fields[10])
       self.bp_range = (int(fields[12]), int(fields[13]))
       self.homlen = self.bp_range[1] - self.end_pos
-      self.homseq = reference_handle.fetch(self.chromosome, self.end_pos-1, self.bp_range[1]-1)
+      self.homseq = reference_handle.fetch(self.chromosome, self.end_pos-1, self.bp_range[1]-1) if reference_handle else ""
       self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i+1]), "ref_support_at_end": int(fields[i+2]), "plus_support": int(fields[i+3]), "minus_support": int(fields[i+4])} for i in xrange(31, len(fields), 5)]
     else:
       self.sv_len = 0
@@ -73,7 +73,7 @@ class PindelRecord:
     return str(self.__dict__)
 
 class PindelReader:
-  def __init__(self, file_name, reference_handle):
+  def __init__(self, file_name, reference_handle = None):
     logger.info("File is " + file_name)
     self.file_fd = open(file_name)
     self.reference_handle = reference_handle

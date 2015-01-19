@@ -1,4 +1,4 @@
-#!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
+#!/usr/bin/python
 
 import sys
 import os
@@ -40,7 +40,7 @@ parser.add_argument("--disable_assembly", action = "store_true", help = "Disable
 
 args = parser.parse_args()
 
-return run_metasv(args.sample, args.reference, pindel_vcf = args.pindel_vcf, pindel_native = args.pindel_native, breakdancer_vcf = args.breakdancer_vcf, breakdancer_native = args.breakdancer_native,
+sys.exit(run_metasv(args.sample, args.reference, pindel_vcf = args.pindel_vcf, pindel_native = args.pindel_native, breakdancer_vcf = args.breakdancer_vcf, breakdancer_native = args.breakdancer_native,
         breakseq_vcf = args.breakseq_vcf, cnvnator_vcf = args.cnvnator_vcf, cnvnator_native = args.cnvnator_native, gatk_vcf = args.gatk_vcf,
         gaps = args.gaps, filter_gaps = args.filter_gaps, keep_standard_contigs = args.keep_standard_contigs, wiggle = args.wiggle, overlap_ratio = args.overlap_ratio,
-        workdir = args.workdir, outdir = args.outdir, boost_ins = args.boost_ins, bam = args.bam, chromosomes = args.chromosomes, num_threads = args.num_threads, spades = args.spades, age = args.age, disable_assembly = args.disable_assembly)
+        workdir = args.workdir, outdir = args.outdir, boost_ins = args.boost_ins, bam = args.bam, chromosomes = args.chromosomes, num_threads = args.num_threads, spades = args.spades, age = args.age, disable_assembly = args.disable_assembly))

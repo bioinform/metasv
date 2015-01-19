@@ -76,7 +76,7 @@ def run_metasv(sample, reference, pindel_vcf = [], pindel_native = [], breakdanc
         logger.error("Reference file %s is not indexed" % (reference))
         return 1
 
-    fasta_handle = pysam.Fastafile(reference)
+    fasta_handle = pysam.Fastafile(reference) if os.path.isfile(reference) else None
     contigs = get_contigs(reference)
     include_intervals = sorted([SVInterval(contig.name, 0, contig.length, contig.name, "include", length = contig.length) for contig in contigs])
 

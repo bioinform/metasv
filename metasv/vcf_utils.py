@@ -56,10 +56,10 @@ def get_gt(gt, fmt):
 def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[], source=None, contig_whitelist=[], is_gatk=False):
   if not os.path.isfile(in_vcf): return intervals
   logger.info("Loading SV intervals from %s" % (in_vcf))
+
   tabix_file = pysam.Tabixfile(in_vcf, parser=pysam.asVCF())
 
   for vcf_record in (record for record in tabix_file.fetch() if record.contig in contig_whitelist):
-
     fmt = "GT"
     gt = "./1"
     try:
