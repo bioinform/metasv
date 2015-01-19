@@ -193,11 +193,17 @@ for toolname, tool_out in vcf_out_list:
 for sv_type in sv_types:
   logger.info("Processing SVs of type %s" % (sv_type))
   tool_merged_intervals[sv_type] = []
+
+  # Do the intra-tool merging
   for tool in tools:
     if sv_type not in intervals[tool]: continue
     logger.info("First level merging for %s for tool %s" % (sv_type, tool))
     tool_merged_intervals[sv_type] += sv_interval.merge_intervals(intervals[tool][sv_type])
+
+  # Do the inter-tool merging
   merged_intervals = sv_interval.merge_intervals(tool_merged_intervals[sv_type])
+
+  # Marghoob.... what does this do? :/
   intervals1 = []
   intervals2 = []
   for interval in tool_merged_intervals[sv_type]:
@@ -216,7 +222,7 @@ for interval in final_intervals:
   interval.fix_pos()
   final_chr_intervals[interval.chrom].append(interval)
 
-# This is the merged VCF without assembly
+# This is the merged VCF without assembly, ok for deletions at this point
 out_vcf = os.path.join(args.outdir, "metasv.vcf")
 outfd = open(out_vcf, "w")
 print_vcf_header(outfd, args.reference, contigs, args.sample)
