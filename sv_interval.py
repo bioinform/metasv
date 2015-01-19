@@ -10,7 +10,7 @@ import pysam
 import pybedtools
 
 svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV"]
-sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"]
+sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"] # order is important!
 precise_sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller"]
 sv_sources_to_type = {"Pindel": "SR", "BreakSeq": "JM", "BreakDancer": "RP", "CNVnator": "RD", "HaplotypeCaller": "AS"}
 
@@ -108,6 +108,7 @@ class SVInterval:
             return
 
         if not self.sub_intervals:
+            # This interval did not overlap anything
             self.is_precise = list(self.sources)[0] in precise_sv_sources
             # if self.sv_type == "INV" and self.length >= 1000: self.is_validated = True
             return
@@ -122,6 +123,7 @@ class SVInterval:
             lists[list(interval.sources)[0]].append(interval)
 
         for source in sv_sources:
+            # If the SV is called multiple times by the same tool, don't validate
             if len(lists[source]) == 1:
                 if self.overlaps(lists[source][0], overlap_ratio, overlap_ratio) \
                         or interval_overlaps_interval_list(lists[source][0], precise_merged, overlap_ratio,
@@ -129,7 +131,7 @@ class SVInterval:
                     self.is_validated = len(self.sources) > 1
                     self.validating_interval = lists[source][0]
                     self.is_precise = source in precise_sv_sources
-                    break
+                    break # This break makes the order of sv_sources important
 
         if not self.is_validated:
             return
