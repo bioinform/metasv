@@ -163,6 +163,7 @@ vcf_out_list = [("BreakDancer", bd_out),
                 ("CNVnator", cnvnator_out),
                 ("BreakSeq", breakseq_out)]
 
+# This will just output per-tool VCFs, no intra-tool merging is done yet
 for toolname, tool_out in vcf_out_list:
   if tool_out is not None and toolname in intervals:
     intervals_tool = []
@@ -172,9 +173,10 @@ for toolname, tool_out in vcf_out_list:
       if sv_type in intervals[toolname]:
         intervals_tool.extend([copy.deepcopy(interval) for interval in intervals[toolname][sv_type]])
     for interval in intervals_tool:
-      # Check if it is supported by at least 2 tools? [Marghoob please confirm this...]
-      # This is kind of strange since at this point we don't have multiple tools merged?
+
+      # Marghoob says that this is just to fill-in some metadata
       interval.do_validation(args.overlap_ratio)
+
       interval.fix_pos()
       chr_intervals_tool[interval.chrom].append(interval)
     print_vcf_header(tool_out_fd, args.reference, contigs, args.sample)
@@ -187,6 +189,7 @@ for toolname, tool_out in vcf_out_list:
     tool_out_fd.close()
     pysam.tabix_index(tool_out, force=True, preset="vcf")
 
+# Do merging here
 for sv_type in sv_types:
   logger.info("Processing SVs of type %s" % (sv_type))
   tool_merged_intervals[sv_type] = []
@@ -205,6 +208,7 @@ for sv_type in sv_types:
 
   final_intervals.extend(sv_interval.merge_intervals(intervals1) + sv_interval.merge_intervals(intervals2))
 
+
 final_chr_intervals = {}
 for contig in contigs: final_chr_intervals[contig.name] = []
 for interval in final_intervals:
@@ -212,11 +216,13 @@ for interval in final_intervals:
   interval.fix_pos()
   final_chr_intervals[interval.chrom].append(interval)
 
+# This is the merged VCF without assembly
 out_vcf = os.path.join(args.outdir, "metasv.vcf")
 outfd = open(out_vcf, "w")
 print_vcf_header(outfd, args.reference, contigs, args.sample)
 final_stats = {}
 
+# This is the bedfile for the merged VCF, used for assembly
 bed_intervals = []
 merged_bed = os.path.join(args.workdir, "metasv.bed")
 for contig in contigs:
