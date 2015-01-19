@@ -30,7 +30,7 @@ class SVInterval:
     self.is_precise = False
     self.is_validated = False
     self.validating_interval = None
-    self.info_dict = {}
+    self.info_dict = {} # Marghoob, did you have any specific plans for this?
     self.cipos = cipos
     self.ciend = ciend
     self.native_sv = native_sv
