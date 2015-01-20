@@ -65,7 +65,7 @@ breakdancer_source = set(["BreakDancer"])
 class BreakDancerHeader:
     def __init__(self):
         self.header_dict = {}
-        self.name = breakdancer_source[0]
+        self.name = breakdancer_name
 
     def parse_header_line(self, header_line):
         if header_line.startswith("#Software:"):
