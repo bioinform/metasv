@@ -242,9 +242,12 @@ for interval in final_intervals:
     final_chr_intervals[interval.chrom].append(interval)
 
 # This is the merged VCF without assembly, ok for deletions at this point
+vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
+vcf_template_reader.samples = [args.sample]
 out_vcf = os.path.join(args.outdir, "metasv.vcf")
-outfd = open(out_vcf, "w")
-print_vcf_header(outfd, args.reference, contigs, args.sample)
+vcf_fd = open(out_vcf, "w") if out_vcf is not None else sys.stdout
+vcf_writer = vcf.Writer(vcf_fd, vcf_template_reader)
+
 final_stats = {}
 
 # This is the bedfile for the merged VCF, used for assembly
@@ -255,7 +258,7 @@ merged_bed = os.path.join(args.workdir, "metasv.bed")
 for contig in contigs:
     final_chr_intervals[contig.name].sort()
     for interval in final_chr_intervals[contig.name]:
-        vcf_record = interval.to_vcf_record(fasta_handle)
+        vcf_record = interval.to_vcf_record(fasta_handle,args.sample)
         if vcf_record is not None:
             key = (interval.sv_type,
                    "PASS" if interval.is_validated else "LowQual",
@@ -263,13 +266,14 @@ for contig in contigs:
                    tuple(sorted(list(interval.sources))))
             if key not in final_stats: final_stats[key] = 0
             final_stats[key] += 1
-            outfd.write("%s\n" % (vcf_record))
+            vcf_writer.write_record(vcf_record)
         bed_interval = interval.to_bed_interval(args.sample)
         if bed_interval is not None:
             bed_intervals.append(bed_interval)
 
 pybedtools.BedTool(bed_intervals).saveas(merged_bed)
-outfd.close()
+vcf_fd.close()
+vcf_writer.close()
 
 for key in sorted(final_stats.keys()):
     logger.info(str(key) + ":" + str(final_stats[key]))
