@@ -144,7 +144,7 @@ class PindelRecord:
             self.start_pos = int(fields[4])
             self.up_read_supp = int(fields[6])  # upstream
             self.end_pos = int(fields[7])
-            self.down_read_supp = int(fields[8])  # downstream
+            self.down_read_supp = int(fields[9])  # downstream
             self.bp_range = (self.start_pos, self.end_pos)
             self.homlen = 0
             self.homseq = ""
