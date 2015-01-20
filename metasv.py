@@ -250,6 +250,8 @@ final_stats = {}
 # This is the bedfile for the merged VCF, used for assembly
 bed_intervals = []
 merged_bed = os.path.join(args.workdir, "metasv.bed")
+
+# output both VCF and BED here
 for contig in contigs:
     final_chr_intervals[contig.name].sort()
     for interval in final_chr_intervals[contig.name]:
