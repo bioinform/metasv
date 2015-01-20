@@ -1,5 +1,3 @@
-#!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
-
 import logging
 
 logger = logging.getLogger(__name__)
