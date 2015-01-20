@@ -203,7 +203,7 @@ for toolname, tool_out in vcf_out_list:
         for contig in contigs:
             chr_intervals_tool[contig.name].sort()
             for interval in chr_intervals_tool[contig.name]:
-                vcf_record = interval.to_vcf_record(fasta_handle)
+                vcf_record = interval.to_vcf_record(fasta_handle,args.sample)
                 if vcf_record is not None:
                     tool_out_fd.write("%s\n" % (vcf_record))
         tool_out_fd.close()
