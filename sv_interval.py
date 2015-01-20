@@ -183,9 +183,9 @@ class SVInterval:
         svmethods = [sv_sources_to_type[tool] for tool in self.sources]
         svmethods.sort()
         sv_len = -self.length if self.sv_type == "DEL" else self.length
-        info = {"SVLEN": sv_len,
+        info.update({"SVLEN": sv_len,
                 "SVTYPE": self.sv_type,
-                "SVMETHOD": ",".join(svmethods)}
+                "SVMETHOD": ",".join(svmethods)})
         if self.sv_type == "DEL" or self.sv_type == "DUP":
             info["END"] = self.end
 
