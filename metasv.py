@@ -143,6 +143,9 @@ for toolname, nativename, svReader in native_name_list:
     for native_file in nativename:
         for record in svReader(native_file):
             interval = record.to_sv_interval()
+            if not interval:
+                # This is the case for SVs we want to skip
+                continue
             if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
                 intervals[toolname][record.sv_type].append(interval)
 
