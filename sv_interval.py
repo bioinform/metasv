@@ -196,7 +196,7 @@ class SVInterval:
         info.update({"NUM_SVMETHODS":len(self.sources)})
         info.update({"SOURCES":str(self)})
         if self.cipos:
-            info.update({"CIPOS": (",".join(self.cipos))})
+            info.update({"CIPOS": (",".join([str(a) for a in self.cipos]))})
 
         vcf_record = vcf.model._Record(self.chrom,
                                        self.start,
