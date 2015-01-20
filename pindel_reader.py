@@ -95,7 +95,8 @@ Following lines are repeated for each sample
 
 '''
 
-pindel_source = set(["Pindel"])
+pindel_name = "Pindel"
+pindel_source = set([pindel_name])
 min_coverage = 10
 het_cutoff = 0.2
 hom_cutoff = 0.8
@@ -111,7 +112,7 @@ class PindelRecord:
     def __init__(self, record_string, reference_handle=None):
         fields = record_string.split()
         self.sv_type = fields[1]
-        self.name = pindel_source[0]
+        self.name = pindel_name
 
         self.sv_len = None
         self.num_nt_added = None

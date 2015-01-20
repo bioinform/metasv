@@ -58,6 +58,7 @@ Real SV breakpoints are expected to reside within the predicted boundaries with 
 '''
 
 valid_breakdancer_svs = set(["DEL", "INS", "INV"])
+breakdancer_name = "BreakDancer"
 breakdancer_source = set(["BreakDancer"])
 
 

@@ -28,8 +28,8 @@ q0            -- fraction of reads mapped with q0 quality
 '''
 
 pattern = re.compile("(:|-)")
-
-cnvnator_source = set(["CNVnator"])
+cnvnator_name = 'CNVnator'
+cnvnator_source = set([cnvnator_name])
 
 sv_type_dict = {"deletion": "DEL", "duplication": "DUP"}
 
@@ -38,7 +38,7 @@ class CNVnatorRecord:
     def __init__(self, record_string):
         fields = record_string.split()
         self.sv_type = sv_type_dict[fields[0]]
-        self.name = cnvnator_source[0]
+        self.name = cnvnator_name
 
         coordinates = pattern.split(fields[1])
         self.chromosome = coordinates[0]
