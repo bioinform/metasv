@@ -1,15 +1,8 @@
 #!/usr/bin/python
 
 import sys
-import os
 import argparse
-import shutil
-import logging
 from metasv.run_metasv import run_metasv
-
-FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
-logging.basicConfig(level=logging.INFO, format=FORMAT)
-logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser("Merge SVs from different tools", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
