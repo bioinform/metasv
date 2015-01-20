@@ -38,6 +38,7 @@ class CNVnatorRecord:
     def __init__(self, record_string):
         fields = record_string.split()
         self.sv_type = sv_type_dict[fields[0]]
+        self.name = cnvnator_source[0]
 
         coordinates = pattern.split(fields[1])
         self.chromosome = coordinates[0]
@@ -67,7 +68,7 @@ class CNVnatorRecord:
         return SVInterval(self.chromosome,
                           self.start,
                           self.end,
-                          "CNVnator",
+                          self.name,
                           sv_type=self.sv_type,
                           length=self.sv_len,
                           sources=cnvnator_source,

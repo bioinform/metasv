@@ -111,6 +111,7 @@ class PindelRecord:
     def __init__(self, record_string, reference_handle=None):
         fields = record_string.split()
         self.sv_type = fields[1]
+        self.name = pindel_source[0]
 
         self.sv_len = None
         self.num_nt_added = None
@@ -222,7 +223,7 @@ class PindelRecord:
             return SVInterval(self.chromosome,
                               self.start_pos,
                               self.end_pos,
-                              "Pindel",
+                              self.name,
                               sv_type=sv_type,
                               length=self.sv_len,
                               sources=pindel_source,
@@ -232,7 +233,7 @@ class PindelRecord:
             return SVInterval(self.chromosome,
                               self.start_pos,
                               self.start_pos,
-                              "Pindel",
+                              self.name,
                               sv_type=sv_type,
                               length=self.sv_len,
                               sources=pindel_source,

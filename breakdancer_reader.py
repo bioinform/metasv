@@ -64,6 +64,7 @@ breakdancer_source = set(["BreakDancer"])
 class BreakDancerHeader:
     def __init__(self):
         self.header_dict = {}
+        self.name = breakdancer_source[0]
 
     def parse_header_line(self, header_line):
         if header_line.startswith("#Software:"):
@@ -118,6 +119,7 @@ class BreakDancerRecord:
             return SVInterval(self.chr1,
                               self.pos1,
                               self.pos1 + abs(self.sv_len),
+                              self.name,
                               sv_type=self.sv_type,
                               length=self.sv_len,
                               sources=breakdancer_source,
@@ -128,6 +130,7 @@ class BreakDancerRecord:
             return SVInterval(self.chr1,
                               self.pos1,
                               self.pos1,
+                              self.name,
                               sv_type="INS",
                               length=self.sv_len,
                               sources=breakdancer_source,
