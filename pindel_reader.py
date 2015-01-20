@@ -112,6 +112,29 @@ class PindelRecord:
         fields = record_string.split()
         self.sv_type = fields[1]
 
+        self.sv_len = None
+        self.num_nt_added = None
+        self.nt_added = None
+        self.chromosome = None
+        self.start_pos = None
+        self.end_pos = None
+        self.bp_range = None
+        self.read_supp = None
+        self.uniq_read_supp = None
+        self.up_read_supp = None
+        self.up_uniq_read_supp = None
+        self.down_read_supp = None
+        self.down_uniq_read_supp = None
+        self.simple_score = None
+        self.sum_mapq = None
+        self.num_sample = None
+        self.num_sample_supp = None
+        self.num_sample_uniq_supp = None
+        self.homlen = None
+        self.homseq = None
+        self.samples = None
+
+
         if self.sv_type != "LI":
             self.sv_len = int(fields[2])
             self.num_nt_added = map(int, fields[4].split(":"))
