@@ -224,7 +224,7 @@ class PindelRecord:
             return SVInterval(self.chromosome,
                               self.start_pos,
                               self.end_pos,
-                              self.name,
+                              name=self.name,
                               sv_type=sv_type,
                               length=self.sv_len,
                               sources=pindel_source,

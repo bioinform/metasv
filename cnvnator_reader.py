@@ -68,7 +68,7 @@ class CNVnatorRecord:
         return SVInterval(self.chromosome,
                           self.start,
                           self.end,
-                          self.name,
+                          name=self.name,
                           sv_type=self.sv_type,
                           length=self.sv_len,
                           sources=cnvnator_source,
