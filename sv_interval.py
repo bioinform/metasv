@@ -175,7 +175,7 @@ class SVInterval:
         if not self.sub_intervals:
             info.update(self.info)
         else:
-            if not self.info:
+            if self.info:
                 info.update(self.info)
             for interval in self.sub_intervals:
                 #TODO: this will just overwrite the other dict entries... this should be ok for pass variants
