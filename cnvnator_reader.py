@@ -64,7 +64,6 @@ class CNVnatorRecord:
         return str(self.__dict__)
 
     def to_sv_interval(self):
-        sv_type = sv_type_dict[self.sv_type]
         return SVInterval(self.chromosome,
                           self.start,
                           self.end,
