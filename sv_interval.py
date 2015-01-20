@@ -8,6 +8,7 @@ import copy
 import bisect
 import pysam
 import pybedtools
+import vcf
 
 svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV"]
 sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"] # order is important!
@@ -141,6 +142,7 @@ class SVInterval:
             self.end = self.validating_interval.end
             self.length = self.validating_interval.length
             self.gt = self.validating_interval.gt
+            self.info = self.validating_interval.info
 
             if self.length == 0:
                 for source in sv_sources:
@@ -160,30 +162,55 @@ class SVInterval:
                 self.start = mid
                 self.end = mid
 
-    def to_vcf_record(self, fasta_handle):
+    def to_vcf_record(self, fasta_handle, sample):
         if self.start <= 0: return None
         if self.sv_type not in svs_of_interest: return None
-        if not self.sub_intervals and list(self.sources)[0] == "HaplotypeCaller": return None
-        if len(self.sources) == 1 and list(self.sources)[0] == "HaplotypeCaller": return None
 
-        # logger.debug("Converting interval %s to VCF record" % (str(self)))
+        # ignore private haplotype caller calls
+        if ((not self.sub_intervals) or len(self.sources) == 1) and list(self.sources)[0] == "HaplotypeCaller":
+            return None
 
-        vcf_record_ref = fasta_handle.fetch(self.chrom, self.start - 1, self.start)
-        vcf_record_alt = "<%s>" % (self.sv_type)
-        vcf_record_filter = "PASS" if self.is_validated else "LowQual"
-
-        vcf_record_info = "END=%d;SVLEN=%d;SVTYPE=%s;VT=SV;SVTOOL=%s;NUM_SVMETHODS=%d;SOURCES=%s" % (
-        self.end, -self.length if self.sv_type == "DEL" else self.length, self.sv_type, "MetaSVMerge",
-        len(self.sources), str(self))
-        if self.cipos: vcf_record_info += ";CIPOS=%s" % (",".join(self.cipos))
-        if not self.is_precise: vcf_record_info += ";IMPRECISE"
+        # formulate the INFO field
+        info = {}
+        if (not self.sub_intervals) or len(self.sources) == 1:
+            info.update(self.info)
+        else:
+            for interval in self.sub_intervals:
+                info.update(interval.info)
         svmethods = [sv_sources_to_type[tool] for tool in self.sources]
         svmethods.sort()
-        vcf_record_info += ";SVMETHOD=" + ",".join(svmethods)
-        return "%s\t%d\t.\t%s\t%s\t.\t%s\t%s\tGT\t%s" % (
-        self.chrom, self.start, vcf_record_ref, vcf_record_alt, vcf_record_filter, vcf_record_info, self.gt)
+        sv_len = -self.sv_len if self.sv_type == "DEL" else self.sv_len
+        info = {"SVLEN": sv_len,
+                "SVTYPE": self.sv_type,
+                "SVMETHOD": ",".join(svmethods)}
+        if self.sv_type == "DEL" or self.sv_type == "DUP":
+            info["END"] = self.end
+        else:
+            return None
 
+        if not self.is_precise:
+            info.update({"IMPRECISE": None})
+
+        info.update({"VT":"SV"})
+        info.update({"SVTOOL":"MetaSVMerge"})
+        info.update({"NUM_SVMETHODS":len(self.sources)})
+        info.update({"SOURCES":str(self)})
+        if self.cipos:
+            info.update({"CIPOS": (",".join(self.cipos))})
+
+        vcf_record = vcf.model._Record(self.chrom,
+                                       self.start,
+                                       ".",
+                                       fasta_handle.fetch(self.chrom, self.start - 1, self.start),
+                                       ["<%s>" % (self.sv_type)],
+                                       ".",
+                                       "PASS" if self.is_validated else "LowQual",
+                                       info,
+                                       "GT",
+                                       [0],
+                                       [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT="1/1"))])
         return vcf_record
+
 
     def to_bed_interval(self, sample_name):
         if self.start <= 0: return None
