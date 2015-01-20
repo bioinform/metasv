@@ -65,7 +65,6 @@ breakdancer_source = set(["BreakDancer"])
 class BreakDancerHeader:
     def __init__(self):
         self.header_dict = {}
-        self.name = breakdancer_name
 
     def parse_header_line(self, header_line):
         if header_line.startswith("#Software:"):
@@ -83,6 +82,8 @@ class BreakDancerHeader:
 
 class BreakDancerRecord:
     def __init__(self, record_string):
+        self.name = breakdancer_name
+
         fields = record_string.split()
         self.chr1 = fields[0]
         self.pos1 = int(fields[1])
