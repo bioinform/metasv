@@ -160,16 +160,16 @@ for toolname, vcfname in vcf_name_list:
     intervals[toolname] = {}
 
     vcf_list = []
-    for vcf in vcfname:
-        if os.path.isdir(vcf):
-            logger.info("Will load from per-chromosome VCFs from directory %s for tool %s" % (vcf, toolname))
-            vcf_list += [os.path.join(vcf, "%s.vcf.gz" % (contig.name)) for contig in contigs if
+    for vcffile in vcfname:
+        if os.path.isdir(vcffile):
+            logger.info("Will load from per-chromosome VCFs from directory %s for tool %s" % (vcffile, toolname))
+            vcf_list += [os.path.join(vcffile, "%s.vcf.gz" % (contig.name)) for contig in contigs if
                          (not contig_whitelist or contig.name in contig_whitelist)]
         else:
-            vcf_list.append(vcf)
+            vcf_list.append(vcffile)
 
-    for vcf in vcf_list:
-        load_intervals(vcf, intervals[toolname], gap_intervals, include_intervals, toolname, contig_whitelist,
+    for vcffile in vcf_list:
+        load_intervals(vcffile, intervals[toolname], gap_intervals, include_intervals, toolname, contig_whitelist,
                        toolname == "HaplotypeCaller")
     sv_types |= set(intervals[toolname].keys())
 
@@ -215,6 +215,7 @@ for toolname, tool_out in vcf_out_list:
                 if vcf_record is not None:
                     vcf_writer.write_record(vcf_record)
         tool_out_fd.close()
+        logger.info("Indexing single tool VCF for %s" % (str(toolname)))
         pysam.tabix_index(tool_out, force=True, preset="vcf")
 
 # Do merging here
