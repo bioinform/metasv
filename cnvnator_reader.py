@@ -68,7 +68,7 @@ class CNVnatorRecord:
                           self.start,
                           self.end,
                           "CNVnator",
-                          sv_type=sv_type,
+                          sv_type=self.sv_type,
                           length=self.sv_len,
                           sources=cnvnator_source,
                           info=self.info,
