@@ -207,7 +207,7 @@ for toolname, tool_out in vcf_out_list:
 
             interval.fix_pos()
             chr_intervals_tool[interval.chrom].append(interval)
-        print_vcf_header(tool_out_fd, args.reference, contigs, args.sample)
+
         for contig in contigs:
             chr_intervals_tool[contig.name].sort()
             for interval in chr_intervals_tool[contig.name]:
@@ -215,6 +215,7 @@ for toolname, tool_out in vcf_out_list:
                 if vcf_record is not None:
                     vcf_writer.write_record(vcf_record)
         tool_out_fd.close()
+        vcf_writer.close()
         logger.info("Indexing single tool VCF for %s" % (str(toolname)))
         pysam.tabix_index(tool_out, force=True, preset="vcf")
 
