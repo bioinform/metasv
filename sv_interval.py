@@ -175,6 +175,7 @@ class SVInterval:
         if not self.sub_intervals:
             info.update(self.info)
         else:
+            info.update(self.info)
             for interval in self.sub_intervals:
                 #TODO: this will just overwrite the other dict entries... this should be ok for pass variants
                 info.update(interval.info)
@@ -186,8 +187,6 @@ class SVInterval:
                 "SVMETHOD": ",".join(svmethods)}
         if self.sv_type == "DEL" or self.sv_type == "DUP":
             info["END"] = self.end
-        else:
-            return None
 
         if not self.is_precise:
             info.update({"IMPRECISE": None})
