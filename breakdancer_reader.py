@@ -132,6 +132,7 @@ class BreakDancerRecord:
                               length=self.sv_len,
                               sources=breakdancer_source,
                               cipos=[0, self.pos2 - self.pos1],
+                              info=self.info,
                               native_sv=self)
 
     def to_vcf_record(self, sample):
