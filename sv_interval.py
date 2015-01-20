@@ -52,7 +52,7 @@ class SVInterval:
         self.length = max(interval1.length, interval2.length)
         self.name = interval1.name + "," + interval2.name
         self.sv_type = interval1.sv_type
-        self.info = "merged"
+        self.info = None
         self.sub_intervals = [interval1, interval2]
         self.sources = interval1.sources | interval2.sources
         self.gt = interval1.gt

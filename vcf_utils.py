@@ -36,14 +36,14 @@ def merge_vcfs(in_vcfs_dir, contigs, out_vcf):
 
 def parse_info(info):
     info_fields = info.split(";")
-    info_dict = {}
+    info = {}
     for field in info_fields:
         if field.find("=") >= 0:
             info_key, info_value = field.split("=")
-            info_dict[info_key] = info_value.split(",")
+            info[info_key] = info_value.split(",")
         else:
-            info_dict[field] = True
-    return info_dict
+            info[field] = True
+    return info
 
 
 def load_gap_intervals(gap_file):
@@ -75,7 +75,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
         except IndexError:
             pass
 
-        info_dict = parse_info(vcf_record.info)
+        info = parse_info(vcf_record.info)
 
         if is_gatk:
             if vcf_record.filter != "PASS" and vcf_record.filter != ".": continue
@@ -106,18 +106,18 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
             if source == "BreakSeq" and vcf_record.filter != "PASS": continue
             if vcf_record.alt.find(",") != -1: continue
             # logger.info(str(vcf_record.alt))
-            sv_type = info_dict["SVTYPE"][0]
+            sv_type = info["SVTYPE"][0]
             if sv_type == "DUP:TANDEM": sv_type = "DUP"
-            if "SVLEN" not in info_dict:
+            if "SVLEN" not in info:
                 if source == "BreakSeq" and sv_type == "INS":
-                    info_dict["SVLEN"] = [0]
+                    info["SVLEN"] = [0]
                 else:
                     continue
-            svlen = abs(int(info_dict["SVLEN"][0]))
+            svlen = abs(int(info["SVLEN"][0]))
             if svlen < 50: continue
             wiggle = 100 if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else 0
             if source == "Pindel" and sv_type == "INS": vcf_record.pos += 1
-            interval = SVInterval(vcf_record.contig, vcf_record.pos, int(info_dict["END"][0]), source, sv_type, svlen,
+            interval = SVInterval(vcf_record.contig, vcf_record.pos, int(info["END"][0]), source, sv_type, svlen,
                                   sources=set([source]), wiggle=wiggle, gt=gt)
         if interval_overlaps_interval_list(interval, gap_intervals):
             logger.warn("Skipping " + str(interval) + " due to overlap with gaps")
@@ -125,7 +125,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
         if not interval_overlaps_interval_list(interval, include_intervals, min_fraction_self=1.0):
             logger.warn("Skipping " + str(interval) + " due to being outside the include regions")
             continue
-        interval.info_dict = info_dict
+        interval.info = info
 
         if interval.sv_type not in intervals:
             intervals[interval.sv_type] = [interval]
