@@ -138,7 +138,7 @@ for toolname, nativename, svReader in native_name_list:
     if not nativename: continue
 
     tools.append(toolname)
-    intervals[toolname] = {}
+    intervals[toolname] = defaultdict(list)
 
     for native_file in nativename:
         for record in svReader(native_file):
