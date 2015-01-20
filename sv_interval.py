@@ -172,10 +172,11 @@ class SVInterval:
 
         # formulate the INFO field
         info = {}
-        if (not self.sub_intervals) or len(self.sources) == 1:
+        if not self.sub_intervals:
             info.update(self.info)
         else:
             for interval in self.sub_intervals:
+                #TODO: this will just overwrite the other dict entries... this should be ok for pass variants
                 info.update(interval.info)
         svmethods = [sv_sources_to_type[tool] for tool in self.sources]
         svmethods.sort()
