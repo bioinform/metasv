@@ -7,6 +7,7 @@ import copy
 import bisect
 import pysam
 import pybedtools
+import vcf
 
 svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV"]
 sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"] # order is important!
