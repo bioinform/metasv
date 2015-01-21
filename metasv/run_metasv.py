@@ -9,6 +9,7 @@ import shutil
 import logging
 import copy
 import pybedtools
+import vcf
 from collections import defaultdict
 from fasta_utils import *
 from vcf_utils import *
