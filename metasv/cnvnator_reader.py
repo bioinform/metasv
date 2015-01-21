@@ -24,40 +24,44 @@ pattern = re.compile("(:|-)")
 cnvnator_source = set(["CNVnator"])
 
 sv_type_dict = {"deletion": "DEL", "duplication": "DUP"}
+
+
 class CNVnatorRecord:
-  def __init__(self, record_string):
-    fields = record_string.split()
-    self.sv_type = sv_type_dict[fields[0]]
+    def __init__(self, record_string):
+        fields = record_string.split()
+        self.sv_type = sv_type_dict[fields[0]]
 
-    coordinates = pattern.split(fields[1])
-    self.chromosome = coordinates[0]
-    self.start = int(coordinates[2])
-    self.end = int(coordinates[4])
-    self.sv_len = self.end - self.start
-    self.normalized_rd = float(fields[3])
-    self.e_val1 = float(fields[4])
-    self.e_val2 = float(fields[5])
-    self.e_val3 = float(fields[6])
-    self.e_val4 = float(fields[7])
-    self.q0 = float(fields[8])
+        coordinates = pattern.split(fields[1])
+        self.chromosome = coordinates[0]
+        self.start = int(coordinates[2])
+        self.end = int(coordinates[4])
+        self.sv_len = self.end - self.start
+        self.normalized_rd = float(fields[3])
+        self.e_val1 = float(fields[4])
+        self.e_val2 = float(fields[5])
+        self.e_val3 = float(fields[6])
+        self.e_val4 = float(fields[7])
+        self.q0 = float(fields[8])
 
-  def __str__(self):
-    return str(self.__dict__)
+    def __str__(self):
+        return str(self.__dict__)
 
-  def to_sv_interval(self):
-    sv_type = sv_type_dict[self.sv_type]
-    return SVInterval(self.chromosome, self.start, self.end, "CNVnator", sv_type = sv_type, length = self.sv_len, sources = cnvnator_source, native_sv = self)
+    def to_sv_interval(self):
+        sv_type = sv_type_dict[self.sv_type]
+        return SVInterval(self.chromosome, self.start, self.end, "CNVnator", sv_type=sv_type, length=self.sv_len,
+                          sources=cnvnator_source, native_sv=self)
+
 
 class CNVnatorReader:
-  def __init__(self, file_name):
-    logger.info("File is " + file_name)
-    self.file_fd = open(file_name)
+    def __init__(self, file_name):
+        logger.info("File is " + file_name)
+        self.file_fd = open(file_name)
 
-  def __iter__(self):
-    return self
+    def __iter__(self):
+        return self
 
-  def next(self):
-    while True:
-      line = self.file_fd.next()
-      if line[0] != "#":
-        return CNVnatorRecord(line.strip())
+    def next(self):
+        while True:
+            line = self.file_fd.next()
+            if line[0] != "#":
+                return CNVnatorRecord(line.strip())

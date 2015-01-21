@@ -6,7 +6,8 @@ import argparse
 import subprocess
 import pysam
 
-parser = argparse.ArgumentParser("Convert genotyped BreakDancer output to VCF", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser = argparse.ArgumentParser("Convert genotyped BreakDancer output to VCF",
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--sv_file", metavar="sv_file", help="SV file", required=False, default="-")
 parser.add_argument("--reference", metavar="reference", help="Reference file", required=True)
 parser.add_argument("--sample", metavar="Sample", help="Sample name", required=True)
@@ -18,34 +19,37 @@ input_handle = sys.stdin if args.sv_file == "-" else open(args.sv_file)
 
 fasta_handle = pysam.Fastafile(args.reference)
 
+
 def get_contigs(fai_filename):
-  fai_file = open(fai_filename)
-  contigs = {}
-  contigs_order = {}
-  linenum = 0
-  for line in fai_file.readlines():
-    line = line.strip()
-    line_items = line.split("\t")
-    name, length = line_items[0:2]
-    name = name.split(" ")[0]
-    contigs[name] = int(length)
-    contigs_order[name] = linenum
-    linenum += 1
-  fai_file.close()
-  return contigs, contigs_order
+    fai_file = open(fai_filename)
+    contigs = {}
+    contigs_order = {}
+    linenum = 0
+    for line in fai_file.readlines():
+        line = line.strip()
+        line_items = line.split("\t")
+        name, length = line_items[0:2]
+        name = name.split(" ")[0]
+        contigs[name] = int(length)
+        contigs_order[name] = linenum
+        linenum += 1
+    fai_file.close()
+    return contigs, contigs_order
+
 
 def line_to_tuple(line):
-  line = line.strip()
-  fields = line.split("\t")
-  return tuple(fields[0:2]) + tuple([int(i) for i in fields[2:7]]) + (float(fields[7]),) + tuple(fields[8:10])
+    line = line.strip()
+    fields = line.split("\t")
+    return tuple(fields[0:2]) + tuple([int(i) for i in fields[2:7]]) + (float(fields[7]),) + tuple(fields[8:10])
+
 
 contigs, contigs_order = get_contigs(args.reference + ".fai")
 contig_names = contigs.keys()
-contig_names.sort(key = lambda tup: contigs_order[tup])
+contig_names.sort(key=lambda tup: contigs_order[tup])
 
 contig_str = ""
 for contig_name in contig_names:
-  contig_str += "##contig=<ID=%s,length=%d>\n" % (contig_name, contigs[contig_name])
+    contig_str += "##contig=<ID=%s,length=%d>\n" % (contig_name, contigs[contig_name])
 
 sys.stdout.write("""##fileformat=VCFv4.1
 ##reference=%s
@@ -80,17 +84,18 @@ sys.stdout.write("""##fileformat=VCFv4.1
 
 records = map(line_to_tuple, input_handle.readlines())
 if args.sort:
-  records.sort(key = lambda tup: (contigs_order[tup[1]], tup[2], tup[3], tup[4]))
+    records.sort(key=lambda tup: (contigs_order[tup[1]], tup[2], tup[3], tup[4]))
 
 for record in records:
-  sv_type, chr1, pos1, pos2, size, normal_read_count, num_reads, score, gt, tool = record
-  alt_allele = "<%s>" % (sv_type)
+    sv_type, chr1, pos1, pos2, size, normal_read_count, num_reads, score, gt, tool = record
+    alt_allele = "<%s>" % (sv_type)
 
-  ref_allele = fasta_handle.fetch(chr1, pos1-1, pos1)
+    ref_allele = fasta_handle.fetch(chr1, pos1 - 1, pos1)
 
-  if sv_type in ["DEL"]: size = -size
-  info = "TOOLNAME=%s;SVLEN=%d;SVTYPE=%s;END=%d;IMPRECISE;NORMAL_COUNT=%d;NUM_READS=%d;SCORE=%g" % (tool, size, sv_type, pos2, normal_read_count, num_reads, score)
+    if sv_type in ["DEL"]: size = -size
+    info = "TOOLNAME=%s;SVLEN=%d;SVTYPE=%s;END=%d;IMPRECISE;NORMAL_COUNT=%d;NUM_READS=%d;SCORE=%g" % (
+    tool, size, sv_type, pos2, normal_read_count, num_reads, score)
 
-  sys.stdout.write("%s\t%d\t.\t%s\t%s\t.\tPASS\t%s\tGT\t%s\n" % (chr1, pos1, ref_allele, alt_allele, info, gt))
+    sys.stdout.write("%s\t%d\t.\t%s\t%s\t.\tPASS\t%s\tGT\t%s\n" % (chr1, pos1, ref_allele, alt_allele, info, gt))
 
 fasta_handle.close()
