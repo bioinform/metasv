@@ -11,112 +11,145 @@ import bisect
 from fasta_utils import *
 from sv_interval import *
 
+
 def print_header(header, file_fd):
-  for line in header:
-    file_fd.write("%s\n" % (line))
+    for line in header:
+        file_fd.write("%s\n" % (line))
+
 
 def merge_vcfs(in_vcfs_dir, contigs, out_vcf):
-  logger.info("Mergings per-chromosome VCFs from %s" % (in_vcfs_dir))
-  header_done = False
-  out_vcf_file = open(out_vcf, "w")
-  for contig in contigs:
-    chr_vcf = os.path.join(in_vcfs_dir, "%s.vcf.gz" % (contig.name))
-    if os.path.isfile(chr_vcf):
-      chr_tabix_file = pysam.Tabixfile(chr_vcf)
-      if not header_done:
-        print_header(chr_tabix_file.header, out_vcf_file)
-      for entry in chr_tabix_file.fetch():
-        out_vcf_file.write("%s\n" % (entry))
-      chr_tabix_file.close()
-  out_vcf_file.close()
-  pysam.tabix_index(out_vcf, force=True, preset="vcf")
+    logger.info("Mergings per-chromosome VCFs from %s" % (in_vcfs_dir))
+    header_done = False
+    out_vcf_file = open(out_vcf, "w")
+    for contig in contigs:
+        chr_vcf = os.path.join(in_vcfs_dir, "%s.vcf.gz" % (contig.name))
+        if os.path.isfile(chr_vcf):
+            chr_tabix_file = pysam.Tabixfile(chr_vcf)
+            if not header_done:
+                print_header(chr_tabix_file.header, out_vcf_file)
+            for entry in chr_tabix_file.fetch():
+                out_vcf_file.write("%s\n" % (entry))
+            chr_tabix_file.close()
+    out_vcf_file.close()
+    pysam.tabix_index(out_vcf, force=True, preset="vcf")
+
 
 def parse_info(info):
-  info_fields = info.split(";")
-  info_dict = {}
-  for field in info_fields:
-    if field.find("=") >= 0:
-      info_key, info_value = field.split("=")
-      info_dict[info_key] = info_value.split(",")
-    else:
-      info_dict[field] = True
-  return info_dict
+    info_fields = info.split(";")
+    info = {}
+    for field in info_fields:
+        if field.find("=") >= 0:
+            info_key, info_value = field.split("=")
+            info[info_key] = info_value.split(",")
+        else:
+            info[field] = True
+    return info
+
 
 def load_gap_intervals(gap_file):
-  if gap_file is None: return []
-  logger.info("Loading the gaps in the genome from %s" % (gap_file))
-  with open(gap_file) as gap_file_fd:
-    gap_intervals = [SVInterval(it.contig, it.start, it.end, it.name, "gap") for it in pysam.tabix_file_iterator(gap_file_fd, parser=pysam.asBed())]
-  return merge_intervals(gap_intervals)
+    if gap_file is None: return []
+    logger.info("Loading the gaps in the genome from %s" % (gap_file))
+    with open(gap_file) as gap_file_fd:
+        gap_intervals = [SVInterval(it.contig, it.start, it.end, it.name, "gap") for it in
+                         pysam.tabix_file_iterator(gap_file_fd, parser=pysam.asBed())]
+    return merge_intervals(gap_intervals)
+
 
 def get_gt(gt, fmt):
-  fmt_index = [i for i, field in enumerate(fmt.split(":")) if field == "GT"][0]
-  return gt.split(":")[fmt_index]
+    fmt_index = [i for i, field in enumerate(fmt.split(":")) if field == "GT"][0]
+    return gt.split(":")[fmt_index]
 
-def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[], source=None, contig_whitelist=[], is_gatk=False):
-  if not os.path.isfile(in_vcf): return intervals
-  logger.info("Loading SV intervals from %s" % (in_vcf))
-  tabix_file = pysam.Tabixfile(in_vcf, parser=pysam.asVCF())
 
-  for vcf_record in (record for record in tabix_file.fetch() if record.contig in contig_whitelist):
+def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[], source=None, contig_whitelist=[],
+                   minsvlen=50, wiggle=100, inswiggle=100):
+    if not os.path.isfile(in_vcf): return intervals
+    logger.info("Loading SV intervals from %s" % (in_vcf))
+    tabix_file = pysam.Tabixfile(in_vcf, parser=pysam.asVCF())
 
-    fmt = "GT"
-    gt = "./1"
-    try:
-      gt = get_gt(vcf_record[0], vcf_record.format)
-    except IndexError:
-      pass
+    for vcf_record in (record for record in tabix_file.fetch() if record.contig in contig_whitelist):
 
-    info_dict = parse_info(vcf_record.info)
+        fmt = "GT"
+        gt = "./1"
+        try:
+            gt = get_gt(vcf_record[0], vcf_record.format)
+        except IndexError:
+            pass
 
-    if is_gatk:
-      if vcf_record.filter != "PASS" and vcf_record.filter != ".": continue
-      if vcf_record.alt.find(",") >= 0: continue
-      if len(vcf_record.ref) != 1 and len(vcf_record.alt) != 1: continue
-      if len(vcf_record.ref) < 50 and len(vcf_record.alt) < 50: continue
-      if len(vcf_record.ref) == 1:
-        wiggle = 100 if source in ["Pindel", "BreakSeq", "HaplotypeCaller"] else 0
-        interval = SVInterval(vcf_record.contig, vcf_record.pos + 1, vcf_record.pos + 1, source, "INS", len(vcf_record.alt)-1, sources=set([source]), wiggle=wiggle, gt=gt)
-      else:
-        interval = SVInterval(vcf_record.contig, vcf_record.pos, vcf_record.pos + len(vcf_record.ref) - 1, source, "DEL", len(vcf_record.ref)-1, sources=set([source]), gt=gt)
-    else:
-      if source == "BreakSeq" and vcf_record.filter != "PASS": continue
-      if vcf_record.alt.find(",") != -1: continue
-      #logger.info(str(vcf_record.alt))
-      sv_type = info_dict["SVTYPE"][0]
-      if sv_type == "DUP:TANDEM": sv_type = "DUP"
-      if "SVLEN" not in info_dict:
-        if source == "BreakSeq" and sv_type == "INS": 
-          info_dict["SVLEN"] = [0]
+        info = parse_info(vcf_record.info)
+
+        if source in ["HaplotypeCaller"]:
+            if vcf_record.filter != "PASS" and vcf_record.filter != ".": continue
+
+            # ignore tri-allelic stuff
+            if vcf_record.alt.find(",") >= 0: continue
+
+            # ignore MNPs
+            if len(vcf_record.ref) != 1 and len(vcf_record.alt) != 1: continue
+
+            # Check for SV length
+            if len(vcf_record.ref) < minsvlen and len(vcf_record.alt) < minsvlen: continue
+
+            if len(vcf_record.ref) == 1:
+                # This is the case for insertions
+                interval = SVInterval(vcf_record.contig,
+                                      vcf_record.pos + 1,
+                                      vcf_record.pos + 1,
+                                      source,
+                                      "INS",
+                                      len(vcf_record.alt) - 1,
+                                      sources=set([source]),
+                                      wiggle=max(inswiggle,wiggle),
+                                      gt=gt)
+            else:
+                interval = SVInterval(vcf_record.contig,
+                                      vcf_record.pos,
+                                      vcf_record.pos + len(vcf_record.ref) - 1,
+                                      source,
+                                      "DEL",
+                                      len(vcf_record.ref) - 1,
+                                      sources=set([source]),
+                                      wiggle=wiggle,
+                                      gt=gt)
         else:
-          continue
-      svlen = abs(int(info_dict["SVLEN"][0]))
-      if svlen < 50: continue
-      wiggle = 100 if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else 0
-      if source == "Pindel" and sv_type == "INS": vcf_record.pos += 1
-      interval = SVInterval(vcf_record.contig, vcf_record.pos, int(info_dict["END"][0]), source, sv_type, svlen, sources=set([source]), wiggle=wiggle, gt=gt)
-    if interval_overlaps_interval_list(interval, gap_intervals):
-      logger.warn("Skipping " + str(interval) + " due to overlap with gaps")
-      continue
-    if not interval_overlaps_interval_list(interval, include_intervals, min_fraction_self = 1.0):
-      logger.warn("Skipping " + str(interval) + " due to being outside the include regions")
-      continue
-    interval.info_dict = info_dict
+            if source == "BreakSeq" and vcf_record.filter != "PASS": continue
+            if vcf_record.alt.find(",") != -1: continue
+            # logger.info(str(vcf_record.alt))
+            sv_type = info["SVTYPE"][0]
+            if sv_type == "DUP:TANDEM": sv_type = "DUP"
+            if "SVLEN" not in info:
+                if source == "BreakSeq" and sv_type == "INS":
+                    info["SVLEN"] = [0]
+                else:
+                    continue
+            svlen = abs(int(info["SVLEN"][0]))
+            if svlen < minsvlen: continue
+            wiggle = max(inswiggle,wiggle) if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
+            if source == "Pindel" and sv_type == "INS": vcf_record.pos += 1
+            interval = SVInterval(vcf_record.contig, vcf_record.pos, int(info["END"][0]), source, sv_type, svlen,
+                                  sources=set([source]), wiggle=wiggle, gt=gt)
+        if interval_overlaps_interval_list(interval, gap_intervals):
+            logger.warn("Skipping " + str(interval) + " due to overlap with gaps")
+            continue
+        if not interval_overlaps_interval_list(interval, include_intervals, min_fraction_self=1.0):
+            logger.warn("Skipping " + str(interval) + " due to being outside the include regions")
+            continue
+        interval.info = info
 
-    if interval.sv_type not in intervals:
-      intervals[interval.sv_type] = [interval]
-    else:
-      intervals[interval.sv_type].append(interval)
-  return intervals
+        if interval.sv_type not in intervals:
+            intervals[interval.sv_type] = [interval]
+        else:
+            intervals[interval.sv_type].append(interval)
+    return intervals
+
 
 def print_vcf_header(outfd, reference, contigs, sample):
-  contig_str = ""
-  for contig in contigs:
-    contig_str += "##contig=<ID=%s,length=%d>\n" % (contig.name, contig.length)
+    contig_str = ""
+    for contig in contigs:
+        contig_str += "##contig=<ID=%s,length=%d>\n" % (contig.name, contig.length)
 
-  outfd.write("""##fileformat=VCFv4.1
-##reference=%s
-##source=%s
+    outfd.write("""##fileformat=VCFv4.1
+##reference={0:s}
+##source={1:s}
 ##INFO=<ID=BKPTID,Number=.,Type=String,Description=\"ID of the assembled alternate allele in the assembly file\">
 ##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">
 ##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">
@@ -158,7 +191,7 @@ def print_vcf_header(outfd, reference, contigs, sample):
 ##INFO=<ID=natorP4,Number=1,Type=Float,Description=\"CNVnator: e-val by Gaussian tail (middle)\">
 ##INFO=<ID=natorQ0,Number=1,Type=Float,Description=\"CNVnator: Fraction of reads with 0 mapping quality\">
 ##FILTER=<ID=LowQual,Description=\"Low Quality\">
-%s##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">
+{2:s}##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">
 ##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">
 ##FORMAT=<ID=CNQ,Number=1,Type=Float,Description=\"Copy number genotype quality for imprecise events\">
 ##FORMAT=<ID=CNL,Number=.,Type=Float,Description=\"Copy number genotype likelihood for imprecise events\">
@@ -175,4 +208,5 @@ def print_vcf_header(outfd, reference, contigs, sample):
 ##ALT=<ID=INS:ME:L1,Description=\"Insertion of L1 element\">
 ##ALT=<ID=INV,Description=\"Inversion\">
 ##ALT=<ID=CNV,Description=\"Copy number variable region\">
-#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t%s\n""" % (reference, " ".join(sys.argv), contig_str, sample))
+#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{3:s}\n""".format(reference, " ".join(sys.argv), contig_str,
+                                                                         sample))
