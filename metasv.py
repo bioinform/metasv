@@ -146,20 +146,21 @@ for toolname, nativename, svReader in native_name_list:
         for record in svReader(native_file):
             interval = record.to_sv_interval()
 
-            # Check length
-            if interval.sv_len < args.minsvlen:
-                continue
-
-            # Set wiggle
-            if interval.sv_type == "INS":
-                interval.wiggle = max(args.inswiggle,args.wiggle)
-            else:
-                interval.wiggle = args.wiggle
-
             if not interval:
                 # This is the case for SVs we want to skip
                 continue
             if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
+
+                # Check length
+                if interval.sv_len < args.minsvlen:
+                    continue
+
+                # Set wiggle
+                if interval.sv_type == "INS":
+                    interval.wiggle = max(args.inswiggle,args.wiggle)
+                else:
+                    interval.wiggle = args.wiggle
+
                 intervals[toolname][record.sv_type].append(interval)
 
     sv_types |= set(intervals[toolname].keys())
