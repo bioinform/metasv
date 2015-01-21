@@ -215,7 +215,7 @@ class SVInterval:
         vcf_record = vcf.model._Record(self.chrom,
                                        self.start,
                                        ".",
-                                       fasta_handle.fetch(self.chrom, self.start - 1, self.start),
+                                       fasta_handle.fetch(self.chrom, self.start - 1, self.start) if fasta_handle else "N",
                                        ["<%s>" % (self.sv_type)],
                                        ".",
                                        "PASS" if self.is_validated else "LowQual",
