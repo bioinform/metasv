@@ -152,7 +152,7 @@ for toolname, nativename, svReader in native_name_list:
             if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
 
                 # Check length
-                if interval.sv_len < args.minsvlen:
+                if interval.length < args.minsvlen:
                     continue
 
                 # Set wiggle
