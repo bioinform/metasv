@@ -1,9 +1,8 @@
 #!/usr/bin/env python2.7
 
 import sys
-import os
 import argparse
-import subprocess
+
 import pysam
 
 parser = argparse.ArgumentParser("Convert genotyped BreakDancer output to VCF",

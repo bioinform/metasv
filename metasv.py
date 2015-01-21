@@ -29,6 +29,8 @@ parser.add_argument("--gaps", metavar="gaps", help="Gap bed file", required=Fals
 parser.add_argument("--filter_gaps", help="Filter out gaps", action="store_true", required=False)
 parser.add_argument("--keep_standard_contigs", action="store_true", help="Keep only the major contigs + MT")
 parser.add_argument("--wiggle", help="Wiggle for interval overlap", default=100, type=int, required=False)
+parser.add_argument("--inswiggle", help="Wiggle for insertions, overides wiggle", default=100, type=int, required=False)
+parser.add_argument("--minsvlen", help="Minimum length acceptable to be an SV", default=50, type=int, required=False)
 parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=0.5, type=float, required=False)
 parser.add_argument("--workdir", help="Scratch directory for working", default="work", required=False)
 parser.add_argument("--boost_ins", help="Use soft-clips for improving insertion detection", action="store_true")
@@ -52,4 +54,5 @@ sys.exit(run_metasv(args.sample, args.reference, pindel_vcf=args.pindel_vcf, pin
                     wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
                     workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
                     chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
-                    disable_assembly=args.disable_assembly))
+                    disable_assembly=args.disable_assembly, minsvlen = args.minsvlen, inswiggle = args.inswiggle))
+

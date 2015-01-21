@@ -14,5 +14,10 @@ In addition, it requires the following software to be installed:
 * [AGE](https://github.com/abyzovlab/AGE): Used for determining the SV breakpoints using assembled contigs
 The paths to the above tools are specified on the command-line options for MetaSV.
 
+# Tools
+* `metasv.py`: Top-level MetaSV script. Use this when running all of MetaSV.
+* `breakdancer_reader.py`: Reader for BreakDancer output files. Can also convert to a VCF file.
+
 # Running
 Type `metasv.py -h` for help on the command-line options.
+

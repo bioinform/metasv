@@ -9,7 +9,7 @@ import pysam
 import pybedtools
 
 svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV"]
-sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"]
+sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"] # order is important!
 precise_sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller"]
 sv_sources_to_type = {"Pindel": "SR", "BreakSeq": "JM", "BreakDancer": "RP", "CNVnator": "RD", "HaplotypeCaller": "AS"}
 
@@ -45,7 +45,6 @@ class SVInterval:
         self.is_precise = False
         self.is_validated = False
         self.validating_interval = None
-        self.info_dict = {}
         self.cipos = cipos
         self.ciend = ciend
         self.native_sv = native_sv
@@ -65,7 +64,7 @@ class SVInterval:
         self.length = max(interval1.length, interval2.length)
         self.name = interval1.name + "," + interval2.name
         self.sv_type = interval1.sv_type
-        self.info = "merged"
+        self.info = None
         self.sub_intervals = [interval1, interval2]
         self.sources = interval1.sources | interval2.sources
         self.gt = interval1.gt
@@ -122,6 +121,7 @@ class SVInterval:
             return
 
         if not self.sub_intervals:
+            # This interval did not overlap anything
             self.is_precise = list(self.sources)[0] in precise_sv_sources
             # if self.sv_type == "INV" and self.length >= 1000: self.is_validated = True
             return
@@ -136,13 +136,15 @@ class SVInterval:
             lists[list(interval.sources)[0]].append(interval)
 
         for source in sv_sources:
+            # If the SV is called multiple times by the same tool, don't validate
             if len(lists[source]) == 1:
-                if self.overlaps(lists[source][0], overlap_ratio, overlap_ratio) or interval_overlaps_interval_list(
-                        lists[source][0], precise_merged, overlap_ratio, overlap_ratio):
+                if self.overlaps(lists[source][0], overlap_ratio, overlap_ratio) \
+                        or interval_overlaps_interval_list(lists[source][0], precise_merged, overlap_ratio,
+                                                           overlap_ratio):
                     self.is_validated = len(self.sources) > 1
                     self.validating_interval = lists[source][0]
                     self.is_precise = source in precise_sv_sources
-                    break
+                    break # This break makes the order of sv_sources important
 
         if not self.is_validated:
             return
@@ -152,6 +154,7 @@ class SVInterval:
             self.end = self.validating_interval.end
             self.length = self.validating_interval.length
             self.gt = self.validating_interval.gt
+            self.info = self.validating_interval.info
 
             if self.length == 0:
                 for source in sv_sources:
@@ -171,30 +174,56 @@ class SVInterval:
                 self.start = mid
                 self.end = mid
 
-    def to_vcf_record(self, fasta_handle=None):
+    def to_vcf_record(self, fasta_handle=None, sample = ""):
         if self.start <= 0: return None
         if self.sv_type not in svs_of_interest: return None
-        if not self.sub_intervals and list(self.sources)[0] == "HaplotypeCaller": return None
-        if len(self.sources) == 1 and list(self.sources)[0] == "HaplotypeCaller": return None
 
-        # logger.debug("Converting interval %s to VCF record" % (str(self)))
+        # ignore private haplotype caller calls
+        if ((not self.sub_intervals) or len(self.sources) == 1) and list(self.sources)[0] == "HaplotypeCaller":
+            return None
 
-        vcf_record_ref = fasta_handle.fetch(self.chrom, self.start - 1, self.start) if fasta_handle else "N"
-        vcf_record_alt = "<%s>" % (self.sv_type)
-        vcf_record_filter = "PASS" if self.is_validated else "LowQual"
-
-        vcf_record_info = "END=%d;SVLEN=%d;SVTYPE=%s;VT=SV;SVTOOL=%s;NUM_SVMETHODS=%d;SOURCES=%s" % (
-        self.end, -self.length if self.sv_type == "DEL" else self.length, self.sv_type, "MetaSVMerge",
-        len(self.sources), str(self))
-        if self.cipos: vcf_record_info += ";CIPOS=%s" % (",".join(self.cipos))
-        if not self.is_precise: vcf_record_info += ";IMPRECISE"
+        # formulate the INFO field
+        info = {}
+        if not self.sub_intervals:
+            info.update(self.info)
+        else:
+            if self.info:
+                info.update(self.info)
+            for interval in self.sub_intervals:
+                #TODO: this will just overwrite the other dict entries... this should be ok for pass variants
+                info.update(interval.info)
         svmethods = [sv_sources_to_type[tool] for tool in self.sources]
         svmethods.sort()
-        vcf_record_info += ";SVMETHOD=" + ",".join(svmethods)
-        return "%s\t%d\t.\t%s\t%s\t.\t%s\t%s\tGT\t%s" % (
-        self.chrom, self.start, vcf_record_ref, vcf_record_alt, vcf_record_filter, vcf_record_info, self.gt)
+        sv_len = -self.length if self.sv_type == "DEL" else self.length
+        info.update({"SVLEN": sv_len,
+                "SVTYPE": self.sv_type,
+                "SVMETHOD": ",".join(svmethods)})
+        if self.sv_type == "DEL" or self.sv_type == "DUP":
+            info["END"] = self.end
 
+        if not self.is_precise:
+            info.update({"IMPRECISE": None})
+
+        info.update({"VT":"SV"})
+        info.update({"SVTOOL":"MetaSVMerge"})
+        info.update({"NUM_SVMETHODS":len(self.sources)})
+        info.update({"SOURCES":str(self)})
+        if self.cipos:
+            info.update({"CIPOS": (",".join([str(a) for a in self.cipos]))})
+
+        vcf_record = vcf.model._Record(self.chrom,
+                                       self.start,
+                                       ".",
+                                       fasta_handle.fetch(self.chrom, self.start - 1, self.start),
+                                       ["<%s>" % (self.sv_type)],
+                                       ".",
+                                       "PASS" if self.is_validated else "LowQual",
+                                       info,
+                                       "GT",
+                                       [0],
+                                       [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT="1/1"))])
         return vcf_record
+
 
     def to_bed_interval(self, sample_name):
         if self.start <= 0: return None
@@ -227,10 +256,11 @@ class SVInterval:
 def interval_overlaps_interval_list(interval, interval_list, min_fraction_self=1e-9, min_fraction_other=1e-9):
     index = bisect.bisect_left(interval_list, interval)
     if index > 0 and interval.overlaps(interval_list[index - 1], min_fraction_self, min_fraction_other,
-                                       min_overlap_length_self=1, min_overlap_length_other=1): return True
+                                       min_overlap_length_self=1, min_overlap_length_other=1):
+        return True
     if index < len(interval_list) and interval.overlaps(interval_list[index], min_fraction_self, min_fraction_other,
-                                                        min_overlap_length_self=1,
-                                                        min_overlap_length_other=1): return True
+                                                        min_overlap_length_self=1, min_overlap_length_other=1):
+        return True
     return False
 
 
