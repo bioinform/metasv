@@ -52,6 +52,8 @@ parser.add_argument("--gaps", metavar="gaps", help="Gap bed file", required=Fals
 parser.add_argument("--filter_gaps", help="Filter out gaps", action="store_true", required=False)
 parser.add_argument("--keep_standard_contigs", action="store_true", help="Keep only the major contigs + MT")
 parser.add_argument("--wiggle", help="Wiggle for interval overlap", default=100, type=int, required=False)
+parser.add_argument("--inswiggle", help="Wiggle for insertions, overides wiggle", default=100, type=int, required=False)
+parser.add_argument("--minsvlen", help="Minimum length acceptable to be an SV", default=50, type=int, required=False)
 parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=0.5, type=float, required=False)
 parser.add_argument("--workdir", help="Scratch directory for working", default="work", required=False)
 parser.add_argument("--boost_ins", help="Use soft-clips for improving insertion detection", action="store_true")
@@ -143,6 +145,17 @@ for toolname, nativename, svReader in native_name_list:
     for native_file in nativename:
         for record in svReader(native_file):
             interval = record.to_sv_interval()
+
+            # Check length
+            if interval.sv_len < args.minsvlen:
+                continue
+
+            # Set wiggle
+            if interval.sv_type == "INS":
+                interval.wiggle = max(args.inswiggle,args.wiggle)
+            else:
+                interval.wiggle = args.wiggle
+
             if not interval:
                 # This is the case for SVs we want to skip
                 continue
@@ -170,7 +183,7 @@ for toolname, vcfname in vcf_name_list:
 
     for vcffile in vcf_list:
         load_intervals(vcffile, intervals[toolname], gap_intervals, include_intervals, toolname, contig_whitelist,
-                       toolname == "HaplotypeCaller")
+                       minsvlen=args.minsvlen, wiggle=args.wiggle, inswiggle=args.inswiggle)
     sv_types |= set(intervals[toolname].keys())
 
 logger.info("SV types are %s" % (str(sv_types)))

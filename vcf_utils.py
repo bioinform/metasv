@@ -61,7 +61,7 @@ def get_gt(gt, fmt):
 
 
 def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[], source=None, contig_whitelist=[],
-                   is_gatk=False):
+                   minsvlen=50, wiggle=100, inswiggle=100):
     if not os.path.isfile(in_vcf): return intervals
     logger.info("Loading SV intervals from %s" % (in_vcf))
     tabix_file = pysam.Tabixfile(in_vcf, parser=pysam.asVCF())
@@ -77,13 +77,20 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
 
         info = parse_info(vcf_record.info)
 
-        if is_gatk:
+        if source in ["HaplotypeCaller"]:
             if vcf_record.filter != "PASS" and vcf_record.filter != ".": continue
+
+            # ignore tri-allelic stuff
             if vcf_record.alt.find(",") >= 0: continue
+
+            # ignore MNPs
             if len(vcf_record.ref) != 1 and len(vcf_record.alt) != 1: continue
-            if len(vcf_record.ref) < 50 and len(vcf_record.alt) < 50: continue
+
+            # Check for SV length
+            if len(vcf_record.ref) < minsvlen and len(vcf_record.alt) < minsvlen: continue
+
             if len(vcf_record.ref) == 1:
-                wiggle = 100 if source in ["Pindel", "BreakSeq", "HaplotypeCaller"] else 0
+                # This is the case for insertions
                 interval = SVInterval(vcf_record.contig,
                                       vcf_record.pos + 1,
                                       vcf_record.pos + 1,
@@ -91,7 +98,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                                       "INS",
                                       len(vcf_record.alt) - 1,
                                       sources=set([source]),
-                                      wiggle=wiggle,
+                                      wiggle=max(inswiggle,wiggle),
                                       gt=gt)
             else:
                 interval = SVInterval(vcf_record.contig,
@@ -101,6 +108,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                                       "DEL",
                                       len(vcf_record.ref) - 1,
                                       sources=set([source]),
+                                      wiggle=wiggle,
                                       gt=gt)
         else:
             if source == "BreakSeq" and vcf_record.filter != "PASS": continue
@@ -114,8 +122,8 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                 else:
                     continue
             svlen = abs(int(info["SVLEN"][0]))
-            if svlen < 50: continue
-            wiggle = 100 if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else 0
+            if svlen < minsvlen: continue
+            wiggle = max(inswiggle,wiggle) if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
             if source == "Pindel" and sv_type == "INS": vcf_record.pos += 1
             interval = SVInterval(vcf_record.contig, vcf_record.pos, int(info["END"][0]), source, sv_type, svlen,
                                   sources=set([source]), wiggle=wiggle, gt=gt)
