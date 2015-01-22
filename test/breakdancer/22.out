@@ -1,0 +1,28 @@
+#Software: BreakDancerMax-1.1.2
+#Command: /usr/lib/bina/executor/..//breakdancer/current/current/bin/breakdancer_max -o 22 /mnt/scratch/local/jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/breakdancer/breakdancer.cfg 
+#Library Statistics:
+#jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam	mean:349.04	std:50.37	uppercutoff:549.42	lowercutoff:146.45	readlen:100	library:pairedend	reflen:35194445	seqcov:47.3234	phycov:82.5888	1:255	2:1114	3:432	4:66	8:201	32:7006
+#Chr1	Pos1	Orientation1	Chr2	Pos2	Orientation2	Type	Size	Score	num_Reads	num_Reads_lib	0.recalibrated.bam	1.recalibrated.bam	10.recalibrated.bam	11.recalibrated.bam	12.recalibrated.bam	13.recalibrated.bam	14.recalibrated.bam	15.recalibrated.bam	2.recalibrated.bam	3.recalibrated.bam	4.recalibrated.bam	5.recalibrated.bam	6.recalibrated.bam	7.recalibrated.bam	8.recalibrated.bam	9.recalibrated.bam
+22	16857478	3+3-	22	16857525	3+3-	INS	-207	99	3	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|3	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA
+22	18047481	60+0-	22	18047651	0+60-	DEL	374	99	60	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|60	NA	NA	NA	NA	NA	NA	NA	0.85	NA	NA	NA	NA	NA	NA	NA	NA
+22	18168650	38+0-	22	18169010	38+0-	INV	-37	99	19	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|19	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA
+22	18535789	4+0-	22	18536082	0+4-	DEL	216	99	4	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|4	NA	NA	NA	NA	NA	NA	NA	1.61	NA	NA	NA	NA	NA	NA	NA	NA
+22	20950665	27+0-	22	20953840	0+27-	DEL	3211	99	27	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|27	NA	NA	NA	NA	NA	NA	NA	1.03	NA	NA	NA	NA	NA	NA	NA	NA
+22	21760374	0+17-	22	21922038	0+17-	INV	161284	99	17	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|17	NA	NA	NA	NA	NA	NA	NA	0.72	NA	NA	NA	NA	NA	NA	NA	NA
+22	26891493	4+0-	22	26891659	0+4-	DEL	224	88	4	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|4	NA	NA	NA	NA	NA	NA	NA	1.41	NA	NA	NA	NA	NA	NA	NA	NA
+22	30281250	2+2-	22	30281257	2+2-	INS	-202	61	2	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|2	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA
+22	31776459	17+0-	22	31780623	0+17-	DEL	4201	99	17	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|17	NA	NA	NA	NA	NA	NA	NA	1.05	NA	NA	NA	NA	NA	NA	NA	NA
+22	33295803	28+0-	22	33295946	0+28-	DEL	325	99	28	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|28	NA	NA	NA	NA	NA	NA	NA	2.13	NA	NA	NA	NA	NA	NA	NA	NA
+22	33751416	5+4-	22	33751858	5+4-	DEL	210	85	4	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|4	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA
+22	35645458	38+0-	22	35645797	0+38-	DEL	1000	99	38	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|38	NA	NA	NA	NA	NA	NA	NA	7.85	NA	NA	NA	NA	NA	NA	NA	NA
+22	36561127	2+2-	22	36561473	2+2-	INS	-211	48	2	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|2	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA
+22	36598292	62+45-	22	36651689	62+45-	INV	53040	99	107	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|107	NA	NA	NA	NA	NA	NA	NA	2.06	NA	NA	NA	NA	NA	NA	NA	NA
+22	42335781	6+6-	22	42335815	6+6-	INS	-227	99	6	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|6	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA
+22	45875071	28+0-	22	45875351	0+28-	DEL	336	99	28	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|28	NA	NA	NA	NA	NA	NA	NA	1.83	NA	NA	NA	NA	NA	NA	NA	NA
+22	49000641	2+2-	22	49001057	2+2-	INS	-231	47	2	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|2	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA
+22	49016805	3+3-	22	49016832	3+3-	INS	-211	92	3	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|3	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA
+22	49077667	20+0-	22	49077903	0+20-	DEL	276	99	20	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|20	NA	NA	NA	NA	NA	NA	NA	1.09	NA	NA	NA	NA	NA	NA	NA	NA
+22	49670884	2+2-	22	49670892	2+2-	INS	-219	61	2	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|2	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA
+22	47465624	0+9-	22	50459704	9+0-	ITX	2993539	99	9	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|9	NA	NA	NA	NA	NA	NA	NA	2.07	NA	NA	NA	NA	NA	NA	NA	NA
+22	50502137	2+2-	22	50502409	2+2-	INS	-225	53	2	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|2	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA
+22	50714639	17+17-	22	50714811	17+17-	INS	-220	99	17	jobs/617dfc0a-f87f-4a74-83d3-ebb72bf3659d/15.recalibrated.bam|17	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA	NA
