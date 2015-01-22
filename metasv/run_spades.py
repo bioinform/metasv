@@ -1,19 +1,17 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
+import pysam
 import os
 import sys
 import argparse
 import logging
 import multiprocessing
+import pybedtools
+import extract_pairs
 import subprocess
 import itertools
 import fileinput
 from functools import partial, update_wrapper
-
-import pysam
-import pybedtools
-import extract_pairs
-
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)

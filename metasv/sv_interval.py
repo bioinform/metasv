@@ -1,9 +1,8 @@
-#!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
-
 import logging
 
 logger = logging.getLogger(__name__)
 
+import os
 import copy
 import bisect
 import pysam
@@ -14,6 +13,20 @@ svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV"]
 sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"] # order is important!
 precise_sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller"]
 sv_sources_to_type = {"Pindel": "SR", "BreakSeq": "JM", "BreakDancer": "RP", "CNVnator": "RD", "HaplotypeCaller": "AS"}
+
+mydir = os.path.dirname(os.path.realpath(__file__))
+gaps_b37 = os.path.join(mydir, "resources/b37.gaps.bed")
+gaps_hg19 = os.path.join(mydir, "resources/hg19.gaps.bed")
+
+
+def get_gaps_file(contig_names):
+    hg19_major = set(["chr%d" % i for i in xrange(1, 23)] + ["chrX", "chrY", "chrM"])
+    b37_major = set([str(i) for i in xrange(1, 23)] + ["X", "Y", "MT"])
+    if set(contig_names) & hg19_major: return gaps_hg19
+    if set(contig_names) & b37_major: return gaps_b37
+
+    logger.warn("Could not guess gaps file for reference. No gap filtering will be done.")
+    return None
 
 
 class SVInterval:
@@ -162,7 +175,7 @@ class SVInterval:
                 self.start = mid
                 self.end = mid
 
-    def to_vcf_record(self, fasta_handle, sample):
+    def to_vcf_record(self, fasta_handle=None, sample = ""):
         if self.start <= 0: return None
         if self.sv_type not in svs_of_interest: return None
 
@@ -202,7 +215,7 @@ class SVInterval:
         vcf_record = vcf.model._Record(self.chrom,
                                        self.start,
                                        ".",
-                                       fasta_handle.fetch(self.chrom, self.start - 1, self.start),
+                                       fasta_handle.fetch(self.chrom, self.start - 1, self.start) if fasta_handle else "N",
                                        ["<%s>" % (self.sv_type)],
                                        ".",
                                        "PASS" if self.is_validated else "LowQual",
@@ -253,10 +266,9 @@ def interval_overlaps_interval_list(interval, interval_list, min_fraction_self=1
 
 
 def merge_intervals(interval_list):
-    if not interval_list: return []
-
     interval_list.sort()
     merged_intervals = []
+    if not interval_list: return []
 
     current_merged_interval = copy.deepcopy(interval_list[0])
     for i in xrange(len(interval_list) - 1):

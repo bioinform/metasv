@@ -1,18 +1,21 @@
 #!/usr/bin/python
 
 import argparse
-import logging
-import sys
-import datetime
-from collections import OrderedDict, namedtuple
-
 import pybedtools
 import pysam
 import vcf
+import logging
 import fasta_utils
+import sys
+import datetime
+import os
+from collections import OrderedDict, namedtuple
+
+mydir = os.path.dirname(os.path.realpath(__file__))
+vcf_template = os.path.join(mydir, "resources/template.vcf")
 
 
-def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template=None, sample=None, reference=None):
+def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template=vcf_template, sample=None, reference=None):
     vcf_template_reader = vcf.Reader(open(vcf_template, "r"))
 
     # The following are hacks to ensure sample name and contig names are put in the VCF header

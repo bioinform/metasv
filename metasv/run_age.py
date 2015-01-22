@@ -1,6 +1,7 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
 import traceback
+import pysam
 import os
 import sys
 import argparse
@@ -9,16 +10,13 @@ import multiprocessing
 import subprocess
 import fileinput
 import hashlib
-from functools import partial
-
-import pysam
 from spades_contig import SpadesContig
 from tigra_contig import TigraContig
 from svregion import SVRegion
 from age_parser import *
 from process_age_alignment import process_age_records
 import pybedtools
-
+from functools import partial
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)

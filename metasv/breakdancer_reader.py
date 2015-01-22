@@ -83,7 +83,6 @@ class BreakDancerHeader:
 class BreakDancerRecord:
     def __init__(self, record_string):
         self.name = breakdancer_name
-
         fields = record_string.split()
         self.chr1 = fields[0]
         self.pos1 = int(fields[1])
@@ -166,7 +165,6 @@ class BreakDancerRecord:
                                        [0],
                                        [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT="1/1"))])
         return vcf_record
-
 
 class BreakDancerReader:
     def __init__(self, file_name):

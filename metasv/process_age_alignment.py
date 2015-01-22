@@ -5,9 +5,7 @@ import logging
 import re
 import hashlib
 import multiprocessing
-
 import pybedtools
-
 
 logger = logging.getLogger(__name__)
 

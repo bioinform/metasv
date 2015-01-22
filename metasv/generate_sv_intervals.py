@@ -1,16 +1,13 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
-import sys
-import os
-import re
+import sys, os, re
+import pysam
 import argparse
 import multiprocessing
 import logging
 import collections
 import itertools
 from functools import partial
-
-import pysam
 import pybedtools
 
 

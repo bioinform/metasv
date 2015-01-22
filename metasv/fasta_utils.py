@@ -1,3 +1,8 @@
+import sys
+import os
+import argparse
+
+
 class Contig:
     def __init__(self, name, length):
         self.name = name

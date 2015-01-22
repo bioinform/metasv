@@ -4,9 +4,7 @@ import sys
 import os
 import argparse
 import subprocess
-
 import pysam
-
 
 parser = argparse.ArgumentParser("Compute zygosity for SV tools output",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)

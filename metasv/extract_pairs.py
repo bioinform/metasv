@@ -1,14 +1,12 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
+import pysam
 import os
 import sys
 import argparse
 import logging
 import multiprocessing
 from functools import partial
-
-import pysam
-
 
 compl_table = [chr(i) for i in xrange(256)]
 compl_table[ord('A')] = 'T'
