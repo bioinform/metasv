@@ -115,6 +115,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         gap_intervals = sorted(load_gap_intervals(gaps))
         
     # Handles native input
+    logger.info("Load native files")
     for toolname, nativename, svReader in native_name_list:
         # If no native file is given, ignore the tool
         if not nativename: continue
@@ -146,6 +147,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         sv_types |= set(intervals[toolname].keys())
 
     # Handles the VCF input cases, we will just deal with these cases
+    logger.info("Load VCF files")
     for toolname, vcfname in vcf_name_list:
         # If no VCF is given, ignore the tool
         if not vcfname: continue
@@ -182,6 +184,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                     ("BreakSeq", breakseq_out)]
     
     # This will just output per-tool VCFs, no intra-tool merging is done yet
+    logger.info("Outut per-tool VCFs")
     for toolname, tool_out in vcf_out_list:
         if tool_out is None or toolname not in intervals: continue
         
@@ -215,6 +218,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         pysam.tabix_index(tool_out, force=True, preset="vcf")
 
     # Do merging here
+    logger.info("Do merging")
     for sv_type in sv_types:
         logger.info("Processing SVs of type %s" % (sv_type))
         tool_merged_intervals[sv_type] = []
@@ -247,6 +251,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         final_chr_intervals[interval.chrom].append(interval)
 
     # This is the merged VCF without assembly, ok for deletions at this point
+    logger.info("Output merged VCF without assembly ")
     vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
     vcf_template_reader.samples = [sample]
     out_vcf = os.path.join(outdir, "metasv.vcf")
@@ -279,6 +284,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         logger.info(str(key) + ":" + str(final_stats[key]))
 
     if not disable_assembly:
+        logger.info("Running assembly")
         if spades is None:
             logger.error("Spades executable not specified")
             return 1
@@ -318,10 +324,16 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     else:
         final_bed = merged_bed
 
+    logger.info("Output final VCF file")
+
     final_vcf = os.path.join(outdir, "final.vcf")
     convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample)
 
+    logger.info("Clean up pybedtools")
+
     pybedtools.cleanup(remove_all=True)
+
+    logger.info("All Done!")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Merge SVs from different tools",
@@ -376,3 +388,4 @@ if __name__ == "__main__":
         chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
         disable_assembly=args.disable_assembly, minsvlen = args.minsvlen, inswiggle = args.inswiggle))
 
+                                                            
