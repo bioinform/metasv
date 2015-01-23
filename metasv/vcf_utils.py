@@ -111,6 +111,10 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
 
         else:
             if source == "BreakSeq" and "PASS" not in vcf_record.FILTER: continue
+
+            # The following is a hack to fix broken VCF from cnvnator2vcf script
+            if source == "CNVnator": vcf_record.INFO["natorPE"] = 0
+
             if len(vcf_record.ALT) > 1: continue
             sv_type = vcf_record.INFO["SVTYPE"]
             if sv_type == "DUP:TANDEM": sv_type = "DUP"
