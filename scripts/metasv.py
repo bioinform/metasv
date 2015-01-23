@@ -2,6 +2,8 @@
 
 import sys
 import argparse
+import pkg_resources
+import metasv
 from metasv.run_metasv import run_metasv
 
 parser = argparse.ArgumentParser("Merge SVs from different tools",
