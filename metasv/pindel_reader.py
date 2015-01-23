@@ -143,7 +143,7 @@ class PindelRecord:
             self.nt_added = map(lambda x: x.replace('"', ''), fields[5].split(":"))
             self.chromosome = fields[7]
             self.start_pos = int(fields[9])
-            self.end_pos = int(fields[10])
+            self.end_pos = int(fields[10]) - 1
             self.bp_range = (int(fields[12]), int(fields[13]))
             self.read_supp = int(fields[15])  # The number of reads supporting the SV
             self.uniq_read_supp = int(
@@ -166,9 +166,9 @@ class PindelRecord:
         else:
             self.sv_len = 0
             self.chromosome = fields[3]
-            self.start_pos = int(fields[4])
+            self.start_pos = min(int(fields[4]), int(fields[7]))
             self.up_read_supp = int(fields[6])  # upstream
-            self.end_pos = int(fields[7])
+            self.end_pos = self.start_pos + 1
             self.down_read_supp = int(fields[9])  # downstream
             self.bp_range = (self.start_pos, self.end_pos)
             self.homlen = 0
@@ -252,7 +252,7 @@ class PindelRecord:
         info.update(self.info)
 
         vcf_record = vcf.model._Record(self.chromosome,
-                                       self.start_pos,
+                                       self.start_pos - 1,
                                        ".",
                                        "N",
                                        alt,

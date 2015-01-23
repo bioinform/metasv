@@ -88,7 +88,7 @@ class CNVnatorRecord:
         info.update(self.info)
 
         vcf_record = vcf.model._Record(self.chr1,
-                                       self.pos1,
+                                       self.pos1 - 1,
                                        ".",
                                        "N",
                                        alt,

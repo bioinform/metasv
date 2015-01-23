@@ -64,8 +64,8 @@ def parse_line(line, tool):
     if tool == "pindel":
         sv_type = pindel_sv_type_dict[fields[1]]
         if sv_type != "LI":
-            size, chr1, pos1, pos2, num_reads, score = int(fields[2]), fields[7], int(fields[9]) - 1, int(
-                fields[10]) - 1, int(fields[16]), int(fields[24])
+            size, chr1, pos1, pos2, num_reads, score = \
+                int(fields[2]), fields[7], int(fields[9]) - 1, int(fields[10]) - 1, int(fields[16]), int(fields[24])
         else:
             chr1, pos1, pos2, num_reads = fields[3], int(fields[4]) - 1, int(fields[7]) - 1, int(fields[6]) + int(
                 fields[9])
@@ -88,7 +88,8 @@ max_isize = args.mean + 3 * args.sd
 for input_handle in input_handles:
     for line in input_handle.readlines():
         record = parse_line(line, args.tool)
-        if not record: continue
+        if not record:
+            continue
         sv_type, chr1, pos1, pos2, size, num_reads, score = record
 
         pos2 = max(pos2, pos1 + 1)
@@ -102,8 +103,8 @@ for input_handle in input_handles:
                                                                                 pos1, pos2)
             normal_coverage = float(normal_read_bases) / max(1, pos2 - pos1)
             gt = "0/1" if normal_coverage / float(max(1, num_reads)) > 0.2 else "1/1"
-        print "%s\t%s\t%d\t%d\t%d\t%d\t%d\t%g\t%s\t%s" % (
-        sv_type, chr1, pos1 + 1, pos2, size, normal_read_count, num_reads, score, gt, tool)
+        print "%s\t%s\t%d\t%d\t%d\t%d\t%d\t%g\t%s\t%s" % \
+            (sv_type, chr1, pos1 + 1, pos2, size, normal_read_count, num_reads, score, gt, tool)
         sys.stdout.flush()
     input_handle.close()
 
