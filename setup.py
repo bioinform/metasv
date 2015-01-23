@@ -1,6 +1,3 @@
-#import ez_setup
-#ez_setup.use_setuptools()
-
 from setuptools import setup, find_packages
 
 setup(
@@ -13,5 +10,5 @@ setup(
       packages = find_packages(),
       install_requires = ["cython", "pysam==0.7.7", "pybedtools", "pyvcf"],
       package_data = {"metasv": ["resources/*"]},
-      scripts=[]
+      scripts=['scripts/run_metasv.py']
       )
