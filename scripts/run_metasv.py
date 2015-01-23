@@ -2,7 +2,6 @@
 
 import sys
 import argparse
-import pkg_resources
 from metasv.main import run_metasv
 
 
