@@ -1,17 +1,7 @@
 #!/usr/bin/env python
 
-import sys
-import os
-import argparse
-import subprocess
-import pysam
-import shutil
-import logging
-import copy
-import pybedtools
-import vcf
 from collections import defaultdict
-from fasta_utils import *
+
 from vcf_utils import *
 from sv_interval import SVInterval, get_gaps_file, interval_overlaps_interval_list, merge_intervals
 from pindel_reader import PindelReader
@@ -21,6 +11,7 @@ from generate_sv_intervals import parallel_generate_sc_intervals
 from run_spades import run_spades_parallel
 from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
+
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -38,7 +29,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                breakseq_vcf=[], cnvnator_vcf=[], cnvnator_native=[], gatk_vcf=[], gaps=None, filter_gaps=False,
                keep_standard_contigs=False,
                wiggle=100, overlap_ratio=0.5, workdir="work", outdir="out", boost_ins=False, bam=None, chromosomes=[],
-               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen = 50, inswiggle = 100):
+               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=50, inswiggle=100):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -113,19 +104,19 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     if filter_gaps:
         gaps = gaps if gaps else get_gaps_file(contig_whitelist)
         gap_intervals = sorted(load_gap_intervals(gaps))
-        
+
     # Handles native input
     for toolname, nativename, svReader in native_name_list:
         # If no native file is given, ignore the tool
         if not nativename: continue
-        
+
         tools.append(toolname)
         intervals[toolname] = defaultdict(list)
-        
+
         for native_file in nativename:
             for record in svReader(native_file):
                 interval = record.to_sv_interval()
-                
+
                 if not interval:
                     # This is the case for SVs we want to skip
                     continue
@@ -137,7 +128,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
                     # Set wiggle
                     if interval.sv_type == "INS":
-                        interval.wiggle = max(inswiggle,wiggle)
+                        interval.wiggle = max(inswiggle, wiggle)
                     else:
                         interval.wiggle = wiggle
 
@@ -164,7 +155,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
         for vcffile in vcf_list:
             load_intervals(vcffile, intervals[toolname], gap_intervals, include_intervals, toolname, contig_whitelist,
-                           minsvlen = minsvlen, wiggle = wiggle, inswiggle = inswiggle)
+                           minsvlen=minsvlen, wiggle=wiggle, inswiggle=inswiggle)
         sv_types |= set(intervals[toolname].keys())
 
     logger.info("SV types are %s" % (str(sv_types)))
@@ -180,11 +171,11 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                     ("Pindel", pindel_out),
                     ("CNVnator", cnvnator_out),
                     ("BreakSeq", breakseq_out)]
-    
+
     # This will just output per-tool VCFs, no intra-tool merging is done yet
     for toolname, tool_out in vcf_out_list:
         if tool_out is None or toolname not in intervals: continue
-        
+
         logger.info("Outputting single tool VCF for %s" % (str(toolname)))
         vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
         vcf_template_reader.samples = [sample]
@@ -206,7 +197,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         for contig in contigs:
             chr_intervals_tool[contig.name].sort()
             for interval in chr_intervals_tool[contig.name]:
-                vcf_record = interval.to_vcf_record(fasta_handle,sample)
+                vcf_record = interval.to_vcf_record(fasta_handle, sample)
                 if vcf_record is not None:
                     vcf_writer.write_record(vcf_record)
         tool_out_fd.close()
@@ -228,9 +219,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         # Do the inter-tool merging
         merged_intervals = merge_intervals(tool_merged_intervals[sv_type])
 
-
-        intervals1 = [] # Intervals which overlap well with merged_intervals
-        intervals2 = [] # Intervals which do not overlap well with merged_intervals. Used to filter out small intervals which got merged with large intervals
+        intervals1 = []  # Intervals which overlap well with merged_intervals
+        intervals2 = []  # Intervals which do not overlap well with merged_intervals. Used to filter out small intervals which got merged with large intervals
 
         for interval in tool_merged_intervals[sv_type]:
             if interval_overlaps_interval_list(interval, merged_intervals, overlap_ratio, overlap_ratio):
@@ -323,56 +313,60 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     pybedtools.cleanup(remove_all=True)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Merge SVs from different tools",
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("--sample", metavar="Sample", help="Sample name", required=True)
     parser.add_argument("--pindel_vcf", nargs="+", metavar="pindel_vcf", help="VCF file or dir for Pindel VCFs",
-            required=False, default=[])
+                        required=False, default=[])
     parser.add_argument("--pindel_native", nargs="+", metavar="File list", help="Pindel native files", required=False,
-            default=[])
+                        default=[])
     parser.add_argument("--breakdancer_vcf", nargs="+", metavar="breakdancer_vcf",
-            help="VCF file or dir for BreakDancer VCFs", required=False, default=[])
+                        help="VCF file or dir for BreakDancer VCFs", required=False, default=[])
     parser.add_argument("--breakdancer_native", nargs="+", metavar="File list", help="BreakDancer native files",
-            required=False, default=[])
+                        required=False, default=[])
     parser.add_argument("--breakseq_vcf", nargs="+", metavar="breakseq_vcf", help="VCF file or dir for BreakSeq VCFs",
-            required=False, default=[])
+                        required=False, default=[])
     parser.add_argument("--cnvnator_vcf", nargs="+", metavar="cnvnator_vcf", help="VCF file or dir for CNVnator VCFs",
-            required=False, default=[])
-    parser.add_argument("--cnvnator_native", nargs="+", metavar="File list", help="CNVnator native files", required=False,
-            default=[])
+                        required=False, default=[])
+    parser.add_argument("--cnvnator_native", nargs="+", metavar="File list", help="CNVnator native files",
+                        required=False,
+                        default=[])
     parser.add_argument("--gatk_vcf", nargs="+", metavar="file", help="VCF file or dir for gatk VCFs", required=False,
-            default=[])
+                        default=[])
     parser.add_argument("--reference", metavar="reference", help="Reference file", required=True)
     parser.add_argument("--gaps", metavar="gaps", help="Gap bed file", required=False, default=None)
     parser.add_argument("--filter_gaps", help="Filter out gaps", action="store_true", required=False)
     parser.add_argument("--keep_standard_contigs", action="store_true", help="Keep only the major contigs + MT")
     parser.add_argument("--wiggle", help="Wiggle for interval overlap", default=100, type=int, required=False)
-    parser.add_argument("--inswiggle", help="Wiggle for insertions, overides wiggle", default=100, type=int, required=False)
-    parser.add_argument("--minsvlen", help="Minimum length acceptable to be an SV", default=50, type=int, required=False)
+    parser.add_argument("--inswiggle", help="Wiggle for insertions, overides wiggle", default=100, type=int,
+                        required=False)
+    parser.add_argument("--minsvlen", help="Minimum length acceptable to be an SV", default=50, type=int,
+                        required=False)
     parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=0.5, type=float, required=False)
     parser.add_argument("--workdir", help="Scratch directory for working", default="work", required=False)
     parser.add_argument("--boost_ins", help="Use soft-clips for improving insertion detection", action="store_true")
     parser.add_argument("--bam", help="BAM", type=file)
     parser.add_argument("--chromosomes",
-            help="Chromosome list to process. If unspecified, then all chromosomes will be considered.",
-            nargs="+", default=[])
+                        help="Chromosome list to process. If unspecified, then all chromosomes will be considered.",
+                        nargs="+", default=[])
     parser.add_argument("--num_threads", help="Number of threads to use", type=int, default=1)
     parser.add_argument("--outdir", help="Output directory", required=True)
     parser.add_argument("--spades", help="Path to SPAdes executable", required=False)
     parser.add_argument("--age", help="Path to AGE executable", required=False)
     parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
-    
+
     args = parser.parse_args()
-    
+
     sys.exit(run_metasv(args.sample, args.reference, pindel_vcf=args.pindel_vcf, pindel_native=args.pindel_native,
-        breakdancer_vcf=args.breakdancer_vcf, breakdancer_native=args.breakdancer_native,
-        breakseq_vcf=args.breakseq_vcf, cnvnator_vcf=args.cnvnator_vcf,
-        cnvnator_native=args.cnvnator_native, gatk_vcf=args.gatk_vcf,
-        gaps=args.gaps, filter_gaps=args.filter_gaps, keep_standard_contigs=args.keep_standard_contigs,
-        wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
-        workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
-        chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
-        disable_assembly=args.disable_assembly, minsvlen = args.minsvlen, inswiggle = args.inswiggle))
+                        breakdancer_vcf=args.breakdancer_vcf, breakdancer_native=args.breakdancer_native,
+                        breakseq_vcf=args.breakseq_vcf, cnvnator_vcf=args.cnvnator_vcf,
+                        cnvnator_native=args.cnvnator_native, gatk_vcf=args.gatk_vcf,
+                        gaps=args.gaps, filter_gaps=args.filter_gaps, keep_standard_contigs=args.keep_standard_contigs,
+                        wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
+                        workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
+                        chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
+                        disable_assembly=args.disable_assembly, minsvlen=args.minsvlen, inswiggle=args.inswiggle))
 
