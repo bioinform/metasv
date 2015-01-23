@@ -8,6 +8,7 @@ import argparse
 import subprocess
 import pysam
 import bisect
+import vcf
 from fasta_utils import *
 from sv_interval import *
 
@@ -16,6 +17,8 @@ def print_header(header, file_fd):
     for line in header:
         file_fd.write("%s\n" % (line))
 
+def get_template():
+    return vcf.Reader(open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources/template.vcf")))
 
 def merge_vcfs(in_vcfs_dir, contigs, out_vcf):
     logger.info("Mergings per-chromosome VCFs from %s" % (in_vcfs_dir))
