@@ -405,7 +405,6 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
     if sv_type == "DEL":
         breakpoints = get_deletion_breakpoints(good_age_records, start=sv_region.pos1 - pad)
     elif sv_type == "INS":
-        # breakpoints = get_deletion_breakpoints(good_age_records, start = sv_region.pos1 - pad)
         reference_intervals = get_reference_intervals(good_age_records, start=1, min_interval_len=min_interval_len)
 
         func_logger.info("Gathered reference intervals as %s" % (str(reference_intervals)))
