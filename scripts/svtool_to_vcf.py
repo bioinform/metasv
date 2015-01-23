@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import logging
 import sys
 import argparse
@@ -10,15 +12,16 @@ logger = logging.getLogger(__name__)
 
 mydir = os.path.dirname(os.path.realpath(__file__))
 
-from breakdancer_reader import BreakDancerReader
-from pindel_reader import PindelReader
-from cnvnator_reader import CNVnatorReader
+from metasv.breakdancer_reader import BreakDancerReader
+from metasv.pindel_reader import PindelReader
+from metasv.cnvnator_reader import CNVnatorReader
+from metasv.vcf_utils import get_template
 
 tool_to_reader = {"BreakDancer": BreakDancerReader, "Pindel": PindelReader, "CNVnator": CNVnatorReader}
 
 
 def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname):
-    vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
+    vcf_template_reader = get_template()
     vcf_template_reader.samples = [sample]
 
     vcf_fd = open(out_vcf, "w") if out_vcf is not None else sys.stdout

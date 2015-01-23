@@ -72,7 +72,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     """
 
     # Check if there is work to do
-    if not (pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf):
+    if not (pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + cnvnator_native):
         logger.error("Nothing to do since no SV file specified")
         return 1
 
@@ -111,7 +111,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     gap_intervals = []
     if filter_gaps:
-        gaps = gaps if gaps else get_gaps_file(contig_whitelist)
+        if not gaps: gaps = get_gaps_file(contig_whitelist)
         gap_intervals = sorted(load_gap_intervals(gaps))
         
     # Handles native input
