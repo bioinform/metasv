@@ -129,7 +129,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
             if svlen < minsvlen: continue
             wiggle = max(inswiggle,wiggle) if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
             if source == "Pindel" and sv_type == "INS": vcf_record.pos += 1
-            interval = SVInterval(vcf_record.contig, vcf_record.pos, int(vcf_record.INFO["END"]), source, sv_type, svlen,
+            interval = SVInterval(vcf_record.CHROM, vcf_record.POS, int(vcf_record.INFO["END"]), source, sv_type, svlen,
                                   sources=set([source]), wiggle=wiggle, gt=gt)
         if interval_overlaps_interval_list(interval, gap_intervals):
             logger.warn("Skipping " + str(interval) + " due to overlap with gaps")
