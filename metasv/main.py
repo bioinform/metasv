@@ -101,9 +101,9 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     # Load the intervals from different files
     vcf_name_list = [("CNVnator", cnvnator_vcf), ("Pindel", pindel_vcf), ("BreakDancer", breakdancer_vcf),
                      ("BreakSeq", breakseq_vcf), ("HaplotypeCaller", gatk_vcf)]
-    native_name_list = [("CNVnator", args.cnvnator_native, CNVnatorReader),
-                        ("Pindel", args.pindel_native, PindelReader),
-                        ("BreakDancer", args.breakdancer_native, BreakDancerReader)]
+    native_name_list = [("CNVnator", cnvnator_native, CNVnatorReader),
+                        ("Pindel", pindel_native, PindelReader),
+                        ("BreakDancer", breakdancer_native, BreakDancerReader)]
 
     tools = []
     intervals = {}
@@ -132,14 +132,14 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                 if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
 
                     # Check length
-                    if interval.length < args.minsvlen:
+                    if interval.length < minsvlen:
                         continue
 
                     # Set wiggle
                     if interval.sv_type == "INS":
-                        interval.wiggle = max(args.inswiggle,args.wiggle)
+                        interval.wiggle = max(inswiggle,wiggle)
                     else:
-                        interval.wiggle = args.wiggle
+                        interval.wiggle = wiggle
 
                     intervals[toolname][record.sv_type].append(interval)
 
@@ -187,7 +187,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         
         logger.info("Outputting single tool VCF for %s" % (str(toolname)))
         vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
-        vcf_template_reader.samples = [args.sample]
+        vcf_template_reader.samples = [sample]
 
         intervals_tool = []
         tool_out_fd = open(tool_out, "w")
@@ -198,7 +198,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                 intervals_tool.extend([copy.deepcopy(interval) for interval in intervals[toolname][sv_type]])
         for interval in intervals_tool:
             # Marghoob says that this is just to fill-in some metadata
-            interval.do_validation(args.overlap_ratio)
+            interval.do_validation(overlap_ratio)
 
             interval.fix_pos()
             chr_intervals_tool[interval.chrom].append(interval)
@@ -206,7 +206,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         for contig in contigs:
             chr_intervals_tool[contig.name].sort()
             for interval in chr_intervals_tool[contig.name]:
-                vcf_record = interval.to_vcf_record(fasta_handle,args.sample)
+                vcf_record = interval.to_vcf_record(fasta_handle,sample)
                 if vcf_record is not None:
                     vcf_writer.write_record(vcf_record)
         tool_out_fd.close()
@@ -248,8 +248,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     # This is the merged VCF without assembly, ok for deletions at this point
     vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
-    vcf_template_reader.samples = [args.sample]
-    out_vcf = os.path.join(args.outdir, "metasv.vcf")
+    vcf_template_reader.samples = [sample]
+    out_vcf = os.path.join(outdir, "metasv.vcf")
     vcf_fd = open(out_vcf, "w") if out_vcf is not None else sys.stdout
     vcf_writer = vcf.Writer(vcf_fd, vcf_template_reader)
 
