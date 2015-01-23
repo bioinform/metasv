@@ -4,12 +4,10 @@ logger = logging.getLogger(__name__)
 
 import sys
 import os
-import argparse
 import subprocess
 import pysam
 import bisect
 import vcf
-from fasta_utils import *
 from sv_interval import *
 
 
@@ -70,12 +68,11 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
 
     vcf_reader = vcf.Reader(open(in_vcf))
     # Assume single sample for now
-    sample = vcf_reader.samples[0]
+    sample = vcf_reader.samples[0] if vcf_reader.samples else None
     for vcf_record in vcf_reader:
         if vcf_record.CHROM not in contig_whitelist: continue
 
-        gt = vcf_record.genotype(sample)
-        print vcf_record.FILTER, vcf_record.ALT, vcf_record.REF, vcf_record.INFO, vcf_reader.samples
+        gt = vcf_record.genotype(sample) if sample else None
 
         if source in ["HaplotypeCaller"]:
             if vcf_record.FILTER and "PASS" not in vcf_record.FILTER: continue
@@ -87,27 +84,27 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
             if len(vcf_record.REF) != 1 and len(vcf_record.ALT[0]) != 1: continue
 
             # Check for SV length
-            if len(vcf_record.REF) < minsvlen and len(vcf_record.ALT[0]) < minsvlen: continue
+            if max(len(vcf_record.REF), len(vcf_record.ALT[0])) < minsvlen: continue
 
             if not vcf_record.is_indel: continue
 
             if vcf_record.is_deletion:
-                interval = SVInterval(vcf_record.contig,
-                                      vcf_record.pos,
-                                      vcf_record.pos + len(vcf_record.ref) - 1,
+                interval = SVInterval(vcf_record.CHROM,
+                                      vcf_record.POS,
+                                      vcf_record.POS + len(vcf_record.REF) - 1,
                                       source,
                                       "DEL",
-                                      len(vcf_record.ref) - 1,
+                                      len(vcf_record.REF) - 1,
                                       sources=set([source]),
                                       wiggle=wiggle,
                                       gt=gt)
             else:
-                interval = SVInterval(vcf_record.contig,
-                                      vcf_record.pos + 1,
-                                      vcf_record.pos + 1,
+                interval = SVInterval(vcf_record.CHROM,
+                                      vcf_record.POS + 1,
+                                      vcf_record.POS + 1,
                                       source,
                                       "INS",
-                                      len(vcf_record.alt) - 1,
+                                      len(vcf_record.ALT[0]) - 1,
                                       sources=set([source]),
                                       wiggle=max(inswiggle,wiggle),
                                       gt=gt)
