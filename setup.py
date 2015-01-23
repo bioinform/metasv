@@ -13,5 +13,5 @@ setup(
       packages = find_packages(),
       install_requires = ["cython", "pysam==0.7.7", "pybedtools", "pyvcf"],
       package_data = {"metasv": ["resources/*"]},
-      scripts=[]
+      scripts=['scripts/metasv.py']
       )
