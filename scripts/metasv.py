@@ -4,6 +4,7 @@ import sys
 import argparse
 import pkg_resources
 import metasv
+import pysam
 from metasv.run_metasv import run_metasv
 
 
