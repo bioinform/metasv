@@ -191,8 +191,10 @@ class SVInterval:
             if self.info:
                 info.update(self.info)
             for interval in self.sub_intervals:
-                #TODO: this will just overwrite the other dict entries... this should be ok for pass variants
-                info.update(interval.info)
+                # TODO: this will just overwrite the other dict entries... this should be ok for pass variants
+                # TODO: kind of strange
+                if interval.info:
+                    info.update(interval.info)
         svmethods = [sv_sources_to_type[tool] for tool in self.sources]
         svmethods.sort()
         sv_len = -self.length if self.sv_type == "DEL" else self.length
