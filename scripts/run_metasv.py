@@ -3,9 +3,7 @@
 import sys
 import argparse
 import pkg_resources
-import metasv
-import pysam
-from metasv.run_metasv import run_metasv
+from metasv.main import run_metasv
 
 
 if __name__ == "__main__":
