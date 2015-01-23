@@ -10,5 +10,6 @@ setup(
       packages = find_packages(),
       install_requires = ["cython", "pysam==0.7.7", "pybedtools", "pyvcf"],
       package_data = {"metasv": ["resources/*"]},
-      scripts=['scripts/run_metasv.py']
+      scripts=['scripts/run_metasv.py', 'scripts/svtool_to_vcf.py'],
+      dependency_links = ["https://pypi.python.org/packages/source/p/pysam/pysam-0.7.7.tar.gz"]
       )
