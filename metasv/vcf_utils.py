@@ -112,9 +112,6 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
         else:
             if source == "BreakSeq" and "PASS" not in vcf_record.FILTER: continue
 
-            # The following is a hack to fix broken VCF from cnvnator2vcf script
-            if source == "CNVnator": vcf_record.INFO["natorPE"] = 0
-
             if len(vcf_record.ALT) > 1: continue
             sv_type = vcf_record.INFO["SVTYPE"]
             if sv_type == "DUP:TANDEM": sv_type = "DUP"
@@ -124,6 +121,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                 else:
                     continue
 
+            # Handle broken header if SVLEN is reported as an array
             svlen = abs(vcf_record.INFO["SVLEN"]) if isinstance(vcf_record.INFO["SVLEN"], int) else abs(vcf_record.INFO["SVLEN"][0])
 
             if svlen < minsvlen: continue
@@ -144,82 +142,3 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
         else:
             intervals[interval.sv_type].append(interval)
     return intervals
-
-"""
-    tabix_file = pysam.Tabixfile(in_vcf, parser=pysam.asVCF())
-
-    for vcf_record in (record for record in tabix_file.fetch() if record.contig in contig_whitelist):
-
-        fmt = "GT"
-        gt = "./1"
-        try:
-            gt = get_gt(vcf_record[0], vcf_record.format)
-        except IndexError:
-            pass
-
-        info = parse_info(vcf_record.info)
-
-        if source in ["HaplotypeCaller"]:
-            if vcf_record.filter != "PASS" and vcf_record.filter != ".": continue
-
-            # ignore tri-allelic stuff
-            if vcf_record.alt.find(",") >= 0: continue
-
-            # ignore MNPs
-            if len(vcf_record.ref) != 1 and len(vcf_record.alt) != 1: continue
-
-            # Check for SV length
-            if len(vcf_record.ref) < minsvlen and len(vcf_record.alt) < minsvlen: continue
-
-            if len(vcf_record.ref) == 1:
-                # This is the case for insertions
-                interval = SVInterval(vcf_record.contig,
-                                      vcf_record.pos + 1,
-                                      vcf_record.pos + 1,
-                                      source,
-                                      "INS",
-                                      len(vcf_record.alt) - 1,
-                                      sources=set([source]),
-                                      wiggle=max(inswiggle,wiggle),
-                                      gt=gt)
-            else:
-                interval = SVInterval(vcf_record.contig,
-                                      vcf_record.pos,
-                                      vcf_record.pos + len(vcf_record.ref) - 1,
-                                      source,
-                                      "DEL",
-                                      len(vcf_record.ref) - 1,
-                                      sources=set([source]),
-                                      wiggle=wiggle,
-                                      gt=gt)
-        else:
-            if source == "BreakSeq" and vcf_record.filter != "PASS": continue
-            if vcf_record.alt.find(",") != -1: continue
-            # logger.info(str(vcf_record.alt))
-            sv_type = info["SVTYPE"][0]
-            if sv_type == "DUP:TANDEM": sv_type = "DUP"
-            if "SVLEN" not in info:
-                if source == "BreakSeq" and sv_type == "INS":
-                    info["SVLEN"] = [0]
-                else:
-                    continue
-            svlen = abs(int(info["SVLEN"][0]))
-            if svlen < minsvlen: continue
-            wiggle = max(inswiggle,wiggle) if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
-            if source == "Pindel" and sv_type == "INS": vcf_record.pos += 1
-            interval = SVInterval(vcf_record.contig, vcf_record.pos, int(info["END"][0]), source, sv_type, svlen,
-                                  sources=set([source]), wiggle=wiggle, gt=gt)
-        if interval_overlaps_interval_list(interval, gap_intervals):
-            logger.warn("Skipping " + str(interval) + " due to overlap with gaps")
-            continue
-        if not interval_overlaps_interval_list(interval, include_intervals, min_fraction_self=1.0):
-            logger.warn("Skipping " + str(interval) + " due to being outside the include regions")
-            continue
-        interval.info = info
-
-        if interval.sv_type not in intervals:
-            intervals[interval.sv_type] = [interval]
-        else:
-            intervals[interval.sv_type].append(interval)
-    return intervals
-    """
