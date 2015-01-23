@@ -67,6 +67,84 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                    minsvlen=50, wiggle=100, inswiggle=100):
     if not os.path.isfile(in_vcf): return intervals
     logger.info("Loading SV intervals from %s" % (in_vcf))
+
+    vcf_reader = vcf.Reader(open(in_vcf))
+    # Assume single sample for now
+    sample = vcf_reader.samples[0]
+    for vcf_record in vcf_reader:
+        if vcf_record.CHROM not in contig_whitelist: continue
+
+        gt = vcf_record.genotype(sample)
+        print vcf_record.FILTER, vcf_record.ALT, vcf_record.REF, vcf_record.INFO, vcf_reader.samples
+
+        if source in ["HaplotypeCaller"]:
+            if vcf_record.FILTER and "PASS" not in vcf_record.FILTER: continue
+
+            # Ignore tri-allelic stuff
+            if len(vcf_record.ALT) > 1: continue
+
+            # Ignore MNPs
+            if len(vcf_record.REF) != 1 and len(vcf_record.ALT[0]) != 1: continue
+
+            # Check for SV length
+            if len(vcf_record.REF) < minsvlen and len(vcf_record.ALT[0]) < minsvlen: continue
+
+            if not vcf_record.is_indel: continue
+
+            if vcf_record.is_deletion:
+                interval = SVInterval(vcf_record.contig,
+                                      vcf_record.pos,
+                                      vcf_record.pos + len(vcf_record.ref) - 1,
+                                      source,
+                                      "DEL",
+                                      len(vcf_record.ref) - 1,
+                                      sources=set([source]),
+                                      wiggle=wiggle,
+                                      gt=gt)
+            else:
+                interval = SVInterval(vcf_record.contig,
+                                      vcf_record.pos + 1,
+                                      vcf_record.pos + 1,
+                                      source,
+                                      "INS",
+                                      len(vcf_record.alt) - 1,
+                                      sources=set([source]),
+                                      wiggle=max(inswiggle,wiggle),
+                                      gt=gt)
+
+        else:
+            if source == "BreakSeq" and "PASS" not in vcf_record.FILTER: continue
+            if len(vcf_record.ALT) > 1: continue
+            sv_type = vcf_record.INFO["SVTYPE"]
+            if sv_type == "DUP:TANDEM": sv_type = "DUP"
+            if "SVLEN" not in vcf_record.INFO:
+                if source == "BreakSeq" and sv_type == "INS":
+                    vcf_record.INFO["SVLEN"] = 0
+                else:
+                    continue
+
+            svlen = abs(vcf_record.INFO["SVLEN"])
+
+            if svlen < minsvlen: continue
+            wiggle = max(inswiggle,wiggle) if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
+            if source == "Pindel" and sv_type == "INS": vcf_record.pos += 1
+            interval = SVInterval(vcf_record.contig, vcf_record.pos, int(vcf_record.INFO["END"]), source, sv_type, svlen,
+                                  sources=set([source]), wiggle=wiggle, gt=gt)
+        if interval_overlaps_interval_list(interval, gap_intervals):
+            logger.warn("Skipping " + str(interval) + " due to overlap with gaps")
+            continue
+        if not interval_overlaps_interval_list(interval, include_intervals, min_fraction_self=1.0):
+            logger.warn("Skipping " + str(interval) + " due to being outside the include regions")
+            continue
+        interval.info = copy.deepcopy(vcf_record.INFO)
+
+        if interval.sv_type not in intervals:
+            intervals[interval.sv_type] = [interval]
+        else:
+            intervals[interval.sv_type].append(interval)
+    return intervals
+
+"""
     tabix_file = pysam.Tabixfile(in_vcf, parser=pysam.asVCF())
 
     for vcf_record in (record for record in tabix_file.fetch() if record.contig in contig_whitelist):
@@ -143,3 +221,4 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
         else:
             intervals[interval.sv_type].append(interval)
     return intervals
+    """
