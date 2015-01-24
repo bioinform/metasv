@@ -167,10 +167,11 @@ class BreakDancerRecord:
         return vcf_record
 
 class BreakDancerReader:
-    def __init__(self, file_name):
+    def __init__(self, file_name, reference_handle = None):
         logger.info("File is " + str(file_name))
         self.file_fd = open(file_name) if file_name is not None else sys.stdin
         self.header = BreakDancerHeader()
+        self.reference_handle = reference_handle
 
     def __iter__(self):
         return self
