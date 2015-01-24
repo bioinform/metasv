@@ -2,12 +2,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-import sys
-import os
-import argparse
-import subprocess
-import pysam
-import bisect
 from fasta_utils import *
 from sv_interval import *
 
@@ -78,16 +72,20 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
         info = parse_info(vcf_record.info)
 
         if source in ["HaplotypeCaller"]:
-            if vcf_record.filter != "PASS" and vcf_record.filter != ".": continue
+            if vcf_record.filter != "PASS" and vcf_record.filter != ".":
+                continue
 
             # ignore tri-allelic stuff
-            if vcf_record.alt.find(",") >= 0: continue
+            if vcf_record.alt.find(",") >= 0:
+                continue
 
             # ignore MNPs
-            if len(vcf_record.ref) != 1 and len(vcf_record.alt) != 1: continue
+            if len(vcf_record.ref) != 1 and len(vcf_record.alt) != 1:
+                continue
 
             # Check for SV length
-            if len(vcf_record.ref) < minsvlen and len(vcf_record.alt) < minsvlen: continue
+            if len(vcf_record.ref) < minsvlen and len(vcf_record.alt) < minsvlen:
+                continue
 
             if len(vcf_record.ref) == 1:
                 # This is the case for insertions
@@ -98,7 +96,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                                       "INS",
                                       len(vcf_record.alt) - 1,
                                       sources=set([source]),
-                                      wiggle=max(inswiggle,wiggle),
+                                      wiggle=max(inswiggle, wiggle),
                                       gt=gt)
             else:
                 interval = SVInterval(vcf_record.contig,
@@ -111,20 +109,27 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                                       wiggle=wiggle,
                                       gt=gt)
         else:
-            if source == "BreakSeq" and vcf_record.filter != "PASS": continue
-            if vcf_record.alt.find(",") != -1: continue
+            if source == "BreakSeq" and vcf_record.filter != "PASS":
+                continue
+            if vcf_record.alt.find(",") != -1:
+                continue
             # logger.info(str(vcf_record.alt))
             sv_type = info["SVTYPE"][0]
-            if sv_type == "DUP:TANDEM": sv_type = "DUP"
+            if sv_type == "DUP:TANDEM":
+                sv_type = "DUP"
             if "SVLEN" not in info:
                 if source == "BreakSeq" and sv_type == "INS":
                     info["SVLEN"] = [0]
                 else:
                     continue
             svlen = abs(int(info["SVLEN"][0]))
-            if svlen < minsvlen: continue
-            wiggle = max(inswiggle,wiggle) if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
-            if source == "Pindel" and sv_type == "INS": vcf_record.pos += 1
+            if svlen < minsvlen:
+                continue
+            wiggle = max(inswiggle, wiggle) \
+                if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") \
+                else wiggle
+            if source == "Pindel" and sv_type == "INS":
+                vcf_record.pos += 1
             interval = SVInterval(vcf_record.contig, vcf_record.pos, int(info["END"][0]), source, sv_type, svlen,
                                   sources=set([source]), wiggle=wiggle, gt=gt)
         if interval_overlaps_interval_list(interval, gap_intervals):

@@ -174,7 +174,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     # This will just output per-tool VCFs, no intra-tool merging is done yet
     for toolname, tool_out in vcf_out_list:
-        if tool_out is None or toolname not in intervals: continue
+        if tool_out is None or toolname not in intervals:
+            continue
 
         logger.info("Outputting single tool VCF for %s" % (str(toolname)))
         vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
