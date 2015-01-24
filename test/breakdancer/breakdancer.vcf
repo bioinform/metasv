@@ -1,0 +1,137 @@
+##fileformat=VCFv4.1
+##reference=cache/store/a4667db865b8d268933be0a21f2ed52087618e10/human_g1k_v37_decoy.fa
+##source=/usr/lib/bina/executor/..//breakdancer/current/current/bin/gen_vcf.py
+##INFO=<ID=BKPTID,Number=.,Type=String,Description="ID of the assembled alternate allele in the assembly file">
+##INFO=<ID=CIEND,Number=2,Type=Integer,Description="Confidence interval around END for imprecise variants">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=HOMLEN,Number=.,Type=Integer,Description="Length of base pair identical micro-homology at event breakpoints">
+##INFO=<ID=HOMSEQ,Number=.,Type=String,Description="Sequence of base pair identical micro-homology at event breakpoints">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=MEINFO,Number=4,Type=String,Description="Mobile element info of the form NAME,START,END,POLARITY">
+##INFO=<ID=SVLEN,Number=.,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=NORMAL_COUNT,Number=1,Type=Integer,Description="Number of normal reads supporting reference">
+##INFO=<ID=NUM_READS,Number=1,Type=Integer,Description="Number of reads supporting event">
+##INFO=<ID=TOOLNAME,Number=1,Type=String,Description="Tool used to generate the SV">
+##FILTER=<ID=LowQual,Description="Low Quality">
+##contig=<ID=1,length=249250621>
+##contig=<ID=2,length=243199373>
+##contig=<ID=3,length=198022430>
+##contig=<ID=4,length=191154276>
+##contig=<ID=5,length=180915260>
+##contig=<ID=6,length=171115067>
+##contig=<ID=7,length=159138663>
+##contig=<ID=8,length=146364022>
+##contig=<ID=9,length=141213431>
+##contig=<ID=10,length=135534747>
+##contig=<ID=11,length=135006516>
+##contig=<ID=12,length=133851895>
+##contig=<ID=13,length=115169878>
+##contig=<ID=14,length=107349540>
+##contig=<ID=15,length=102531392>
+##contig=<ID=16,length=90354753>
+##contig=<ID=17,length=81195210>
+##contig=<ID=18,length=78077248>
+##contig=<ID=19,length=59128983>
+##contig=<ID=20,length=63025520>
+##contig=<ID=21,length=48129895>
+##contig=<ID=22,length=51304566>
+##contig=<ID=X,length=155270560>
+##contig=<ID=Y,length=59373566>
+##contig=<ID=MT,length=16569>
+##contig=<ID=GL000207.1,length=4262>
+##contig=<ID=GL000226.1,length=15008>
+##contig=<ID=GL000229.1,length=19913>
+##contig=<ID=GL000231.1,length=27386>
+##contig=<ID=GL000210.1,length=27682>
+##contig=<ID=GL000239.1,length=33824>
+##contig=<ID=GL000235.1,length=34474>
+##contig=<ID=GL000201.1,length=36148>
+##contig=<ID=GL000247.1,length=36422>
+##contig=<ID=GL000245.1,length=36651>
+##contig=<ID=GL000197.1,length=37175>
+##contig=<ID=GL000203.1,length=37498>
+##contig=<ID=GL000246.1,length=38154>
+##contig=<ID=GL000249.1,length=38502>
+##contig=<ID=GL000196.1,length=38914>
+##contig=<ID=GL000248.1,length=39786>
+##contig=<ID=GL000244.1,length=39929>
+##contig=<ID=GL000238.1,length=39939>
+##contig=<ID=GL000202.1,length=40103>
+##contig=<ID=GL000234.1,length=40531>
+##contig=<ID=GL000232.1,length=40652>
+##contig=<ID=GL000206.1,length=41001>
+##contig=<ID=GL000240.1,length=41933>
+##contig=<ID=GL000236.1,length=41934>
+##contig=<ID=GL000241.1,length=42152>
+##contig=<ID=GL000243.1,length=43341>
+##contig=<ID=GL000242.1,length=43523>
+##contig=<ID=GL000230.1,length=43691>
+##contig=<ID=GL000237.1,length=45867>
+##contig=<ID=GL000233.1,length=45941>
+##contig=<ID=GL000204.1,length=81310>
+##contig=<ID=GL000198.1,length=90085>
+##contig=<ID=GL000208.1,length=92689>
+##contig=<ID=GL000191.1,length=106433>
+##contig=<ID=GL000227.1,length=128374>
+##contig=<ID=GL000228.1,length=129120>
+##contig=<ID=GL000214.1,length=137718>
+##contig=<ID=GL000221.1,length=155397>
+##contig=<ID=GL000209.1,length=159169>
+##contig=<ID=GL000218.1,length=161147>
+##contig=<ID=GL000220.1,length=161802>
+##contig=<ID=GL000213.1,length=164239>
+##contig=<ID=GL000211.1,length=166566>
+##contig=<ID=GL000199.1,length=169874>
+##contig=<ID=GL000217.1,length=172149>
+##contig=<ID=GL000216.1,length=172294>
+##contig=<ID=GL000215.1,length=172545>
+##contig=<ID=GL000205.1,length=174588>
+##contig=<ID=GL000219.1,length=179198>
+##contig=<ID=GL000224.1,length=179693>
+##contig=<ID=GL000223.1,length=180455>
+##contig=<ID=GL000195.1,length=182896>
+##contig=<ID=GL000212.1,length=186858>
+##contig=<ID=GL000222.1,length=186861>
+##contig=<ID=GL000200.1,length=187035>
+##contig=<ID=GL000193.1,length=189789>
+##contig=<ID=GL000194.1,length=191469>
+##contig=<ID=GL000225.1,length=211173>
+##contig=<ID=GL000192.1,length=547496>
+##contig=<ID=NC_007605,length=171823>
+##contig=<ID=hs37d5,length=35477943>
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=DEL:ME:ALU,Description="Deletion of ALU element">
+##ALT=<ID=DEL:ME:L1,Description="Deletion of L1 element">
+##ALT=<ID=DUP,Description="Duplication">
+##ALT=<ID=DUP:TANDEM,Description="Tandem Duplication">
+##ALT=<ID=INS,Description="Insertion of novel sequence">
+##ALT=<ID=INS:ME:ALU,Description="Insertion of ALU element">
+##ALT=<ID=INS:ME:L1,Description="Insertion of L1 element">
+##ALT=<ID=INV,Description="Inversion">
+##ALT=<ID=CNV,Description="Copy number variable region">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878_gib_filtered
+22	16857479	.	A	<INS>	.	PASS	TOOLNAME=Breakdancer;SVLEN=207;SVTYPE=INS;END=16857525;IMPRECISE;NORMAL_COUNT=75;NUM_READS=3;SCORE=99	GT	0/1
+22	18047482	.	A	<DEL>	.	PASS	TOOLNAME=Breakdancer;SVLEN=-374;SVTYPE=DEL;END=18047651;IMPRECISE;NORMAL_COUNT=70;NUM_READS=60;SCORE=99	GT	0/1
+22	18168651	.	C	<INV>	.	PASS	TOOLNAME=Breakdancer;SVLEN=37;SVTYPE=INV;END=18169010;IMPRECISE;NORMAL_COUNT=566;NUM_READS=19;SCORE=99	GT	0/1
+22	18535790	.	T	<DEL>	.	PASS	TOOLNAME=Breakdancer;SVLEN=-216;SVTYPE=DEL;END=18536082;IMPRECISE;NORMAL_COUNT=140;NUM_READS=4;SCORE=99	GT	0/1
+22	20950666	.	G	<DEL>	.	PASS	TOOLNAME=Breakdancer;SVLEN=-3211;SVTYPE=DEL;END=20953840;IMPRECISE;NORMAL_COUNT=795;NUM_READS=27;SCORE=99	GT	0/1
+22	21760375	.	C	<INV>	.	PASS	TOOLNAME=Breakdancer;SVLEN=161284;SVTYPE=INV;END=21922038;IMPRECISE;NORMAL_COUNT=80422;NUM_READS=17;SCORE=99	GT	0/1
+22	26891494	.	T	<DEL>	.	PASS	TOOLNAME=Breakdancer;SVLEN=-224;SVTYPE=DEL;END=26891659;IMPRECISE;NORMAL_COUNT=85;NUM_READS=4;SCORE=88	GT	0/1
+22	30281251	.	T	<INS>	.	PASS	TOOLNAME=Breakdancer;SVLEN=202;SVTYPE=INS;END=30281257;IMPRECISE;NORMAL_COUNT=52;NUM_READS=2;SCORE=61	GT	0/1
+22	31776460	.	A	<DEL>	.	PASS	TOOLNAME=Breakdancer;SVLEN=-4201;SVTYPE=DEL;END=31780623;IMPRECISE;NORMAL_COUNT=1053;NUM_READS=17;SCORE=99	GT	0/1
+22	33295804	.	C	<DEL>	.	PASS	TOOLNAME=Breakdancer;SVLEN=-325;SVTYPE=DEL;END=33295946;IMPRECISE;NORMAL_COUNT=227;NUM_READS=28;SCORE=99	GT	0/1
+22	33751417	.	A	<DEL>	.	PASS	TOOLNAME=Breakdancer;SVLEN=-210;SVTYPE=DEL;END=33751858;IMPRECISE;NORMAL_COUNT=177;NUM_READS=4;SCORE=85	GT	0/1
+22	35645459	.	C	<DEL>	.	PASS	TOOLNAME=Breakdancer;SVLEN=-1000;SVTYPE=DEL;END=35645797;IMPRECISE;NORMAL_COUNT=814;NUM_READS=38;SCORE=99	GT	0/1
+22	36561128	.	T	<INS>	.	PASS	TOOLNAME=Breakdancer;SVLEN=211;SVTYPE=INS;END=36561473;IMPRECISE;NORMAL_COUNT=206;NUM_READS=2;SCORE=48	GT	0/1
+22	36598293	.	C	<INV>	.	PASS	TOOLNAME=Breakdancer;SVLEN=53040;SVTYPE=INV;END=36651689;IMPRECISE;NORMAL_COUNT=26255;NUM_READS=107;SCORE=99	GT	0/1
+22	42335782	.	A	<INS>	.	PASS	TOOLNAME=Breakdancer;SVLEN=227;SVTYPE=INS;END=42335815;IMPRECISE;NORMAL_COUNT=75;NUM_READS=6;SCORE=99	GT	0/1
+22	45875072	.	T	<DEL>	.	PASS	TOOLNAME=Breakdancer;SVLEN=-336;SVTYPE=DEL;END=45875351;IMPRECISE;NORMAL_COUNT=171;NUM_READS=28;SCORE=99	GT	0/1
+22	49000642	.	G	<INS>	.	PASS	TOOLNAME=Breakdancer;SVLEN=231;SVTYPE=INS;END=49001057;IMPRECISE;NORMAL_COUNT=219;NUM_READS=2;SCORE=47	GT	0/1
+22	49016806	.	C	<INS>	.	PASS	TOOLNAME=Breakdancer;SVLEN=211;SVTYPE=INS;END=49016832;IMPRECISE;NORMAL_COUNT=74;NUM_READS=3;SCORE=92	GT	0/1
+22	49077668	.	C	<DEL>	.	PASS	TOOLNAME=Breakdancer;SVLEN=-276;SVTYPE=DEL;END=49077903;IMPRECISE;NORMAL_COUNT=84;NUM_READS=20;SCORE=99	GT	0/1
+22	49670885	.	T	<INS>	.	PASS	TOOLNAME=Breakdancer;SVLEN=219;SVTYPE=INS;END=49670892;IMPRECISE;NORMAL_COUNT=53;NUM_READS=2;SCORE=61	GT	0/1
+22	50502138	.	C	<INS>	.	PASS	TOOLNAME=Breakdancer;SVLEN=225;SVTYPE=INS;END=50502409;IMPRECISE;NORMAL_COUNT=183;NUM_READS=2;SCORE=53	GT	0/1
+22	50714640	.	G	<INS>	.	PASS	TOOLNAME=Breakdancer;SVLEN=220;SVTYPE=INS;END=50714811;IMPRECISE;NORMAL_COUNT=274;NUM_READS=17;SCORE=99	GT	0/1
