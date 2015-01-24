@@ -283,27 +283,3 @@ class PindelReader:
             if line.find("ChrID") >= 1:
                 return PindelRecord(line.strip(), self.reference_handle)
 
-
-def convert_pindel_to_vcf(file_name, sample, out_vcf):
-    vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
-    vcf_template_reader.samples = [sample]
-
-    vcf_fd = open(out_vcf, "w") if out_vcf is not None else sys.stdout
-    vcf_writer = vcf.Writer(vcf_fd, vcf_template_reader)
-
-    for pd_record in PindelReader(file_name):
-        vcf_record = pd_record.to_vcf_record(sample)
-        if vcf_record is None:
-            continue
-        vcf_writer.write_record(vcf_record)
-    vcf_writer.close()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Convert Pindel output file to VCF")
-    parser.add_argument("--pindel_in", help="Pindel output file", required=False)
-    parser.add_argument("--vcf_out", help="Output VCF to create", required=False)
-    parser.add_argument("--sample", help="Sample name", required=True)
-
-    args = parser.parse_args()
-    convert_pindel_to_vcf(args.pindel_in, args.sample, args.vcf_out)

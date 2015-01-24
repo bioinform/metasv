@@ -387,5 +387,3 @@ if __name__ == "__main__":
         workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
         chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
         disable_assembly=args.disable_assembly, minsvlen = args.minsvlen, inswiggle = args.inswiggle))
-
-                                                            
