@@ -215,7 +215,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         for type in intervals[tool]:
             print "SVTYPEE: " + type
             for inter in intervals[tool][sv_type]:
-                print "INTEVAL: " + str(inter)
+                print "INTEVAL: " + repr(inter)
 
 
     # Do merging here
