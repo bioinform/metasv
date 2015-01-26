@@ -209,6 +209,15 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         logger.info("Indexing single tool VCF for %s" % (str(toolname)))
         pysam.tabix_index(tool_out, force=True, preset="vcf")
 
+    # Do some debugging, output all the intervals...
+    for tool in intervals:
+        print "TOOL:" + tool
+        for type in intervals[tool]:
+            print "SVTYPEE: " + type
+            for inter in intervals[tool][sv_type]:
+                print "INTEVAL: " + str(inter)
+
+
     # Do merging here
     logger.info("Do merging")
     for sv_type in sv_types:
