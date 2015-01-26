@@ -63,7 +63,6 @@ def read_all_vcf(vcf_file):
             continue
         if line[0] == "#":
             continue
-        ll = line.split('\t')
         vcf_list.append(VcfRec(line))
 
     return vcf_list
@@ -80,14 +79,48 @@ outf = sys.stdout
 if not args.out_bed == None:
     outf = open(args.out_bed, 'w')
 
+"""
+# Example line 14      106880906       .       T       <DEL>   .       PASS    END=107175027;SVLEN=-242290;SVTYPE=DEL;
+DP=58;SVTOOL=MetaSVMerge;SOURCES=14-106550910-106924720-373810-BreakDancer,14-106791601-106792400-799-CNVnator,
+14-106805001-106814100-9099-CNVnator,14-106857201-106858000-799-CNVnator,14-106876601-106880600-3999-CNVnator,
+14-106881006-107065514-184507-BreakSeq,14-106932636-107174927-242290-BreakSeq,14-106883201-106918800-35599-CNVnator,
+14-106925577-106925749-172-BreakDancer,14-106932701-106935400-2699-CNVnator,14-106932820-107175108-242288-BreakDancer,
+14-106986860-106986920-60-HaplotypeCaller,14-107174301-107174900-599-CNVnator;NUM_SVMETHODS=4;VT=SV;
+SVMETHOD=AS,JM,RD,RP;AC=1;AF=0.500;AN=2;BD_CHR1=14;BD_CHR2=14;BD_ORI1=25+0-;BD_ORI2=0+25-;BD_POS1=106932820;
+BD_POS2=107174928;BD_SCORE=99.0;BD_SUPPORTING_READ_PAIRS=25;BaseQRankSum=-0.380;CN_EVAL1=11.4296;
+CN_EVAL2=8.9711e-12;CN_EVAL3=1.0;CN_EVAL4=1.0;CN_NORMALIZED_RD=0.311274;CN_Q0=0.0208333;FS=2.391;
+MLEAC=1;MLEAF=0.500;MQ=59.74;MQ0=0;MQRankSum=0.181;QD=11.86;ReadPosRankSum=1.354;
+VQSLOD=-1.060e-01;culprit=DP   GT      1/1
+
+
+"""
 # read in all VCF and flag the ones that are false
 # at the same time generate the features
 # and also output the BED file
 
+# The order matters here
 methods = ["RP", "RD", "SR", "JM", "AS"]
 features = ["CHROM", "START", "END", "LEN", "TRUE", "NUM_METHODS"] + methods
 
-outf.write("#" + "\t".join(features) + "\n")
+# List of tuples, feature name and default value
+details = [("CN_EVAL1", 0),
+           ("CN_NORMALIZED_RD", 0),
+           ("CN_Q0", 0),
+           ("MQRankSum", 0),
+           ("QD", 0),
+           ("MQ0", 0),
+           ("MQ", 0),
+           ("ReadPosRankSum", 0),
+           ("BD_SCORE", 0),
+           ("BD_SUPPORTING_READ_PAIRS", 0),
+           ("BaseQRankSum", 0)
+           ]
+
+outf.write("#" + "\t".join(features))
+
+for d in details:
+    outf.write('\t' + d[0])
+outf.write('\n')
 
 all_vcf = read_all_vcf(args.in_all_vcf)
 
@@ -104,10 +137,10 @@ for line in all_vcf:
     # CHROM
     out_vec.append(line.chrom)
 
-    #START
+    # START
     out_vec.append(str(line.loc + 1))
 
-    #END
+    # END
     out_vec.append(str(line.loc + abs(int(line.info["SVLEN"]))))
 
     #LEN
@@ -126,6 +159,13 @@ for line in all_vcf:
             out_vec.append("1")
         else:
             out_vec.append("0")
+
+    for d in details:
+        if d[0] in line.info:
+            out_vec.append(str(line.info[d[0]]))
+        else:
+            out_vec.append(str(d[1]))
+
 
     outf.write('\t'.join(out_vec) + '\n')
 

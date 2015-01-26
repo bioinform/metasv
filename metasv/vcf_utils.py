@@ -96,7 +96,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                                       "DEL",
                                       len(vcf_record.REF) - 1,
                                       sources=set([source]),
-                                      wiggle=wiggle,
+                                      wiggle=max(inswiggle, wiggle),
                                       gt=gt)
             else:
                 interval = SVInterval(vcf_record.CHROM,
@@ -120,7 +120,6 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                     vcf_record.INFO["SVLEN"] = 0
                 else:
                     continue
-
             # Handle broken header if SVLEN is reported as an array
             svlen = abs(vcf_record.INFO["SVLEN"]) if isinstance(vcf_record.INFO["SVLEN"], int) else abs(vcf_record.INFO["SVLEN"][0])
 

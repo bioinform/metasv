@@ -114,12 +114,13 @@ class BreakDancerRecord:
         return "<" + self.__class__.__name__ + " " + str(self.__dict__) + ">"
 
     def to_sv_interval(self):
-        if self.sv_type not in valid_breakdancer_svs: return None
+        if self.sv_type not in valid_breakdancer_svs:
+            return None
 
         if self.sv_type == "DEL":
             return SVInterval(self.chr1,
-                              self.pos1,
-                              self.pos1 + abs(self.sv_len),
+                              self.pos1 + 1,
+                              self.pos2, #fudge
                               name=self.name,
                               sv_type=self.sv_type,
                               length=self.sv_len,
@@ -129,8 +130,8 @@ class BreakDancerRecord:
                               native_sv=self)
         else:
             return SVInterval(self.chr1,
-                              self.pos1,
-                              self.pos1,
+                              self.pos1 + 1,
+                              self.pos2, #fudge
                               name=self.name,
                               sv_type="INS",
                               length=self.sv_len,

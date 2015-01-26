@@ -215,9 +215,9 @@ class SVInterval:
             info.update({"CIPOS": (",".join([str(a) for a in self.cipos]))})
 
         vcf_record = vcf.model._Record(self.chrom,
-                                       self.start,
+                                       self.start - 1,
                                        ".",
-                                       fasta_handle.fetch(self.chrom, self.start - 1, self.start) if fasta_handle else "N",
+                                       fasta_handle.fetch(self.chrom, max(0, self.start - 2), max(1, self.start - 1)) if fasta_handle else "N",
                                        ["<%s>" % (self.sv_type)],
                                        ".",
                                        "PASS" if self.is_validated else "LowQual",
