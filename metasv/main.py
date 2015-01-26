@@ -11,7 +11,7 @@ from generate_sv_intervals import parallel_generate_sc_intervals
 from run_spades import run_spades_parallel
 from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
-
+from fasta_utils import get_contigs
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
