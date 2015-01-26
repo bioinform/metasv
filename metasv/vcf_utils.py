@@ -123,9 +123,11 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
             # Handle broken header if SVLEN is reported as an array
             svlen = abs(vcf_record.INFO["SVLEN"]) if isinstance(vcf_record.INFO["SVLEN"], int) else abs(vcf_record.INFO["SVLEN"][0])
 
-            if svlen < minsvlen: continue
+            if svlen < minsvlen:
+                continue
             wiggle = max(inswiggle,wiggle) if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
-            if source == "Pindel" and sv_type == "INS": vcf_record.pos += 1
+            if source == "Pindel" and sv_type == "INS":
+                vcf_record.POS += 1
             interval = SVInterval(vcf_record.CHROM, vcf_record.POS, int(vcf_record.INFO["END"]), source, sv_type, svlen,
                                   sources=set([source]), wiggle=wiggle, gt=gt)
         if interval_overlaps_interval_list(interval, gap_intervals):

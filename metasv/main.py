@@ -224,8 +224,11 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         # Do the inter-tool merging
         merged_intervals = merge_intervals(tool_merged_intervals[sv_type])
 
-        intervals1 = []  # Intervals which overlap well with merged_intervals
-        intervals2 = []  # Intervals which do not overlap well with merged_intervals. Used to filter out small intervals which got merged with large intervals
+        # Intervals which overlap well with merged_intervals
+        intervals1 = []
+        # Intervals which do not overlap well with merged_intervals.
+        # Used to filter out small intervals which got merged with large intervals
+        intervals2 = []
 
         for interval in tool_merged_intervals[sv_type]:
             if interval_overlaps_interval_list(interval, merged_intervals, overlap_ratio, overlap_ratio):
