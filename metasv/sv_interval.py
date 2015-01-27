@@ -85,9 +85,11 @@ class SVInterval:
 
     def overlaps(self, other, min_fraction_self=1e-9, min_fraction_other=1e-9, min_overlap_length_self=1,
                  min_overlap_length_other=1):
-        if self.chrom != other.chrom: return False
-        if max(self.start - self.wiggle, other.start - other.wiggle) >= min(self.end + self.wiggle,
-                                                                            other.end + other.wiggle): return False
+        if self.chrom != other.chrom:
+            return False
+        if max(self.start - self.wiggle, other.start - other.wiggle) \
+                >= min(self.end + self.wiggle, other.end + other.wiggle):
+            return False
 
         self_length = float(self.end - self.start + 2 * self.wiggle)
         other_length = float(other.end - other.start + 2 * other.wiggle)
@@ -98,7 +100,8 @@ class SVInterval:
             min_fraction_self, min_overlap_length_other)
 
     def is_adjacent(self, other, gap=0):
-        if self.chrom != other.chrom: return False
+        if self.chrom != other.chrom:
+            return False
         return (self.end + gap >= other.start and self.end + gap < other.end) or (
         other.end + gap >= self.start and other.end + gap < self.end)
 
@@ -270,15 +273,27 @@ def interval_overlaps_interval_list(interval, interval_list, min_fraction_self=1
 def merge_intervals(interval_list):
     interval_list.sort()
     merged_intervals = []
-    if not interval_list: return []
+    if not interval_list:
+        return []
 
     current_merged_interval = copy.deepcopy(interval_list[0])
     for i in xrange(len(interval_list) - 1):
         next_interval = interval_list[i + 1]
+        if str(current_merged_interval) == '1-953161-953319-158-Pindel' or str(current_merged_interval) == '1-953028-953326-165-BreakDancer':
+            print "BLAAAH: " + str(current_merged_interval) + ":" + str(next_interval)
+            print "WOO: " + repr(current_merged_interval)
+            print "WOO2: " + repr(next_interval)
+            print "overlap: " + current_merged_interval.overlaps(next_interval)
+            print "adjacent: " + current_merged_interval.is_adjacent(next_interval)
+
         if current_merged_interval.overlaps(next_interval) or current_merged_interval.is_adjacent(next_interval):
             if current_merged_interval.sub_intervals:
+                if str(current_merged_interval) == '1-953161-953319-158-Pindel' or str(current_merged_interval) == '1-953028-953326-165-BreakDancer':
+                    print "Merging2222..."
                 current_merged_interval.merge(next_interval)
             else:
+                if str(current_merged_interval) == '1-953161-953319-158-Pindel' or str(current_merged_interval) == '1-953028-953326-165-BreakDancer':
+                    print "Merging..."
                 new_merged_interval = SVInterval()
                 # logger.debug("Merging %s with %s" % (repr(current_merged_interval), repr(next_interval)))
                 new_merged_interval.set_merged(current_merged_interval, next_interval)
