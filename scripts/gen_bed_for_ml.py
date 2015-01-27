@@ -114,7 +114,7 @@ details = [("CN_EVAL1", 0),
            ("BD_SCORE", 0),
            ("BD_SUPPORTING_READ_PAIRS", 0),
            ("BaseQRankSum", 0)
-           ]
+]
 
 outf.write("#" + "\t".join(features))
 
@@ -143,7 +143,7 @@ for line in all_vcf:
     # END
     out_vec.append(str(line.loc + abs(int(line.info["SVLEN"]))))
 
-    #LEN
+    # LEN
     out_vec.append(str(abs(int(line.info["SVLEN"]))))
 
     #TRUE
@@ -165,7 +165,6 @@ for line in all_vcf:
             out_vec.append(str(line.info[d[0]]))
         else:
             out_vec.append(str(d[1]))
-
 
     outf.write('\t'.join(out_vec) + '\n')
 
