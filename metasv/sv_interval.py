@@ -280,20 +280,20 @@ def merge_intervals(interval_list):
     for i in xrange(len(interval_list) - 1):
         next_interval = interval_list[i + 1]
         if current_merged_interval.start == 953161 or current_merged_interval.start == 953028:
-            print "BLAAAH: " + str(current_merged_interval) + ":" + str(next_interval)
-            print "WOO: " + repr(current_merged_interval)
-            print "WOO2: " + repr(next_interval)
-            print "overlap: " + str(current_merged_interval.overlaps(next_interval))
-            print "adjacent: " + str(current_merged_interval.is_adjacent(next_interval))
+            logger.info("BLAAAH: " + str(current_merged_interval) + ":" + str(next_interval))
+            logger.info("WOO: " + repr(current_merged_interval))
+            logger.info("WOO2: " + repr(next_interval))
+            logger.info("overlap: " + str(current_merged_interval.overlaps(next_interval)))
+            logger.info("adjacent: " + str(current_merged_interval.is_adjacent(next_interval)))
 
         if current_merged_interval.overlaps(next_interval) or current_merged_interval.is_adjacent(next_interval):
             if current_merged_interval.sub_intervals:
                 if current_merged_interval.start == 953161 or current_merged_interval.start == 953028:
-                    print "Merging2222..."
+                    logger.info("Merging2222...")
                 current_merged_interval.merge(next_interval)
             else:
                 if current_merged_interval.start == 953161 or current_merged_interval.start == 953028:
-                    print "Merging..."
+                    logger.info("Merging...")
                 new_merged_interval = SVInterval()
                 # logger.debug("Merging %s with %s" % (repr(current_merged_interval), repr(next_interval)))
                 new_merged_interval.set_merged(current_merged_interval, next_interval)
@@ -301,6 +301,7 @@ def merge_intervals(interval_list):
         else:
             merged_intervals.append(current_merged_interval)
             current_merged_interval = copy.deepcopy(next_interval)
+
     merged_intervals.append(current_merged_interval)
     merged_intervals.sort()
     return merged_intervals
