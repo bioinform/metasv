@@ -228,7 +228,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         # Do the intra-tool merging
         logger.info("Intra-tool Merging SVs of type %s" % sv_type)
         for tool in tools:
-            logger.info("Is %s in tool keys? %s" % (sv_type, str(tools.keys())))
+            logger.info("Is %s in tool keys? %s" % (sv_type, str(intervals[tool].keys())))
             if sv_type not in intervals[tool]:
                 logger.info("%s not in tool %s" % (sv_type, tool))
                 continue
