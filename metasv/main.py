@@ -175,7 +175,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                     ("BreakSeq", breakseq_out)]
 
     # This will just output per-tool VCFs, no intra-tool merging is done yet
-    logger.info("Outut per-tool VCFs")
+    logger.info("Output per-tool VCFs")
     for toolname, tool_out in vcf_out_list:
         if tool_out is None or toolname not in intervals:
             continue
