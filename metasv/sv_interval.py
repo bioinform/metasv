@@ -279,7 +279,7 @@ def merge_intervals(interval_list):
     current_merged_interval = copy.deepcopy(interval_list[0])
     for i in xrange(len(interval_list) - 1):
         next_interval = interval_list[i + 1]
-        if str(current_merged_interval) == '1-953161-953319-158-Pindel' or str(current_merged_interval) == '1-953028-953326-165-BreakDancer':
+        if current_merged_interval.start == 953161 or current_merged_interval.start == 953028:
             print "BLAAAH: " + str(current_merged_interval) + ":" + str(next_interval)
             print "WOO: " + repr(current_merged_interval)
             print "WOO2: " + repr(next_interval)
@@ -288,11 +288,11 @@ def merge_intervals(interval_list):
 
         if current_merged_interval.overlaps(next_interval) or current_merged_interval.is_adjacent(next_interval):
             if current_merged_interval.sub_intervals:
-                if str(current_merged_interval) == '1-953161-953319-158-Pindel' or str(current_merged_interval) == '1-953028-953326-165-BreakDancer':
+                if current_merged_interval.start == 953161 or current_merged_interval.start == 953028:
                     print "Merging2222..."
                 current_merged_interval.merge(next_interval)
             else:
-                if str(current_merged_interval) == '1-953161-953319-158-Pindel' or str(current_merged_interval) == '1-953028-953326-165-BreakDancer':
+                if current_merged_interval.start == 953161 or current_merged_interval.start == 953028:
                     print "Merging..."
                 new_merged_interval = SVInterval()
                 # logger.debug("Merging %s with %s" % (repr(current_merged_interval), repr(next_interval)))
