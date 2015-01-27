@@ -221,10 +221,11 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     # Do merging here
     logger.info("Do merging")
     for sv_type in sv_types:
-        logger.info("Processing SVs of type %s" % (sv_type))
+        logger.info("Processing SVs of type %s" % sv_type)
         tool_merged_intervals[sv_type] = []
 
         # Do the intra-tool merging
+        logger.info("Intra-tool Merging SVs of type %s" % sv_type)
         for tool in tools:
             if sv_type not in intervals[tool]:
                 continue
@@ -232,6 +233,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
             tool_merged_intervals[sv_type] += merge_intervals(intervals[tool][sv_type])
 
         # Do the inter-tool merging
+        logger.info("Inter-tool Merging SVs of type %s" % sv_type)
         merged_intervals = merge_intervals(tool_merged_intervals[sv_type])
 
         # Intervals which overlap well with merged_intervals
@@ -240,6 +242,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         # Used to filter out small intervals which got merged with large intervals
         intervals2 = []
 
+        logger.info("Checking overlaps SVs of type %s" % sv_type)
         for interval in tool_merged_intervals[sv_type]:
             if interval_overlaps_interval_list(interval, merged_intervals, overlap_ratio, overlap_ratio):
                 intervals2.append(interval)
