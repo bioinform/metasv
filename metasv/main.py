@@ -133,7 +133,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                     else:
                         interval.wiggle = wiggle
 
-                    intervals[toolname][record.sv_type].append(interval)
+                    intervals[toolname][interval.sv_type].append(interval)
 
         sv_types |= set(intervals[toolname].keys())
 
