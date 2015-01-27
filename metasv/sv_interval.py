@@ -282,10 +282,8 @@ def merge_intervals(interval_list):
 
         if current_merged_interval.overlaps(next_interval) or current_merged_interval.is_adjacent(next_interval):
             if current_merged_interval.sub_intervals:
-                if current_merged_interval.start == 953161 or current_merged_interval.start == 953028:
                 current_merged_interval.merge(next_interval)
             else:
-                if current_merged_interval.start == 953161 or current_merged_interval.start == 953028:
                 new_merged_interval = SVInterval()
                 # logger.debug("Merging %s with %s" % (repr(current_merged_interval), repr(next_interval)))
                 new_merged_interval.set_merged(current_merged_interval, next_interval)
