@@ -283,8 +283,8 @@ def merge_intervals(interval_list):
             print "BLAAAH: " + str(current_merged_interval) + ":" + str(next_interval)
             print "WOO: " + repr(current_merged_interval)
             print "WOO2: " + repr(next_interval)
-            print "overlap: " + current_merged_interval.overlaps(next_interval)
-            print "adjacent: " + current_merged_interval.is_adjacent(next_interval)
+            print "overlap: " + str(current_merged_interval.overlaps(next_interval))
+            print "adjacent: " + str(current_merged_interval.is_adjacent(next_interval))
 
         if current_merged_interval.overlaps(next_interval) or current_merged_interval.is_adjacent(next_interval):
             if current_merged_interval.sub_intervals:
