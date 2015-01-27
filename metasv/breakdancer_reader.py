@@ -117,7 +117,7 @@ class BreakDancerRecord:
         if self.sv_type not in valid_breakdancer_svs:
             return None
 
-        if self.sv_type == "DEL":
+        if self.sv_type == "DEL" and self.sv_type == "INV":
             return SVInterval(self.chr1,
                               self.pos1 + 1,
                               self.pos2, #fudge
@@ -128,17 +128,19 @@ class BreakDancerRecord:
                               cipos=[0, self.pos2 - self.pos1 - abs(self.sv_len)],
                               info=self.info,
                               native_sv=self)
-        else:
+        elif self.sv_type == "INS":
             return SVInterval(self.chr1,
                               self.pos1 + 1,
                               self.pos2, #fudge
                               name=self.name,
-                              sv_type="INS",
+                              sv_type=self.sv_type,
                               length=self.sv_len,
                               sources=breakdancer_source,
                               cipos=[0, self.pos2 - self.pos1],
                               info=self.info,
                               native_sv=self)
+        else:
+            logger.error("Bad SV type: " + repr(self))
 
     def to_vcf_record(self, sample):
         alt = ["<%s>" % (self.sv_type)]
