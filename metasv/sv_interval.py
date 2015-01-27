@@ -279,7 +279,6 @@ def merge_intervals(interval_list):
     current_merged_interval = copy.deepcopy(interval_list[0])
     for i in xrange(len(interval_list) - 1):
         next_interval = interval_list[i + 1]
-        if current_merged_interval.start == 953161 or current_merged_interval.start == 953028:
 
         if current_merged_interval.overlaps(next_interval) or current_merged_interval.is_adjacent(next_interval):
             if current_merged_interval.sub_intervals:
