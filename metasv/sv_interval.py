@@ -148,7 +148,7 @@ class SVInterval:
                     self.is_validated = len(self.sources) > 1
                     self.validating_interval = lists[source][0]
                     self.is_precise = source in precise_sv_sources
-                    break # This break makes the order of sv_sources important
+                    break  # This break makes the order of sv_sources important
 
         if not self.is_validated:
             return
