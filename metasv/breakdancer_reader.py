@@ -117,7 +117,7 @@ class BreakDancerRecord:
         if self.sv_type not in valid_breakdancer_svs:
             return None
 
-        if self.sv_type == "DEL" and self.sv_type == "INV":
+        if self.sv_type == "DEL" or self.sv_type == "INV":
             return SVInterval(self.chr1,
                               self.pos1 + 1,
                               self.pos2, #fudge
