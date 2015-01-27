@@ -211,7 +211,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     # Do some debugging, output all the intervals...
     for k, tool in intervals.iteritems():
-        print "TOOL:" + k + "," + tool.keys()
+        print "TOOL:" + k + "," + str(tool.keys())
         for kk, type in tool.iteritems():
             print "SVTYPEE: " + kk
             for inter in type:
