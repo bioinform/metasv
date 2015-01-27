@@ -85,9 +85,11 @@ class SVInterval:
 
     def overlaps(self, other, min_fraction_self=1e-9, min_fraction_other=1e-9, min_overlap_length_self=1,
                  min_overlap_length_other=1):
-        if self.chrom != other.chrom: return False
-        if max(self.start - self.wiggle, other.start - other.wiggle) >= min(self.end + self.wiggle,
-                                                                            other.end + other.wiggle): return False
+        if self.chrom != other.chrom:
+            return False
+        if max(self.start - self.wiggle, other.start - other.wiggle) \
+                >= min(self.end + self.wiggle, other.end + other.wiggle):
+            return False
 
         self_length = float(self.end - self.start + 2 * self.wiggle)
         other_length = float(other.end - other.start + 2 * other.wiggle)
@@ -98,7 +100,8 @@ class SVInterval:
             min_fraction_self, min_overlap_length_other)
 
     def is_adjacent(self, other, gap=0):
-        if self.chrom != other.chrom: return False
+        if self.chrom != other.chrom:
+            return False
         return (self.end + gap >= other.start and self.end + gap < other.end) or (
         other.end + gap >= self.start and other.end + gap < self.end)
 
@@ -270,11 +273,13 @@ def interval_overlaps_interval_list(interval, interval_list, min_fraction_self=1
 def merge_intervals(interval_list):
     interval_list.sort()
     merged_intervals = []
-    if not interval_list: return []
+    if not interval_list:
+        return []
 
     current_merged_interval = copy.deepcopy(interval_list[0])
     for i in xrange(len(interval_list) - 1):
         next_interval = interval_list[i + 1]
+
         if current_merged_interval.overlaps(next_interval) or current_merged_interval.is_adjacent(next_interval):
             if current_merged_interval.sub_intervals:
                 current_merged_interval.merge(next_interval)
@@ -286,6 +291,7 @@ def merge_intervals(interval_list):
         else:
             merged_intervals.append(current_merged_interval)
             current_merged_interval = copy.deepcopy(next_interval)
+
     merged_intervals.append(current_merged_interval)
     merged_intervals.sort()
     return merged_intervals

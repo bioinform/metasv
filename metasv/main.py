@@ -133,7 +133,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                     else:
                         interval.wiggle = wiggle
 
-                    intervals[toolname][record.sv_type].append(interval)
+                    intervals[toolname][interval.sv_type].append(interval)
 
         sv_types |= set(intervals[toolname].keys())
 
@@ -209,19 +209,25 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         logger.info("Indexing single tool VCF for %s" % (str(toolname)))
         pysam.tabix_index(tool_out, force=True, preset="vcf")
 
+
     # Do merging here
     logger.info("Do merging")
     for sv_type in sv_types:
-        logger.info("Processing SVs of type %s" % (sv_type))
+        logger.info("Processing SVs of type %s" % sv_type)
         tool_merged_intervals[sv_type] = []
 
         # Do the intra-tool merging
+        logger.info("Intra-tool Merging SVs of type %s" % sv_type)
         for tool in tools:
-            if sv_type not in intervals[tool]: continue
+            logger.debug("Is %s in tool keys? %s" % (sv_type, str(intervals[tool].keys())))
+            if sv_type not in intervals[tool]:
+                logger.debug("%s not in tool %s" % (sv_type, tool))
+                continue
             logger.info("First level merging for %s for tool %s" % (sv_type, tool))
             tool_merged_intervals[sv_type] += merge_intervals(intervals[tool][sv_type])
 
         # Do the inter-tool merging
+        logger.info("Inter-tool Merging SVs of type %s" % sv_type)
         merged_intervals = merge_intervals(tool_merged_intervals[sv_type])
 
         # Intervals which overlap well with merged_intervals
@@ -230,12 +236,12 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         # Used to filter out small intervals which got merged with large intervals
         intervals2 = []
 
+        logger.info("Checking overlaps SVs of type %s" % sv_type)
         for interval in tool_merged_intervals[sv_type]:
             if interval_overlaps_interval_list(interval, merged_intervals, overlap_ratio, overlap_ratio):
                 intervals2.append(interval)
             else:
                 intervals1.append(interval)
-
         final_intervals.extend(merge_intervals(intervals1) + merge_intervals(intervals2))
 
     final_chr_intervals = {contig.name: [] for contig in contigs}
