@@ -210,11 +210,11 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         pysam.tabix_index(tool_out, force=True, preset="vcf")
 
     # Do some debugging, output all the intervals...
-    for tool in intervals:
-        print "TOOL:" + tool
-        for type in intervals[tool]:
-            print "SVTYPEE: " + type
-            for inter in intervals[tool][sv_type]:
+    for k, tool in intervals.iteritems():
+        print "TOOL:" + k
+        for kk, type in tool.iteritems():
+            print "SVTYPEE: " + kk
+            for inter in type:
                 print "INTEVAL: " + str(inter) + " : " + repr(inter)
 
 
