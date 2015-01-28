@@ -12,6 +12,7 @@ from run_spades import run_spades_parallel
 from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
 from fasta_utils import get_contigs
+import shutil
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -29,7 +30,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                breakseq_vcf=[], cnvnator_vcf=[], cnvnator_native=[], gatk_vcf=[], gaps=None, filter_gaps=False,
                keep_standard_contigs=False,
                wiggle=100, overlap_ratio=0.5, workdir="work", outdir="out", boost_ins=False, bam=None, chromosomes=[],
-               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=50, inswiggle=100):
+               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=50, inswiggle=100, enable_per_tool_output = False):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -175,39 +176,40 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                     ("BreakSeq", breakseq_out)]
 
     # This will just output per-tool VCFs, no intra-tool merging is done yet
-    logger.info("Outut per-tool VCFs")
-    for toolname, tool_out in vcf_out_list:
-        if tool_out is None or toolname not in intervals:
-            continue
+    if enable_per_tool_output:
+        logger.info("Outut per-tool VCFs")
+        for toolname, tool_out in vcf_out_list:
+            if tool_out is None or toolname not in intervals:
+                continue
 
-        logger.info("Outputting single tool VCF for %s" % (str(toolname)))
-        vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
-        vcf_template_reader.samples = [sample]
+            logger.info("Outputting single tool VCF for %s" % (str(toolname)))
+            vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
+            vcf_template_reader.samples = [sample]
 
-        intervals_tool = []
-        tool_out_fd = open(tool_out, "w")
-        vcf_writer = vcf.Writer(tool_out_fd, vcf_template_reader)
-        chr_intervals_tool = {contig.name: [] for contig in contigs}
-        for sv_type in sv_types:
-            if sv_type in intervals[toolname]:
-                intervals_tool.extend([copy.deepcopy(interval) for interval in intervals[toolname][sv_type]])
-        for interval in intervals_tool:
-            # Marghoob says that this is just to fill-in some metadata
-            interval.do_validation(overlap_ratio)
+            intervals_tool = []
+            tool_out_fd = open(tool_out, "w")
+            vcf_writer = vcf.Writer(tool_out_fd, vcf_template_reader)
+            chr_intervals_tool = {contig.name: [] for contig in contigs}
+            for sv_type in sv_types:
+                if sv_type in intervals[toolname]:
+                    intervals_tool.extend([copy.deepcopy(interval) for interval in intervals[toolname][sv_type]])
+            for interval in intervals_tool:
+                # Marghoob says that this is just to fill-in some metadata
+                interval.do_validation(overlap_ratio)
 
-            interval.fix_pos()
-            chr_intervals_tool[interval.chrom].append(interval)
+                interval.fix_pos()
+                chr_intervals_tool[interval.chrom].append(interval)
 
-        for contig in contigs:
-            chr_intervals_tool[contig.name].sort()
-            for interval in chr_intervals_tool[contig.name]:
-                vcf_record = interval.to_vcf_record(fasta_handle, sample)
-                if vcf_record is not None:
-                    vcf_writer.write_record(vcf_record)
-        tool_out_fd.close()
-        vcf_writer.close()
-        logger.info("Indexing single tool VCF for %s" % (str(toolname)))
-        pysam.tabix_index(tool_out, force=True, preset="vcf")
+            for contig in contigs:
+                chr_intervals_tool[contig.name].sort()
+                for interval in chr_intervals_tool[contig.name]:
+                    vcf_record = interval.to_vcf_record(fasta_handle, sample)
+                    if vcf_record is not None:
+                        vcf_writer.write_record(vcf_record)
+            tool_out_fd.close()
+            vcf_writer.close()
+            logger.info("Indexing single tool VCF for %s" % (str(toolname)))
+            pysam.tabix_index(tool_out, force=True, preset="vcf")
 
 
     # Do merging here
@@ -254,8 +256,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     logger.info("Output merged VCF without assembly ")
     vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
     vcf_template_reader.samples = [sample]
-    out_vcf = os.path.join(outdir, "metasv.vcf")
-    vcf_fd = open(out_vcf, "w") if out_vcf is not None else sys.stdout
+    preasm_vcf = os.path.join(workdir, "pre_asm.vcf")
+    vcf_fd = open(preasm_vcf, "w")
     vcf_writer = vcf.Writer(vcf_fd, vcf_template_reader)
 
     final_stats = {}
@@ -282,6 +284,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     for key in sorted(final_stats.keys()):
         logger.info(str(key) + ":" + str(final_stats[key]))
+
+    final_vcf = os.path.join(outdir, "variants.vcf")
 
     if not disable_assembly:
         logger.info("Running assembly")
@@ -321,13 +325,14 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                 final_bed)
         else:
             pybedtools.BedTool(breakpoints_bed).saveas(final_bed)
+
+        logger.info("Output final VCF file")
+
+        convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample)
     else:
-        final_bed = merged_bed
+        shutil.copy(preasm_vcf, final_vcf)
 
-    logger.info("Output final VCF file")
-
-    final_vcf = os.path.join(outdir, "final.vcf")
-    convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample)
+    pysam.tabix_index(final_vcf, force=True, preset="vcf")
 
     logger.info("Clean up pybedtools")
 
@@ -379,6 +384,7 @@ if __name__ == "__main__":
     parser.add_argument("--spades", help="Path to SPAdes executable", required=False)
     parser.add_argument("--age", help="Path to AGE executable", required=False)
     parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
+    parser.add_argument("--enable_per_tool_output", action = "store_true", help = "Enable output of merged SVs for individual tools")
 
     args = parser.parse_args()
 
