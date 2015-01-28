@@ -20,7 +20,7 @@ args = parser.parse_args()
 
 class VcfRec:
     def __init__(self, line):
-        ll = line.split("\t");
+        ll = line.split("\t")
         self.chrom = ll[0]
         self.loc = int(ll[1])
         self.ref = ll[3]
@@ -76,7 +76,7 @@ for line in false_vcf:
 
 # open the output file
 outf = sys.stdout
-if not args.out_bed == None:
+if not args.out_bed is None:
     outf = open(args.out_bed, 'w')
 
 """
@@ -122,12 +122,12 @@ details = [("CN_EVAL1", 0),
            ("ReadPosRankSum", 0),
            ("BD_SCORE", 0),
            ("BD_SUPPORTING_READ_PAIRS", 0),
-           ("BaseQRankSum", 0)
-           ("PD_DOWN_UNIQ_READ_SUPP", 0)
-           ("PD_UP_UNIQ_READ_SUPP", 0)
-           ("PD_UNIQ_READ_SUPP", 0)
-           ("PD_SIMPLE_SCORE", 0)
-           ("PD_SUM_MAPQ", 0)
+           ("BaseQRankSum", 0),
+           ("PD_DOWN_UNIQ_READ_SUPP", 0),
+           ("PD_UP_UNIQ_READ_SUPP", 0),
+           ("PD_UNIQ_READ_SUPP", 0),
+           ("PD_SIMPLE_SCORE", 0),
+           ("PD_SUM_MAPQ", 0),
            ("PD_HOMLEN", 0)
 ]
 
@@ -161,10 +161,10 @@ for line in all_vcf:
     # LEN
     out_vec.append(str(abs(int(line.info["SVLEN"]))))
 
-    #TRUE
+    # TRUE
     out_vec.append(str(true_var))
 
-    #NUM_METHODS
+    # NUM_METHODS
     out_vec.append(str(len(method_ll)))
 
     #RP,RD,SR,JT,AS
