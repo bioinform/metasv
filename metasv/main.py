@@ -285,7 +285,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     for key in sorted(final_stats.keys()):
         logger.info(str(key) + ":" + str(final_stats[key]))
 
-    final_vcf = os.path.join(outdir, "merged.vcf")
+    final_vcf = os.path.join(outdir, "variants.vcf")
 
     if not disable_assembly:
         logger.info("Running assembly")
