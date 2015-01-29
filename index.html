@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="MetaSV">
+    <meta name="author" content="Marghoob Mohiyuddin">
+
+    <title>MetaSV</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+    .container {
+  margin-right: auto;
+  margin-left: auto;
+  max-width: 760px;
+}
+    </style>
+    
+    <!-- Google Tag Manager -->
+<noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-WGQXX7"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-WGQXX7');</script>
+<!-- End Google Tag Manager -->
+    
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-58409498-2', 'auto');
+  ga('require', 'linkid', 'linkid.js');
+  ga('send', 'pageview');
+  
+  
+  
+  /**
+* Function that tracks a click on an outbound link in Google Analytics.
+* This function takes a valid URL string as an argument, and uses that URL string
+* as the event label.
+*/
+var trackOutboundLink = function(url) {
+   ga('send', 'event', 'outbound', 'click', url, {'hitCallback':
+     function () {
+     document.location = url;
+     }
+   });
+}
+
+
+function _gaLt(event){
+    var el = event.srcElement || event.target;
+
+    /* Loop up the DOM tree through parent elements if clicked element is not a link (eg: an image inside a link) */
+    while(el && (typeof el.tagName == 'undefined' || el.tagName.toLowerCase() != 'a' || !el.href)){
+        el = el.parentNode;
+    }
+
+    if(el && el.href){
+        if(el.href.indexOf(location.host) == -1){ /* external link */
+            /* HitCallback function to either open link in either same or new window */
+            var hitBack = function(link, target){
+                target ? window.open(link, target) : window.location.href = link;
+            };
+            /* link */
+            var link = el.href;
+            /* Is target set and not _(self|parent|top)? */
+            var target = (el.target && !el.target.match(/^_(self|parent|top)$/i)) ? el.target : false;
+            /* send event with callback */
+            ga(
+                "send", "event", "Outgoing Links", link,
+                document.location.pathname + document.location.search,
+                {"hitCallback": hitBack(link, target)}
+            );
+
+            /* Prevent standard click */
+            event.preventDefault ? event.preventDefault() : event.returnValue = !1;
+        }
+
+    }
+}
+
+/* Attach the event to all clicks in the document after page has loaded */
+var w = window;
+w.addEventListener ? w.addEventListener("load",function(){document.body.addEventListener("click",_gaLt,!1)},!1)
+ : w.attachEvent && w.attachEvent("onload",function(){document.body.attachEvent("onclick",_gaLt)});
+
+</script>
+
+</head>
+
+<body>
+
+	
+
+    <div class="container" style="padding-bottom: 400px;">
+    	<div class="page-header">
+  		<h1>MetaSV</h1>
+  		<h2>An accurate and integrative structural-variant caller for next generation sequencing</h2>
+	</div>
+    
+        <div class="jumbotron">
+            <p>
+                <i>For more information contact us at <a href="mailto:rd@bina.com">rd@bina.com</a></i>
+            </p>
+            
+        </div>
+        
+<h2>Download MetaSV</h2>
+
+<p>Latest version:  <a href="https://github.com/bioinform/metasv/archive/0.1.1-alpha.tar.gz"
+onclick="trackOutboundLink('https://github.com/bioinform/metasv/archive/0.1.1-alpha.tar.gz'); return false;">https://github.com/bioinform/metasv/archive/0.1.1-alpha.tar.gz</a></p>
+
+<p>For other versions, see "releases". <a href="https://github.com/bioinform/metasv/releases"
+onclick="trackOutboundLink('https://github.com/bioinform/metasv/releases'); return false;">https://github.com/bioinform/metasv/releases</a></p>
+
+
+<h2>System Requirements</h2>
+<p>
+   The following Python packages must be installed:
+   <ul>
+      <li><a href="http://pythonhosted.org/pybedtools">pybedtools</a></li>
+      <li><a href="https://pypi.python.org/packages/source/p/pysam/pysam-0.7.7.tar.gz">pysam-0.7.7</a>: MetaSV has only been tested with version 0.7.7 of pysam.</li>
+      <li><a href="https://github.com/jamescasbon/PyVCF">pyvcf</a></li>
+   </ul>
+   In addition, paths to the following tools must be provided as MetaSV arguments:
+   <ul>
+      <li><a href="http://bioinf.spbau.ru/spades">SPAdes</a>: Used for assembly around the SV breakpoints</li>
+      <li><a href="https://github.com/abyzovlab/AGE">AGE</a>: Used for determining the SV breakpoints using assembled contigs. Please use AGE code from the following <a href="https://github.com/marghoob/AGE/archive/simple-parseable-output.zip">fork</a> of the main repository-the code was modified to make AGE output simpler to parse. This dependency on the fork will be fixed in the next release.</li>
+   </ul>
+</p>
+
+
+<h2>Installing MetaSV</h2>
+<p>MetaSV is a python package and can be installed using <code>pip</code>. To install type <code>pip install https://github.com/bioinform/metasv/archive/0.1.1-alpha.tar.gz</code>. The current version
+of MetaSV is 0.1.1-alpha. In general, the install source would be https://github.com/bioinform/metasv/archive/version.tar.gz</p>
+
+
+<h2>Running VarSim</h2>
+
+<p>Type <code>run_metasv.py -h</code> for help.</p>
+
+<h2>References/Tools</h2>
+
+<ul style="font-family:monospace;">
+   <li>AGE</li>
+   <li>BreakDancer</li>
+   <li>BreakSeq2</li>
+   <li>CNVnator</li>
+   <li>Pindel</li>
+   <li>SPAdes</li>
+</ul>
+
+
+
+    </div>
+    
+    
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+</body>
