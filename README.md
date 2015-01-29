@@ -11,7 +11,8 @@ MetaSV uses the following Python packages which must be available on the `PYTHON
 
 In addition, it requires the following software to be installed:
 * [SPAdes](http://bioinf.spbau.ru/spades): Use for assembly around the SV breakpoints
-* [AGE](https://github.com/abyzovlab/AGE): Used for determining the SV breakpoints using assembled contigs
+* [AGE](https://github.com/abyzovlab/AGE): Used for determining the SV breakpoints using assembled contigs. Please use AGE code from the following [fork](https://github.com/marghoob/AGE/archive/simple-parseable-output.zip) of the main repository--the code was modified to make AGE output simpler to parse. This dependency on the fork will be fixed in the next release.
+
 The paths to the above tools are specified on the command-line options for MetaSV.
 
 # Tools
