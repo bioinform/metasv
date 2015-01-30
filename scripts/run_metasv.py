@@ -7,8 +7,7 @@ from metasv._version import __version__
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Merge SVs from different tools",
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description = "Merge SVs from multiple tools for accurate SV calling", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("--sample", metavar="Sample", help="Sample name", required=True)
     parser.add_argument("--pindel_vcf", nargs="+", metavar="pindel_vcf", help="VCF file or dir for Pindel VCFs",
