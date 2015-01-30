@@ -22,7 +22,8 @@ def concatenate_files(files, output):
 
 
 def get_max_soft_clip(aln):
-    if aln.cigar is None: return 0
+    if aln.cigar is None:
+        return 0
     return max([length for (op, length) in aln.cigar if op == 4] + [0])
 
 
