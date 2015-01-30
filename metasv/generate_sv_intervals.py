@@ -32,7 +32,7 @@ def is_good_soft_clip(aln):
 
 
 def is_discordant(aln):
-    return abs(aln.tlen) < 200 and abs(aln.tlen) > 0
+    return 200 > abs(aln.tlen) > 0
 
 
 def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_soft_clip=50):
