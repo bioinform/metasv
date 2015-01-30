@@ -306,7 +306,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
         create_dirs([spades_tmpdir, age_tmpdir])
 
-        assembly_bed = merged_bed
+        assembly_bed = merged_bed # Marghoob grr
 
         if boost_ins:
             logger.info("Generating intervals for insertions")

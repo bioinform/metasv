@@ -28,9 +28,9 @@ def get_age_file_prefix(contig):
 
 
 def run_cmd(cmd, logger, out, err):
-    logger.info("Running command %s" % (cmd))
+    logger.info("Running command %s" % cmd)
     retcode = subprocess.call(cmd, shell=True, stderr=err, stdout=out)
-    logger.info("Returned code %d" % (retcode))
+    logger.info("Returned code %d" % retcode)
 
     return retcode
 
@@ -39,7 +39,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                    age_workdir=None, timeout=300, keep_temp=False, myid=0):
     thread_logger = logging.getLogger("%s-%s" % (run_age_single.__name__, multiprocessing.current_process()))
 
-    log_fd = open(os.path.join(age_workdir, "age_%d.log" % (myid)), "w")
+    log_fd = open(os.path.join(age_workdir, "age_%d.log" % myid), "w")
 
     bedtools_intervals = []
     intervals_bedtool = pybedtools.BedTool(intervals_bed)
@@ -64,17 +64,19 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 matching_interval = matching_intervals[0]
             thread_logger.info("Matching interval %s" % (str(matching_interval)))
 
-            if region not in contig_dict: continue
-            if not contig_dict[region]: continue
+            if region not in contig_dict:
+                continue
+            if not contig_dict[region]:
+                continue
 
             region_object = SVRegion(region[0], region[1], region[2], region[3])
 
             reference_sequence = reference_fasta.fetch(reference=region_object.chrom1, start=region_object.pos1 - pad,
                                                        end=region_object.pos2 + pad)
             region_name = "%s.%d.%d" % (region_object.chrom1, region_object.pos1, region_object.pos2)
-            ref_name = os.path.join(age_workdir, "%s.ref.fa" % (region_name))
+            ref_name = os.path.join(age_workdir, "%s.ref.fa" % region_name)
 
-            thread_logger.info("Writing the ref sequence for region %s" % (region_name))
+            thread_logger.info("Writing the ref sequence for region %s" % region_name)
             with open(ref_name, "w") as file_handle:
                 file_handle.write(">{}.ref\n{}".format(region_name, reference_sequence))
 
@@ -83,22 +85,27 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             for contig in contig_dict[region]:
                 thread_logger.info(
                     "Writing the assembeled sequence %s of length %s" % (contig.raw_name, contig.sequence_len))
-                if contig.sequence_len * region_object.length() >= 1000000000:
+                if contig.sequence_len * region_object.length() >= 1000000000: # Marghoob: this is pretty big!
                     thread_logger.info("Skipping contig because AGE problem is large")
                     continue
 
                 contig_sequence = assembly_fasta.fetch(contig.raw_name)
 
                 prefix = get_age_file_prefix(contig)
-                asm_name = os.path.join(age_workdir, "%s.as.fa" % (prefix))
-                out = os.path.join(age_workdir, "%s.age.out" % (prefix))
-                err = os.path.join(age_workdir, "%s.age.err" % (prefix))
+                asm_name = os.path.join(age_workdir, "%s.as.fa" % prefix)
+                out = os.path.join(age_workdir, "%s.age.out" % prefix)
+                err = os.path.join(age_workdir, "%s.age.err" % prefix)
 
                 with open(asm_name, "w") as file_handle:
                     file_handle.write(">{}.as\n{}".format(region_name, contig_sequence))
 
                 age_cmd = "%s %s -both -go=-6 %s %s >%s 2>%s" % (
-                    age, "-inv" if contig.sv_type == "INV" else "-indel", ref_name, asm_name, out, err)
+                    age,
+                    "-inv" if contig.sv_type == "INV" else "-indel",
+                    ref_name,
+                    asm_name,
+                    out,
+                    err)
                 execute_cmd = "timeout %ds %s" % (timeout, age_cmd)
 
                 retcode = run_cmd(execute_cmd, thread_logger, None, None)
@@ -109,7 +116,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                         age_record.contig = contig
                         age_records.append(age_record)
                     else:
-                        thread_logger.error("Number of inputs != 2 in age output file %s. Skipping." % (out))
+                        thread_logger.error("Number of inputs != 2 in age output file %s. Skipping." % out)
 
                 if not keep_temp:
                     os.remove(asm_name)
@@ -126,7 +133,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 thread_logger.error("Some problem. Mixed SV types for this interval %s" % (str(sv_types)))
             else:
                 sv_type = sv_types[0]
-                thread_logger.info("Processing region of type %s" % (sv_type))
+                thread_logger.info("Processing region of type %s" % sv_type)
                 breakpoints = process_age_records(unique_age_records, sv_type=sv_type, pad=pad)
                 bedtools_fields = matching_interval.fields
                 if len(breakpoints) == 1 and sv_type == "INS":
@@ -155,7 +162,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
 
     thread_logger.info("Writing %d intervals" % (len(bedtools_intervals)))
     if bedtools_intervals:
-        breakpoints_bed = os.path.join(age_workdir, "%d_breakpoints.bed" % (myid))
+        breakpoints_bed = os.path.join(age_workdir, "%d_breakpoints.bed" % myid)
         pybedtools.BedTool(bedtools_intervals).saveas(breakpoints_bed)
 
     return breakpoints_bed
@@ -179,7 +186,7 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=500,
         func_logger.info("Assembly FASTA wasn't indexed. Will attempt to index now.")
         pysam.faidx(assembly)
 
-    func_logger.info("Loading assembly contigs from %s" % (assembly))
+    func_logger.info("Loading assembly contigs from %s" % assembly)
     with open(assembly) as assembly_fd:
         if assembly_tool == "spades":
             contigs = [SpadesContig(line[1:]) for line in assembly_fd if line[0] == '>']
