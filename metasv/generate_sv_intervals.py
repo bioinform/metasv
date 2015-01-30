@@ -1,13 +1,15 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
-import sys, os, re
-import pysam
+import sys
+import os
 import argparse
 import multiprocessing
 import logging
 import collections
 import itertools
 from functools import partial
+
+import pysam
 import pybedtools
 
 
@@ -20,7 +22,8 @@ def concatenate_files(files, output):
 
 
 def get_max_soft_clip(aln):
-    if aln.cigar is None: return 0
+    if aln.cigar is None:
+        return 0
     return max([length for (op, length) in aln.cigar if op == 4] + [0])
 
 
@@ -30,20 +33,26 @@ def is_good_soft_clip(aln):
 
 
 def is_discordant(aln):
-    return abs(aln.tlen) < 200 and abs(aln.tlen) > 0
+    return 200 > abs(aln.tlen) > 0
 
 
 def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_soft_clip=50):
-    if aln.is_duplicate: return False
-    if aln.is_unmapped: return False
-    if aln.mapq < min_mapq: return False
-    if aln.cigar is None: return False
+    if aln.is_duplicate:
+        return False
+    if aln.is_unmapped:
+        return False
+    if aln.mapq < min_mapq:
+        return False
+    if aln.cigar is None:
+        return False
 
     soft_clips = [length for (op, length) in aln.cigar if op == 4]
-    if len(soft_clips) != 1: return False
+    if len(soft_clips) != 1:
+        return False
     soft_clip = soft_clips[0]
 
-    if not (min_soft_clip <= soft_clip <= max_soft_clip): return False
+    if not (min_soft_clip <= soft_clip <= max_soft_clip):
+        return False
 
     if aln.cigar[0][0] == 4:
         avg_base_quality = float(sum(map(ord, aln.qual[:soft_clip]))) / soft_clip
@@ -58,8 +67,8 @@ def get_interval(aln, pad=500):
     end = aln.aend
 
     if aln.cigar[0][0] == 4:
-        return (start - pad, start + pad)
-    return (end - pad, end + pad)
+        return start - pad, start + pad
+    return end - pad, end + pad
 
 
 def merged_interval_features(feature):

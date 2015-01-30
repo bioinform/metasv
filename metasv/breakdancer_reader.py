@@ -1,9 +1,9 @@
 import logging
 import sys
-import argparse
 import os
 
 import vcf
+
 from sv_interval import SVInterval
 
 
@@ -71,7 +71,7 @@ class BreakDancerHeader:
             self.header_dict["software"] = header_line.split()[1]
         elif header_line.startswith("#Command:"):
             self.header_dict["command"] = header_line.split()[1:]
-        elif not (header_line.startswith("#Library") or header_line.startswith("#Chr1")): #marghoob, what?
+        elif not (header_line.startswith("#Library") or header_line.startswith("#Chr1")):  # marghoob, what?
             fields = header_line[1:].split()
             self.header_dict[fields[0]] = dict(field.split(":") for field in fields[1:])
         logger.info(self.header_dict)
@@ -120,7 +120,7 @@ class BreakDancerRecord:
         if self.sv_type == "DEL" or self.sv_type == "INV":
             return SVInterval(self.chr1,
                               self.pos1 + 1,
-                              self.pos2, #fudge
+                              self.pos2,  # fudge
                               name=self.name,
                               sv_type=self.sv_type,
                               length=self.sv_len,
@@ -131,7 +131,7 @@ class BreakDancerRecord:
         elif self.sv_type == "INS":
             return SVInterval(self.chr1,
                               self.pos1 + 1,
-                              self.pos2, #fudge
+                              self.pos2,  # fudge
                               name=self.name,
                               sv_type=self.sv_type,
                               length=self.sv_len,
@@ -169,8 +169,9 @@ class BreakDancerRecord:
                                        [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT="1/1"))])
         return vcf_record
 
+
 class BreakDancerReader:
-    def __init__(self, file_name, reference_handle = None):
+    def __init__(self, file_name, reference_handle=None):
         logger.info("File is " + str(file_name))
         self.file_fd = open(file_name) if file_name is not None else sys.stdin
         self.header = BreakDancerHeader()

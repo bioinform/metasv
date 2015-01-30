@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
 from collections import defaultdict
+import shutil
+import argparse
+import sys
+import pysam
 
 from vcf_utils import *
 from sv_interval import SVInterval, get_gaps_file, interval_overlaps_interval_list, merge_intervals
@@ -29,7 +33,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                breakseq_vcf=[], cnvnator_vcf=[], cnvnator_native=[], gatk_vcf=[], gaps=None, filter_gaps=False,
                keep_standard_contigs=False,
                wiggle=100, overlap_ratio=0.5, workdir="work", outdir="out", boost_ins=False, bam=None, chromosomes=[],
-               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=50, inswiggle=100):
+               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=50, inswiggle=100,
+               enable_per_tool_output=False):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -59,11 +64,11 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     spades -- Path for the SPAdes executable (default None)
     age -- Path for the AGE executable (default None)
     disable_assembly -- Flag to disable assembly (default False)
-
     """
 
     # Check if there is work to do
-    if not (pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + cnvnator_native):
+    if not (
+                            pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + cnvnator_native):
         logger.error("Nothing to do since no SV file specified")
         return 1
 
@@ -102,7 +107,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     gap_intervals = []
     if filter_gaps:
-        if not gaps: gaps = get_gaps_file(contig_whitelist)
+        if not gaps:
+            gaps = get_gaps_file(contig_whitelist)
         gap_intervals = sorted(load_gap_intervals(gaps))
 
     # Handles native input
@@ -175,40 +181,40 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                     ("BreakSeq", breakseq_out)]
 
     # This will just output per-tool VCFs, no intra-tool merging is done yet
-    logger.info("Output per-tool VCFs")
-    for toolname, tool_out in vcf_out_list:
-        if tool_out is None or toolname not in intervals:
-            continue
+    if enable_per_tool_output:
+        logger.info("Outut per-tool VCFs")
+        for toolname, tool_out in vcf_out_list:
+            if tool_out is None or toolname not in intervals:
+                continue
 
-        logger.info("Outputting single tool VCF for %s" % (str(toolname)))
-        vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
-        vcf_template_reader.samples = [sample]
+            logger.info("Outputting single tool VCF for %s" % (str(toolname)))
+            vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
+            vcf_template_reader.samples = [sample]
 
-        intervals_tool = []
-        tool_out_fd = open(tool_out, "w")
-        vcf_writer = vcf.Writer(tool_out_fd, vcf_template_reader)
-        chr_intervals_tool = {contig.name: [] for contig in contigs}
-        for sv_type in sv_types:
-            if sv_type in intervals[toolname]:
-                intervals_tool.extend([copy.deepcopy(interval) for interval in intervals[toolname][sv_type]])
-        for interval in intervals_tool:
-            # Marghoob says that this is just to fill-in some metadata
-            interval.do_validation(overlap_ratio)
+            intervals_tool = []
+            tool_out_fd = open(tool_out, "w")
+            vcf_writer = vcf.Writer(tool_out_fd, vcf_template_reader)
+            chr_intervals_tool = {contig.name: [] for contig in contigs}
+            for sv_type in sv_types:
+                if sv_type in intervals[toolname]:
+                    intervals_tool.extend([copy.deepcopy(interval) for interval in intervals[toolname][sv_type]])
+            for interval in intervals_tool:
+                # Marghoob says that this is just to fill-in some metadata
+                interval.do_validation(overlap_ratio)
 
-            interval.fix_pos()
-            chr_intervals_tool[interval.chrom].append(interval)
+                interval.fix_pos()
+                chr_intervals_tool[interval.chrom].append(interval)
 
-        for contig in contigs:
-            chr_intervals_tool[contig.name].sort()
-            for interval in chr_intervals_tool[contig.name]:
-                vcf_record = interval.to_vcf_record(fasta_handle, sample)
-                if vcf_record is not None:
-                    vcf_writer.write_record(vcf_record)
-        tool_out_fd.close()
-        vcf_writer.close()
-        logger.info("Indexing single tool VCF for %s" % (str(toolname)))
-        pysam.tabix_index(tool_out, force=True, preset="vcf")
-
+            for contig in contigs:
+                chr_intervals_tool[contig.name].sort()
+                for interval in chr_intervals_tool[contig.name]:
+                    vcf_record = interval.to_vcf_record(fasta_handle, sample)
+                    if vcf_record is not None:
+                        vcf_writer.write_record(vcf_record)
+            tool_out_fd.close()
+            vcf_writer.close()
+            logger.info("Indexing single tool VCF for %s" % (str(toolname)))
+            pysam.tabix_index(tool_out, force=True, preset="vcf")
 
     # Do merging here
     logger.info("Do merging")
@@ -254,8 +260,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     logger.info("Output merged VCF without assembly ")
     vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
     vcf_template_reader.samples = [sample]
-    out_vcf = os.path.join(outdir, "metasv.vcf")
-    vcf_fd = open(out_vcf, "w") if out_vcf is not None else sys.stdout
+    preasm_vcf = os.path.join(workdir, "pre_asm.vcf")
+    vcf_fd = open(preasm_vcf, "w")
     vcf_writer = vcf.Writer(vcf_fd, vcf_template_reader)
 
     final_stats = {}
@@ -283,6 +289,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     for key in sorted(final_stats.keys()):
         logger.info(str(key) + ":" + str(final_stats[key]))
 
+    final_vcf = os.path.join(outdir, "variants.vcf")
+
     if not disable_assembly:
         logger.info("Running assembly")
         if spades is None:
@@ -298,7 +306,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
         create_dirs([spades_tmpdir, age_tmpdir])
 
-        assembly_bed = merged_bed
+        assembly_bed = merged_bed # Marghoob grr
 
         if boost_ins:
             logger.info("Generating intervals for insertions")
@@ -321,13 +329,12 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                 final_bed)
         else:
             pybedtools.BedTool(breakpoints_bed).saveas(final_bed)
+
+        logger.info("Output final VCF file")
+        convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample)
     else:
-        final_bed = merged_bed
-
-    logger.info("Output final VCF file")
-
-    final_vcf = os.path.join(outdir, "final.vcf")
-    convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample)
+        shutil.copy(preasm_vcf, final_vcf)
+        pysam.tabix_index(final_vcf, force=True, preset="vcf")
 
     logger.info("Clean up pybedtools")
 
@@ -379,16 +386,18 @@ if __name__ == "__main__":
     parser.add_argument("--spades", help="Path to SPAdes executable", required=False)
     parser.add_argument("--age", help="Path to AGE executable", required=False)
     parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
+    parser.add_argument("--enable_per_tool_output", action="store_true",
+                        help="Enable output of merged SVs for individual tools")
 
     args = parser.parse_args()
 
     sys.exit(run_metasv(args.sample, args.reference, pindel_vcf=args.pindel_vcf, pindel_native=args.pindel_native,
-        breakdancer_vcf=args.breakdancer_vcf, breakdancer_native=args.breakdancer_native,
-        breakseq_vcf=args.breakseq_vcf, cnvnator_vcf=args.cnvnator_vcf,
-        cnvnator_native=args.cnvnator_native, gatk_vcf=args.gatk_vcf,
-        gaps=args.gaps, filter_gaps=args.filter_gaps, keep_standard_contigs=args.keep_standard_contigs,
-        wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
-        workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
-        chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
-        disable_assembly=args.disable_assembly, minsvlen = args.minsvlen, inswiggle = args.inswiggle))
+                        breakdancer_vcf=args.breakdancer_vcf, breakdancer_native=args.breakdancer_native,
+                        breakseq_vcf=args.breakseq_vcf, cnvnator_vcf=args.cnvnator_vcf,
+                        cnvnator_native=args.cnvnator_native, gatk_vcf=args.gatk_vcf,
+                        gaps=args.gaps, filter_gaps=args.filter_gaps, keep_standard_contigs=args.keep_standard_contigs,
+                        wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
+                        workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
+                        chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
+                        disable_assembly=args.disable_assembly, minsvlen=args.minsvlen, inswiggle=args.inswiggle))
 

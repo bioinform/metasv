@@ -1,10 +1,9 @@
 import logging
 import sys
-import argparse
 import os
 
-import pysam
 import vcf
+
 from sv_interval import SVInterval
 
 
@@ -135,7 +134,6 @@ class PindelRecord:
         self.homlen = None
         self.homseq = None
         self.samples = None
-
 
         if self.sv_type != "LI":
             self.sv_len = int(fields[2])

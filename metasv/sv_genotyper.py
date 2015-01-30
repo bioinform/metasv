@@ -1,10 +1,10 @@
 #!/usr/bin/env python2.7
 
 import sys
-import os
 import argparse
-import subprocess
+
 import pysam
+
 
 parser = argparse.ArgumentParser("Compute zygosity for SV tools output",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -104,7 +104,7 @@ for input_handle in input_handles:
             normal_coverage = float(normal_read_bases) / max(1, pos2 - pos1)
             gt = "0/1" if normal_coverage / float(max(1, num_reads)) > 0.2 else "1/1"
         print "%s\t%s\t%d\t%d\t%d\t%d\t%d\t%g\t%s\t%s" % \
-            (sv_type, chr1, pos1 + 1, pos2, size, normal_read_count, num_reads, score, gt, tool)
+              (sv_type, chr1, pos1 + 1, pos2, size, normal_read_count, num_reads, score, gt, tool)
         sys.stdout.flush()
     input_handle.close()
 

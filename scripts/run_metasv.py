@@ -45,6 +45,8 @@ if __name__ == "__main__":
     parser.add_argument("--spades", help="Path to SPAdes executable", required=False)
     parser.add_argument("--age", help="Path to AGE executable", required=False)
     parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
+    parser.add_argument("--enable_per_tool_output", action = "store_true", help = "Enable output of merged SVs for individual tools")
+
     
     args = parser.parse_args()
     
@@ -56,5 +58,5 @@ if __name__ == "__main__":
                     wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
                     workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
                     chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
-                    disable_assembly=args.disable_assembly, minsvlen = args.minsvlen, inswiggle = args.inswiggle))
+                    disable_assembly=args.disable_assembly, minsvlen = args.minsvlen, inswiggle = args.inswiggle, enable_per_tool_output = args.enable_per_tool_output))
 

@@ -1,15 +1,17 @@
 #!/usr/bin/python
 
 import argparse
-import pybedtools
-import pysam
-import vcf
-import logging
-import fasta_utils
 import sys
 import datetime
 import os
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
+
+import pybedtools
+import pysam
+import vcf
+
+import fasta_utils
+
 
 mydir = os.path.dirname(os.path.realpath(__file__))
 vcf_template = os.path.join(mydir, "resources/template.vcf")

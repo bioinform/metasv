@@ -2,12 +2,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-import sys
-import os
-import subprocess
-import pysam
-import bisect
-import vcf
 from sv_interval import *
 
 
@@ -15,8 +9,10 @@ def print_header(header, file_fd):
     for line in header:
         file_fd.write("%s\n" % (line))
 
+
 def get_template():
     return vcf.Reader(open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources/template.vcf")))
+
 
 def merge_vcfs(in_vcfs_dir, contigs, out_vcf):
     logger.info("Mergings per-chromosome VCFs from %s" % (in_vcfs_dir))
@@ -106,7 +102,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                                       "INS",
                                       len(vcf_record.ALT[0]) - 1,
                                       sources=set([source]),
-                                      wiggle=max(inswiggle,wiggle),
+                                      wiggle=max(inswiggle, wiggle),
                                       gt=gt)
 
         else:
@@ -121,11 +117,13 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                 else:
                     continue
             # Handle broken header if SVLEN is reported as an array
-            svlen = abs(vcf_record.INFO["SVLEN"]) if isinstance(vcf_record.INFO["SVLEN"], int) else abs(vcf_record.INFO["SVLEN"][0])
+            svlen = abs(vcf_record.INFO["SVLEN"]) if isinstance(vcf_record.INFO["SVLEN"], int) else abs(
+                vcf_record.INFO["SVLEN"][0])
 
             if svlen < minsvlen:
                 continue
-            wiggle = max(inswiggle,wiggle) if (source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
+            wiggle = max(inswiggle, wiggle) if (
+            source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
             if source == "Pindel" and sv_type == "INS":
                 vcf_record.POS += 1
             interval = SVInterval(vcf_record.CHROM, vcf_record.POS, int(vcf_record.INFO["END"]), source, sv_type, svlen,

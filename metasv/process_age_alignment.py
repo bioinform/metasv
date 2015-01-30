@@ -1,11 +1,9 @@
 from __future__ import print_function
-import os
-import sys
 import logging
-import re
-import hashlib
 import multiprocessing
+
 import pybedtools
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ def pair_intervals(intervals, reference_length, min_interval_length=200, window=
             if interval2_fixed[1] - interval2_fixed[0] < min_interval_length: continue
 
             overlap_interval = (
-            max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
+                max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
             overlap_interval = (min(overlap_interval), max(overlap_interval))
 
             if overlap_interval[1] - overlap_interval[0] <= 20 and overlap_interval[0] >= window and overlap_interval[
@@ -43,7 +41,7 @@ def pair_intervals(intervals, reference_length, min_interval_length=200, window=
     high = max([interval[1] for interval in overlap_intervals])
 
     func_logger.info("low = %d, high = %d overlap_intervals = %s" % (low, high, str(overlap_intervals)))
-    if (high - low <= 20):
+    if high - low <= 20:
         func_logger.info("Pairing success! The overlap intervals are close enough.")
         return len(overlap_intervals), low, high
     return len(overlap_intervals), -1, -1
@@ -66,10 +64,11 @@ def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", 
         left_support = [interval[0] for interval in intervals if abs(interval[0] - breakpoint) <= window]
         right_support = [interval[1] for interval in intervals if abs(interval[1] - breakpoint) <= window]
         counter_examples = [age_record for age_record in age_records if age_record.has_long_ref_flanks() and (
-        age_record.has_ref_deletion(window) or age_record.has_insertion(min_diff=1,
-                                                                        max_diff=49)) and age_record.breakpoint_match(
+            age_record.has_ref_deletion(window) or age_record.has_insertion(min_diff=1,
+                                                                            max_diff=49)) and age_record.breakpoint_match(
             breakpoint, window)]
-        if counter_examples: continue
+        if counter_examples:
+            continue
 
         if (left_support and right_support) and min(
                         [window + 1] + [abs(b[0] - breakpoint) for b in breakpoints]) > window:
@@ -80,7 +79,7 @@ def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", 
             func_logger.info(
                 "insertion lengths = %s" % (str([age_record.insertion_length() for age_record in both_support])))
             insertion_length = max([0] + [age_record.insertion_length() for age_record in both_support])
-            func_logger.info("Insertion length = %d" % (insertion_length))
+            func_logger.info("Insertion length = %d" % insertion_length)
             breakpoints.append((breakpoint, insertion_length))
 
     func_logger.info("Gathered breakpoints as %s" % (str(breakpoints)))
@@ -173,7 +172,7 @@ def pair_deletion_breakpoints(intervals, reference_length, window=50):
             if interval2_fixed[1] - interval2_fixed[0] < 50: continue
 
             overlap_interval = (
-            max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
+                max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
             overlap_interval = (min(overlap_interval), max(overlap_interval))
 
             if overlap_interval[1] - overlap_interval[0] <= 20 and overlap_interval[0] >= window and overlap_interval[
@@ -210,7 +209,7 @@ def pair_intervals(intervals, reference_length, window=50):
             if interval2_fixed[1] - interval2_fixed[0] < 50: continue
 
             overlap_interval = (
-            max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
+                max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
             overlap_interval = (min(overlap_interval), max(overlap_interval))
 
             if overlap_interval[1] - overlap_interval[0] <= 20 and overlap_interval[0] >= window and overlap_interval[
@@ -345,7 +344,7 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
                 diff1 = breakpoints[0][0] - sv_region.pos1
                 diff2 = sv_region.pos2 - breakpoints[0][0]
 
-                if not (diff1 >= pad - 10 and diff1 <= pad + 10 or diff2 >= pad - 10 and diff2 <= pad + 10):
+                if not (pad - 10 <= diff1 <= pad + 10 or pad - 10 <= diff2 <= pad + 10):
                     return []
             func_logger.info("True insertion interval %s" % (str(breakpoints)))
         else:
