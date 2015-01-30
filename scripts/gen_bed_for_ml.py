@@ -54,7 +54,6 @@ class VcfRec:
 
 def read_all_vcf(vcf_file):
     f = open(vcf_file, 'r')
-
     vcf_list = []
 
     for line in f:
