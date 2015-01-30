@@ -1,17 +1,18 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
-import pysam
 import os
-import sys
 import argparse
 import logging
 import multiprocessing
-import pybedtools
-import extract_pairs
 import subprocess
-import itertools
 import fileinput
 from functools import partial, update_wrapper
+
+import pysam
+import pybedtools
+
+import extract_pairs
+
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -69,7 +70,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=0, myi
             if extracted_count >= 5:
                 extra_opt = "--sc" if not fn_id == 0 else ""
                 retcode = run_cmd("bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 %s\"" % (
-                timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger, spades_log_fd)
+                    timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger, spades_log_fd)
                 if retcode == 0:
                     append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % (extract_fn_name), interval,
                                    merged_contigs, fn_id, sv_type)

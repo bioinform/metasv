@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 from collections import defaultdict
+import shutil
+import argparse
 
 from vcf_utils import *
 from sv_interval import SVInterval, get_gaps_file, interval_overlaps_interval_list, merge_intervals
@@ -12,8 +14,6 @@ from run_spades import run_spades_parallel
 from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
 from fasta_utils import get_contigs
-import shutil
-import argparse
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -66,7 +66,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     # Check if there is work to do
     if not (
-                                    pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + cnvnator_native):
+                            pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + cnvnator_native):
         logger.error("Nothing to do since no SV file specified")
         return 1
 

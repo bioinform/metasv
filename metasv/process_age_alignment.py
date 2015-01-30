@@ -1,11 +1,9 @@
 from __future__ import print_function
-import os
-import sys
 import logging
-import re
-import hashlib
 import multiprocessing
+
 import pybedtools
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ def pair_intervals(intervals, reference_length, min_interval_length=200, window=
             if interval2_fixed[1] - interval2_fixed[0] < min_interval_length: continue
 
             overlap_interval = (
-            max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
+                max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
             overlap_interval = (min(overlap_interval), max(overlap_interval))
 
             if overlap_interval[1] - overlap_interval[0] <= 20 and overlap_interval[0] >= window and overlap_interval[
@@ -66,8 +64,8 @@ def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", 
         left_support = [interval[0] for interval in intervals if abs(interval[0] - breakpoint) <= window]
         right_support = [interval[1] for interval in intervals if abs(interval[1] - breakpoint) <= window]
         counter_examples = [age_record for age_record in age_records if age_record.has_long_ref_flanks() and (
-        age_record.has_ref_deletion(window) or age_record.has_insertion(min_diff=1,
-                                                                        max_diff=49)) and age_record.breakpoint_match(
+            age_record.has_ref_deletion(window) or age_record.has_insertion(min_diff=1,
+                                                                            max_diff=49)) and age_record.breakpoint_match(
             breakpoint, window)]
         if counter_examples: continue
 
@@ -173,7 +171,7 @@ def pair_deletion_breakpoints(intervals, reference_length, window=50):
             if interval2_fixed[1] - interval2_fixed[0] < 50: continue
 
             overlap_interval = (
-            max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
+                max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
             overlap_interval = (min(overlap_interval), max(overlap_interval))
 
             if overlap_interval[1] - overlap_interval[0] <= 20 and overlap_interval[0] >= window and overlap_interval[
@@ -210,7 +208,7 @@ def pair_intervals(intervals, reference_length, window=50):
             if interval2_fixed[1] - interval2_fixed[0] < 50: continue
 
             overlap_interval = (
-            max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
+                max(interval1_fixed[0], interval2_fixed[0]), min(interval1_fixed[1], interval2_fixed[1]))
             overlap_interval = (min(overlap_interval), max(overlap_interval))
 
             if overlap_interval[1] - overlap_interval[0] <= 20 and overlap_interval[0] >= window and overlap_interval[
@@ -297,12 +295,12 @@ def process_age_output(tigra_contig, age_file, window, min_id=95, min_contig_len
 
     if age_record.aligned_bases + 10 >= tigra_contig.sequence_len:
         logger.info("Very bad assembly: too many aligned bases %d of %d" % (
-        age_record.aligned_bases, tigra_contig.sequence_len))
+            age_record.aligned_bases, tigra_contig.sequence_len))
         age_record.very_bad_assembly = True
         return None
 
     # if age_record.n_alt > 1:
-    #  logger.info("Very bad assembly: too many alternative regions %d" % (age_record.n_alt))
+    # logger.info("Very bad assembly: too many alternative regions %d" % (age_record.n_alt))
     #  age_record.very_bad_assembly = True
     #  return None
 
@@ -358,8 +356,8 @@ def process_age_output(tigra_contig, age_file, window, min_id=95, min_contig_len
         age_record.end = e - window + tigra_contig.sv_region.pos1
 
     logger.info("Success: %s %d %d %d %d %d %d %d" % (
-    tigra_contig.sv_region.chrom1, tigra_contig.sv_region.pos1, tigra_contig.sv_region.pos2, s, e, age_record.hom,
-    age_record.cs, age_record.ce))
+        tigra_contig.sv_region.chrom1, tigra_contig.sv_region.pos1, tigra_contig.sv_region.pos2, s, e, age_record.hom,
+        age_record.cs, age_record.ce))
     return age_record
 
 

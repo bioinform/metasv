@@ -1,10 +1,9 @@
 import logging
 import re
-import sys
-import argparse
 import os
 
 import vcf
+
 from sv_interval import SVInterval
 
 
@@ -102,7 +101,7 @@ class CNVnatorRecord:
 
 
 class CNVnatorReader:
-    def __init__(self, file_name, reference_handle = None):
+    def __init__(self, file_name, reference_handle=None):
         logger.info("File is " + file_name)
         self.file_fd = open(file_name)
         self.reference_handle = reference_handle

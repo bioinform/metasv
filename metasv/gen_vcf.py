@@ -5,6 +5,7 @@ import argparse
 
 import pysam
 
+
 parser = argparse.ArgumentParser("Convert genotyped BreakDancer output to VCF",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--sv_file", metavar="sv_file", help="SV file", required=False, default="-")
@@ -93,7 +94,7 @@ for record in records:
 
     if sv_type in ["DEL"]: size = -size
     info = "TOOLNAME=%s;SVLEN=%d;SVTYPE=%s;END=%d;IMPRECISE;NORMAL_COUNT=%d;NUM_READS=%d;SCORE=%g" % (
-    tool, size, sv_type, pos2, normal_read_count, num_reads, score)
+        tool, size, sv_type, pos2, normal_read_count, num_reads, score)
 
     sys.stdout.write("%s\t%d\t.\t%s\t%s\t.\tPASS\t%s\tGT\t%s\n" % (chr1, pos1, ref_allele, alt_allele, info, gt))
 

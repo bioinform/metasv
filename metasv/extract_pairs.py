@@ -1,12 +1,12 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
-import pysam
-import os
-import sys
 import argparse
 import logging
 import multiprocessing
 from functools import partial
+
+import pysam
+
 
 compl_table = [chr(i) for i in xrange(256)]
 compl_table[ord('A')] = 'T'
@@ -46,7 +46,7 @@ def is_clipped_both(aln):
 # this is the criteria to keep a read
 def keep_read(aln, aln_chr, chromosome, start, end):
     return aln_chr == chromosome and (
-    not is_clipped_both(aln)) and aln.mapq >= 40 and aln.pos >= start and aln.pos < end
+        not is_clipped_both(aln)) and aln.mapq >= 40 and aln.pos >= start and aln.pos < end
 
 
 # this function will determine whether the pair is kept
@@ -61,7 +61,7 @@ def keep_pair(aln, mate, aln_chr, mate_chr, chromosome, start, end):
 
 def is_all(aln, mate):
     return (
-    (aln.cigarstring == '100M' and mate.cigarstring == '100M') and ( aln.is_proper_pair and mate.is_proper_pair))
+        (aln.cigarstring == '100M' and mate.cigarstring == '100M') and ( aln.is_proper_pair and mate.is_proper_pair))
 
 
 def all_pair(aln, mate):
@@ -91,7 +91,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0):
 
     extract_fn_names = [extract_fn.__name__ for extract_fn in extract_fns]
     logger.info("Extracting reads from %s for region %s with padding %d using functions %s" % (
-    bamname, region, pad, extract_fn_names))
+        bamname, region, pad, extract_fn_names))
 
     bam = pysam.Samfile(bamname, "rb")
     bammate = pysam.Samfile(bamname, "rb")

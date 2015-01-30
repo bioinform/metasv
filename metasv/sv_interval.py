@@ -5,12 +5,11 @@ logger = logging.getLogger(__name__)
 import os
 import copy
 import bisect
-import pysam
 import pybedtools
 import vcf
 
 svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV"]
-sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"] # order is important!
+sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"]  # order is important!
 precise_sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller"]
 sv_sources_to_type = {"Pindel": "SR", "BreakSeq": "JM", "BreakDancer": "RP", "CNVnator": "RD", "HaplotypeCaller": "AS"}
 
@@ -103,7 +102,7 @@ class SVInterval:
         if self.chrom != other.chrom:
             return False
         return (self.end + gap >= other.start and self.end + gap < other.end) or (
-        other.end + gap >= self.start and other.end + gap < self.end)
+            other.end + gap >= self.start and other.end + gap < self.end)
 
     def get_start(self):
         if not self.sub_intervals:
@@ -178,7 +177,7 @@ class SVInterval:
                 self.start = mid
                 self.end = mid
 
-    def to_vcf_record(self, fasta_handle=None, sample = ""):
+    def to_vcf_record(self, fasta_handle=None, sample=""):
         if self.start <= 0: return None
         if self.sv_type not in svs_of_interest: return None
 
@@ -202,25 +201,26 @@ class SVInterval:
         svmethods.sort()
         sv_len = -self.length if self.sv_type == "DEL" else self.length
         info.update({"SVLEN": sv_len,
-                "SVTYPE": self.sv_type,
-                "SVMETHOD": ",".join(svmethods)})
+                     "SVTYPE": self.sv_type,
+                     "SVMETHOD": ",".join(svmethods)})
         if self.sv_type == "DEL" or self.sv_type == "DUP":
             info["END"] = self.end
 
         if not self.is_precise:
             info.update({"IMPRECISE": None})
 
-        info.update({"VT":"SV"})
-        info.update({"SVTOOL":"MetaSVMerge"})
-        info.update({"NUM_SVMETHODS":len(self.sources)})
-        info.update({"SOURCES":str(self)})
+        info.update({"VT": "SV"})
+        info.update({"SVTOOL": "MetaSVMerge"})
+        info.update({"NUM_SVMETHODS": len(self.sources)})
+        info.update({"SOURCES": str(self)})
         if self.cipos:
             info.update({"CIPOS": (",".join([str(a) for a in self.cipos]))})
 
         vcf_record = vcf.model._Record(self.chrom,
                                        self.start - 1,
                                        ".",
-                                       fasta_handle.fetch(self.chrom, max(0, self.start - 2), max(1, self.start - 1)) if fasta_handle else "N",
+                                       fasta_handle.fetch(self.chrom, max(0, self.start - 2),
+                                                          max(1, self.start - 1)) if fasta_handle else "N",
                                        ["<%s>" % (self.sv_type)],
                                        ".",
                                        "PASS" if self.is_validated else "LowQual",
@@ -235,11 +235,11 @@ class SVInterval:
         if self.start <= 0: return None
         if self.sv_type not in ["DEL", "INS", "INV"]: return None
         # if not self.sub_intervals and list(self.sources)[0] == "HaplotypeCaller": return None
-        #if len(self.sources) == 1 and list(self.sources)[0] == "HaplotypeCaller": return None
+        # if len(self.sources) == 1 and list(self.sources)[0] == "HaplotypeCaller": return None
         end = self.end if self.sv_type != "INS" else (self.end + 1)
 
         return pybedtools.Interval(self.chrom, self.start, end, name="%s,%d,%s" % (
-        self.sv_type, self.length, ";".join(sorted([sv_sources_to_type[tool] for tool in self.sources]))),
+            self.sv_type, self.length, ";".join(sorted([sv_sources_to_type[tool] for tool in self.sources]))),
                                    score=str(len(self.sources)))
 
     def to_svp_record(self, sample_name, id_num):
@@ -255,8 +255,8 @@ class SVInterval:
         type_of_computational_approach = ",".join(sorted([sv_sources_to_type[tool] for tool in self.sources]))
 
         return "%s\t%d\t%d\t%d\t%d\t%s\t%d\t%s\t%s\t%s\t%s\tMetaSV\t%d" % (
-        self.chrom, start_outer, start_inner, end_inner, end_outer, self.sv_type, self.length, "BWA", "Illumina",
-        sample_name, type_of_computational_approach, id_num)
+            self.chrom, start_outer, start_inner, end_inner, end_outer, self.sv_type, self.length, "BWA", "Illumina",
+            sample_name, type_of_computational_approach, id_num)
 
 
 def interval_overlaps_interval_list(interval, interval_list, min_fraction_self=1e-9, min_fraction_other=1e-9):

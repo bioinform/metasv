@@ -1,22 +1,22 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
 import traceback
-import pysam
 import os
-import sys
 import argparse
-import logging
 import multiprocessing
 import subprocess
-import fileinput
 import hashlib
+from functools import partial
+
+import pysam
+import pybedtools
+
 from spades_contig import SpadesContig
 from tigra_contig import TigraContig
 from svregion import SVRegion
 from age_parser import *
 from process_age_alignment import process_age_records
-import pybedtools
-from functools import partial
+
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -56,7 +56,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             bedtools_interval = pybedtools.Interval(region[0], region[1], region[3])
             matching_intervals = intervals_bedtool.all_hits(bedtools_interval, overlap=1.0)
             matching_intervals = [interval for interval in intervals_bedtool if (
-            interval.start == bedtools_interval.start and interval.end == bedtools_interval.end and interval.chrom == bedtools_interval.chrom)]
+                interval.start == bedtools_interval.start and interval.end == bedtools_interval.end and interval.chrom == bedtools_interval.chrom)]
             if not matching_intervals:
                 thread_logger.info("Matching interval not found for %s" % (str(bedtools_interval)))
                 matching_interval = bedtools_interval
@@ -98,7 +98,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                     file_handle.write(">{}.as\n{}".format(region_name, contig_sequence))
 
                 age_cmd = "%s %s -both -go=-6 %s %s >%s 2>%s" % (
-                age, "-inv" if contig.sv_type == "INV" else "-indel", ref_name, asm_name, out, err)
+                    age, "-inv" if contig.sv_type == "INV" else "-indel", ref_name, asm_name, out, err)
                 execute_cmd = "timeout %ds %s" % (timeout, age_cmd)
 
                 retcode = run_cmd(execute_cmd, thread_logger, None, None)
@@ -190,7 +190,7 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=500,
     sv_types = set(sv_types)
     contig_dict = {contig.sv_region.to_tuple(): [] for contig in contigs if (len(
         chrs) == 0 or contig.sv_region.chrom1 in chrs) and contig.sequence_len >= min_contig_len and contig.sv_region.length() <= max_region_len and (
-                   len(sv_types) == 0 or contig.sv_type in sv_types)}
+                       len(sv_types) == 0 or contig.sv_type in sv_types)}
 
     func_logger.info("Generating the contig dictionary for parallel execution")
     small_contigs_count = 0
@@ -206,7 +206,7 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=500,
     nthreads = min(nthreads, len(region_list))
 
     func_logger.info("Will process %d regions with %d contigs (%d small contigs ignored) using %d threads" % (
-    len(region_list), sum([len(value) for value in contig_dict.values()]), small_contigs_count, nthreads))
+        len(region_list), sum([len(value) for value in contig_dict.values()]), small_contigs_count, nthreads))
 
     pybedtools.set_tempdir(age_workdir)
     pool = multiprocessing.Pool(nthreads)
