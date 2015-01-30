@@ -3,6 +3,8 @@
 from collections import defaultdict
 import shutil
 import argparse
+import sys
+import pysam
 
 from vcf_utils import *
 from sv_interval import SVInterval, get_gaps_file, interval_overlaps_interval_list, merge_intervals
