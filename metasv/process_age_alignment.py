@@ -1,7 +1,7 @@
 from __future__ import print_function
 import logging
 import multiprocessing
-
+from collections import defaultdict
 import pybedtools
 
 
@@ -309,11 +309,13 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
 
     # Add some features to an info dict
     info = dict()
+    info["BA_NUM_GOOD_REC"] = len(good_age_records) if good_age_records else 0
+
 
 
     if not good_age_records:
         func_logger.warning("No good records found for getting breakpoints")
-        return []
+        return [], info
     else:
         func_logger.info("Found %d good records for getting breakpoints" % (len(good_age_records)))
         func_logger.info("Good records")
@@ -329,7 +331,7 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
         func_logger.info("Gathered reference intervals as %s" % (str(reference_intervals)))
         breakpoints = get_insertion_breakpoints(good_age_records, reference_intervals, start=sv_region.pos1 - pad)
     else:
-        return []
+        return [], info
 
     func_logger.info("Detected breakpoints as %s" % (str(breakpoints)))
 
@@ -338,20 +340,20 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
             func_logger.info("True deletion interval %s" % (str(breakpoints)))
         else:
             func_logger.info("False deletion interval %s" % (str(breakpoints)))
-            return []
+            return [], info
     elif sv_type == "INS":
         if len(breakpoints) == 1:
             if sv_region.pos2 - sv_region.pos1 <= 20:
                 if abs(breakpoints[0][0] - sv_region.pos1) > 20:
-                    return []
+                    return [], info
             else:
                 diff1 = breakpoints[0][0] - sv_region.pos1
                 diff2 = sv_region.pos2 - breakpoints[0][0]
 
                 if not (pad - 10 <= diff1 <= pad + 10 or pad - 10 <= diff2 <= pad + 10):
-                    return []
+                    return [], info
             func_logger.info("True insertion interval %s" % (str(breakpoints)))
         else:
-            return []
+            return [], info
 
-    return breakpoints
+    return breakpoints, info
