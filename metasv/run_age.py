@@ -134,7 +134,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             else:
                 sv_type = sv_types[0]
                 thread_logger.info("Processing region of type %s" % sv_type)
-                breakpoints = process_age_records(unique_age_records, sv_type=sv_type, pad=pad)
+                breakpoints, info_dict = process_age_records(unique_age_records, sv_type=sv_type, pad=pad)
                 bedtools_fields = matching_interval.fields
                 if len(breakpoints) == 1 and sv_type == "INS":
                     bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1]])
@@ -142,6 +142,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                     bedtools_fields += map(str, breakpoints + [breakpoints[1] - breakpoints[0]])
                 else:
                     bedtools_fields += map(str, [bedtools_fields[1], bedtools_fields[2], -1])
+                bedtools_fields += repr(info_dict)
                 thread_logger.info("Writing out fields %s" % (str(bedtools_fields)))
                 bedtools_intervals.append(pybedtools.create_interval_from_list(bedtools_fields))
 

@@ -51,7 +51,8 @@ def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", 
     func_logger = logging.getLogger("%s-%s" % (get_insertion_breakpoints.__name__, multiprocessing.current_process()))
     bedtools_intervals = [pybedtools.Interval("1", interval[0], interval[1]) for interval in sorted(intervals)]
     func_logger.info("bedtools_intervals %s" % (str(bedtools_intervals)))
-    if not bedtools_intervals: return []
+    if not bedtools_intervals:
+        return []
 
     interval_pairs = []
     breakpoints_intervals = set()
