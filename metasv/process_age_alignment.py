@@ -113,7 +113,8 @@ def overlap(s1, e1, s2, e2):
 
 
 def select_best_assembly(assemblies):
-    if not assemblies: return age.AgeRecord()  # return dummy assembly
+    if not assemblies:
+        return age.AgeRecord()  # return dummy assembly, Marghoob this is not defined?
 
     best_assembly = assemblies[0]
 
@@ -126,7 +127,8 @@ def select_best_assembly(assemblies):
 
 
 def are_positions_consistent(assemblies):
-    if not assemblies: return 0
+    if not assemblies:
+        return 0
     low = min([assembly.start for assembly in assemblies])
     high = max([assembly.end for assembly in assemblies])
 
@@ -184,13 +186,14 @@ def pair_deletion_breakpoints(intervals, reference_length, window=50):
     logger.info("Paired %s as %s" % (str(intervals), str(interval_pairs)))
     logger.info("Overlap intervals %s" % (str(overlap_intervals)))
 
-    if not overlap_intervals: return 0, -1, -1
+    if not overlap_intervals:
+        return 0, -1, -1
 
     low = min([interval[0] for interval in overlap_intervals])
     high = max([interval[1] for interval in overlap_intervals])
 
     logger.info("low = %d, high = %d overlap_intervals = %s" % (low, high, str(overlap_intervals)))
-    if (high - low <= 20):
+    if high - low <= 20:
         logger.info("Pairing success! The overlap intervals are close enough.")
         return len(overlap_intervals), low, high
     return len(overlap_intervals), -1, -1
@@ -308,10 +311,13 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
         pass
 
     # Add some features to an info dict
-    info = dict()
+    info = defaultdict(float)
     info["BA_NUM_GOOD_REC"] = len(good_age_records) if good_age_records else 0
-
-
+    for rec in good_age_records:
+        info["BA_FLANK_PERCENT"] = max(info["BA_FLANK_PERCENT"], rec.flank_percent)
+        info["BA_NFRAGS"] = max(info["BA_NFRAGS"], rec.nfrags)
+        info["BA_NUM_ALT"] = max(info["BA_NUM_ALT"], rec.n_alt)
+        info["BA_PERCENT_MATCH"] = max(info["BA_PERCENT_MATCH"], rec.percent)
 
     if not good_age_records:
         func_logger.warning("No good records found for getting breakpoints")
@@ -335,6 +341,9 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
 
     func_logger.info("Detected breakpoints as %s" % (str(breakpoints)))
 
+    # Add a few more features related to the breakpoints computed
+    info["BA_NUM_BP"] = len(breakpoints)
+
     if sv_type == "DEL":
         if len(breakpoints) == 2:
             func_logger.info("True deletion interval %s" % (str(breakpoints)))
@@ -344,12 +353,13 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
     elif sv_type == "INS":
         if len(breakpoints) == 1:
             if sv_region.pos2 - sv_region.pos1 <= 20:
+                info["BA_BP_SCORE"] = abs(breakpoints[0][0] - sv_region.pos1)
                 if abs(breakpoints[0][0] - sv_region.pos1) > 20:
                     return [], info
             else:
                 diff1 = breakpoints[0][0] - sv_region.pos1
                 diff2 = sv_region.pos2 - breakpoints[0][0]
-
+                info["BA_BP_SCORE"] = min(abs(diff1 - pad), abs(diff2 - pad))
                 if not (pad - 10 <= diff1 <= pad + 10 or pad - 10 <= diff2 <= pad + 10):
                     return [], info
             func_logger.info("True insertion interval %s" % (str(breakpoints)))
