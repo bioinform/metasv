@@ -307,6 +307,10 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
     elif sv_type == "INV":
         pass
 
+    # Add some features to an info dict
+    info = dict()
+
+
     if not good_age_records:
         func_logger.warning("No good records found for getting breakpoints")
         return []
