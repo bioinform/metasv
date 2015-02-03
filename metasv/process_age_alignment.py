@@ -141,7 +141,7 @@ def generate_assembly_features(assemblies):
     is_consistent = int(are_positions_consistent(assemblies))
 
     unique_assemblies = set([(assembly.start, assembly.end) for assembly in assemblies])
-    logger.info("Unique assemblies = " + str(unique_assemblies) + " is_consistent = %d" % (is_consistent))
+    logger.info("Unique assemblies = " + str(unique_assemblies) + " is_consistent = %d" % is_consistent)
 
     return map(str, [len(assemblies), len(unique_assemblies), int(len(assemblies) > 0), is_consistent,
                      best_assembly.insertion_length, best_assembly.start, best_assembly.end,
@@ -231,7 +231,7 @@ def pair_intervals(intervals, reference_length, window=50):
     high = max([interval[1] for interval in overlap_intervals])
 
     logger.info("low = %d, high = %d overlap_intervals = %s" % (low, high, str(overlap_intervals)))
-    if (high - low <= 20):
+    if high - low <= 20:
         logger.info("Pairing success! The overlap intervals are close enough.")
         return len(overlap_intervals), low, high
     return len(overlap_intervals), -1, -1

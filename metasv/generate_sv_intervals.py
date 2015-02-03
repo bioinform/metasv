@@ -94,7 +94,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=20, min_ma
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
-        func_logger.error("Working directory %s doesn't exist" % (workdir))
+        func_logger.error("Working directory %s doesn't exist" % workdir)
         return None
 
     func_logger.info("Generating candidate insertion intervals from %s for chromsome %s" % (bam, chromosome))
@@ -141,7 +141,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         "%s-%s" % (parallel_generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
-        func_logger.info("Creating directory %s" % (workdir))
+        func_logger.info("Creating directory %s" % workdir)
         os.makedirs(workdir)
 
     if not chromosomes:

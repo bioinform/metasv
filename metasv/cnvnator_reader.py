@@ -75,19 +75,19 @@ class CNVnatorRecord:
                           native_sv=self)
 
     def to_vcf_record(self, sample):
-        alt = ["<%s>" % (self.sv_type)]
+        alt = ["<%s>" % self.sv_type]
         sv_len = -self.sv_len if self.sv_type == "DEL" else self.sv_len
         info = {"SVLEN": sv_len,
                 "SVTYPE": self.sv_type}
         if self.sv_type == "DEL" or self.sv_type == "DUP":
-            info["END"] = self.pos1 + self.sv_len
+            info["END"] = self.start + self.sv_len
         else:
             return None
 
         info.update(self.info)
 
-        vcf_record = vcf.model._Record(self.chr1,
-                                       self.pos1 - 1,
+        vcf_record = vcf.model._Record(self.chromosome,
+                                       self.start - 1,
                                        ".",
                                        "N",
                                        alt,

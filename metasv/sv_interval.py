@@ -101,8 +101,8 @@ class SVInterval:
     def is_adjacent(self, other, gap=0):
         if self.chrom != other.chrom:
             return False
-        return (self.end + gap >= other.start and self.end + gap < other.end) or (
-            other.end + gap >= self.start and other.end + gap < self.end)
+        return (other.start <= gap + self.end + gap < other.end) or (
+            self.start <= gap + other.end + gap < self.end)
 
     def get_start(self):
         if not self.sub_intervals:
@@ -221,7 +221,7 @@ class SVInterval:
                                        ".",
                                        fasta_handle.fetch(self.chrom, max(0, self.start - 2),
                                                           max(1, self.start - 1)) if fasta_handle else "N",
-                                       ["<%s>" % (self.sv_type)],
+                                       ["<%s>" % self.sv_type],
                                        ".",
                                        "PASS" if self.is_validated else "LowQual",
                                        info,

@@ -180,10 +180,10 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=500,
     func_logger = logging.getLogger("%s-%s" % (run_age_parallel.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(age_workdir):
-        func_logger.info("Creating %s" % (age_workdir))
+        func_logger.info("Creating %s" % age_workdir)
         os.makedirs(age_workdir)
 
-    if not os.path.isfile("%s.fai" % (assembly)):
+    if not os.path.isfile("%s.fai" % assembly):
         func_logger.info("Assembly FASTA wasn't indexed. Will attempt to index now.")
         pysam.faidx(assembly)
 

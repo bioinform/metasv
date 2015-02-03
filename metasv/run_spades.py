@@ -22,10 +22,10 @@ precise_methods = set(["AS", "SR", "JM"])
 
 
 def run_cmd(cmd, logger, spades_log_fd):
-    logger.info("Running command %s" % (cmd))
+    logger.info("Running command %s" % cmd)
     spades_log_fd.write("*************************************************\n")
     retcode = subprocess.call(cmd, shell=True, stderr=spades_log_fd, stdout=spades_log_fd)
-    logger.info("Returned code %d" % (retcode))
+    logger.info("Returned code %d" % retcode)
 
     return retcode
 
@@ -45,7 +45,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=0, myi
     thread_logger = logging.getLogger("%s-%s" % (run_spades_single.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(work):
-        thread_logger.info("Creating %s" % (work))
+        thread_logger.info("Creating %s" % work)
         os.makedirs(work)
 
     merged_contigs = open(os.path.join(work, "merged.fa"), "w")
@@ -65,17 +65,17 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=0, myi
         sv_type = interval.name.split(",")[0]
 
         for fn_id, ((end1, end2), extracted_count) in enumerate(
-                extract_pairs.extract_read_pairs(bam, region, "%s/" % (work), extract_fns, pad=pad)):
+                extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad)):
             extract_fn_name = extract_fns[fn_id].__name__
             if extracted_count >= 5:
                 extra_opt = "--sc" if not fn_id == 0 else ""
                 retcode = run_cmd("bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 %s\"" % (
                     timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger, spades_log_fd)
                 if retcode == 0:
-                    append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % (extract_fn_name), interval,
+                    append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % extract_fn_name, interval,
                                    merged_contigs, fn_id, sv_type)
             else:
-                thread_logger.info("Too few read pairs (%d) extracted. Skipping assembly." % (extracted_count))
+                thread_logger.info("Too few read pairs (%d) extracted. Skipping assembly." % extracted_count)
 
     merged_contigs.close()
 
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not os.path.isdir(args.work):
-        logger.info("Creating %s" % (args.work))
+        logger.info("Creating %s" % args.work)
         os.makedirs(args.work)
 
     run_spades_parallel(bam=args.bam, spades=args.spades, bed=args.bed, work=args.work, pad=args.pad,

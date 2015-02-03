@@ -142,7 +142,7 @@ class AgeRecord:
 
         if len(self.inputs) == 0:
             self.flank_percent = 0
-            logger.warn("%s has problems" % (age_out_file))
+            logger.warn("%s has problems" % age_out_file)
         else:
             self.flank_percent = int(round(100.0 * sum(self.flanking_regions) / self.inputs[0].length))
 
@@ -170,8 +170,7 @@ class AgeRecord:
             self.ref_flanking_regions[0], self.ref_flanking_regions[1]) >= min_len
 
     def has_only_long_left_flank(self, min_len):
-        return min(self.ref_flanking_regions[0], self.flanking_regions[0]) >= min_len and self.flanking_regions[
-                                                                                              1] <= min_len
+        return min(self.ref_flanking_regions[0], self.flanking_regions[0]) >= min_len >= self.flanking_regions[1]
 
     def has_only_long_right_flank(self, min_len):
         return self.flanking_regions[0] <= min_len and self.flanking_regions[1] >= min_len + self.hom and \

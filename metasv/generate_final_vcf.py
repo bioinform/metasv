@@ -66,7 +66,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template=vcf_templ
             end = pos
         sv_id = "."
         ref = "."
-        alt = ["<%s>" % (sv_type)]
+        alt = ["<%s>" % sv_type]
         qual = "."
         sv_filter = "."
         info = {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)}

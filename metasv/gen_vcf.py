@@ -88,7 +88,7 @@ if args.sort:
 
 for record in records:
     sv_type, chr1, pos1, pos2, size, normal_read_count, num_reads, score, gt, tool = record
-    alt_allele = "<%s>" % (sv_type)
+    alt_allele = "<%s>" % sv_type
 
     ref_allele = fasta_handle.fetch(chr1, pos1 - 1, pos1)
 

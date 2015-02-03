@@ -46,13 +46,13 @@ def get_num_reads_supporting_ref(bam_handles, min_isize, max_isize, chromosome, 
             else:
                 if not (aln.pnext > aln.pos and aln.mate_is_reverse): continue
             tlen = aln.tlen if aln.tlen > 0 else (-aln.tlen)
-            if tlen >= min_isize and tlen <= max_isize:
+            if min_isize <= tlen <= max_isize:
                 total_normal_reads = total_normal_reads + 1
                 total_read_bases = total_read_bases + aln.qlen
     return total_normal_reads, total_read_bases
 
 
-pindel_sv_type_dict = {"D": "DEL", "I": "INS", "TD": "DUP:TANDEM", "LI": "LI", "INV": "INV"};
+pindel_sv_type_dict = {"D": "DEL", "I": "INS", "TD": "DUP:TANDEM", "LI": "LI", "INV": "INV"}
 
 
 def parse_line(line, tool):
