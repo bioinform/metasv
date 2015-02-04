@@ -9,10 +9,11 @@ FORMAT = '%(levelname)s %(asctime)-15s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 logger = logging.getLogger(__name__)
 
-parser = argparse.ArgumentParser("Take all and false MetaSV VCF. Make BED with features out of them.\n",
+parser = argparse.ArgumentParser("Take all and false MetaSV VCF (from VarSim). Make BED with features out of them.\n",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--in_all_vcf", help="VCF file of all variants", required=True)
-parser.add_argument("--in_false_vcf", help="VCF file of all variants", required=True)
+parser.add_argument("--in_false_vcf", help="VCF file of false positive variants", required=True)
+parser.add_argument("--in_unknown_vcf", help="VCF file of unknown status variants", required=True)
 parser.add_argument("--out_bed", help="Output BED file")
 
 args = parser.parse_args()
@@ -72,6 +73,11 @@ false_vcf_dict = {}  # this just stores some things that will make the VCF recor
 for line in false_vcf:
     false_vcf_dict["-".join([line.chrom, str(line.loc), line.alt, line.info["SVLEN"]])] = 1
 
+# read in the unknown VCF and store in a dictionary
+unknown_vcf = read_all_vcf(args.in_unknown_vcf)
+unknown_vcf_dict = {}  # this just stores some things that will make the VCF record unique (chr,loc,alt,SVLEN)
+for line in unknown_vcf:
+    unknown_vcf_dict["-".join([line.chrom, str(line.loc), line.alt, line.info["SVLEN"]])] = 1
 
 # open the output file
 outf = sys.stdout
@@ -140,6 +146,11 @@ all_vcf = read_all_vcf(args.in_all_vcf)
 
 for line in all_vcf:
     false_vec = "-".join([line.chrom, str(line.loc), line.alt, line.info["SVLEN"]])
+
+    if false_vec in unknown_vcf_dict:
+        # ignore the unknown state records for analysis
+        continue
+
     true_var = True
     if false_vec in false_vcf_dict:
         true_var = False
