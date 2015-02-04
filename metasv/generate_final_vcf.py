@@ -76,7 +76,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         alt = ["<%s>" % sv_type]
         qual = "."
         sv_filter = "."
-        info = {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)}
+        info.update({"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
         sv_format = "GT"
         sample_indexes = [0]
         samples = [vcf.model._Call(None, sample, ["1/1"])]
