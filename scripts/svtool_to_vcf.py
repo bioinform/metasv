@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 tool_to_reader = {"BreakDancer": BreakDancerReader, "Pindel": PindelReader, "CNVnator": CNVnatorReader, "BreakSeq": BreakSeqReader}
 
 
-def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname, reference, sort=False):
+def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname, reference, sort=False, index=False):
     vcf_template_reader = get_template()
     vcf_template_reader.samples = [sample]
 
@@ -54,6 +54,8 @@ def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname, reference, sort=
         for vcf_record in vcf_records:
             vcf_writer.write_record(vcf_record)
     vcf_writer.close()
+    if out_vcf and index:
+        pysam.tabix_index(out_vcf, force=True)
 
 
 if __name__ == "__main__":
@@ -66,6 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("--sample", help="Sample name", required=True)
     parser.add_argument("--reference", help = "Reference FASTA")
     parser.add_argument("--sort", action = "store_true", help = "Sort the VCF records before writing")
+    parser.add_argument("--index", action="store_true", help="Tabix compress and index the output VCF")
 
     args = parser.parse_args()
-    convert_svtool_to_vcf(args.input, args.sample, args.output, args.tool, args.reference, sort=args.sort)
+    convert_svtool_to_vcf(args.input, args.sample, args.output, args.tool, args.reference, sort=args.sort, index=args.index)
