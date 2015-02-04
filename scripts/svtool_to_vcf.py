@@ -11,7 +11,9 @@ from metasv.pindel_reader import PindelReader
 from metasv.cnvnator_reader import CNVnatorReader
 from metasv.breakseq_reader import BreakSeqReader
 from metasv.vcf_utils import get_template
+from metasv.fasta_utils import get_contigs
 
+logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 tool_to_reader = {"BreakDancer": BreakDancerReader, "Pindel": PindelReader, "CNVnator": CNVnatorReader, "BreakSeq": BreakSeqReader}
@@ -25,6 +27,13 @@ def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname, reference, sort=
     vcf_writer = vcf.Writer(vcf_fd, vcf_template_reader)
 
     reference_handle = pysam.Fastafile(reference) if reference else None
+    reference_contigs = get_contigs(reference)
+    if sort:
+        if not reference_contigs:
+            logger.warn("Chromosomes will be sorted in lexicographic order since reference is missing")
+        else:
+            logger.info("Chromosomes will be sorted by the reference order")
+
     vcf_records = []
     for tool_record in tool_to_reader[toolname](file_name, reference_handle = reference_handle):
         vcf_record = tool_record.to_vcf_record(sample)
@@ -35,9 +44,15 @@ def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname, reference, sort=
         else:
             vcf_writer.write_record(vcf_record)
 
-    vcf_records.sort(cmp=lambda x, y: cmp((x.CHROM, x.POS), (y.CHROM, y.POS)))
-    for vcf_record in vcf_records:
-        vcf_writer.write_record(vcf_record)
+    if sort:
+        if reference_contigs:
+            contigs_order_dict = {contig.name: index for (index, contig) in enumerate(reference_contigs)}
+            vcf_records.sort(cmp=lambda x, y: cmp((contigs_order_dict[x.CHROM], x.POS), (contigs_order_dict[y.CHROM], y.POS)))
+        else:
+            vcf_records.sort(cmp=lambda x, y: cmp((x.CHROM, x.POS), (y.CHROM, y.POS)))
+
+        for vcf_record in vcf_records:
+            vcf_writer.write_record(vcf_record)
     vcf_writer.close()
 
 
