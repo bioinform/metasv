@@ -178,8 +178,10 @@ class SVInterval:
                 self.end = mid
 
     def to_vcf_record(self, fasta_handle=None, sample=""):
-        if self.start <= 0: return None
-        if self.sv_type not in svs_of_interest: return None
+        if self.start <= 0:
+            return None
+        if self.sv_type not in svs_of_interest:
+            return None
 
         # ignore private haplotype caller calls
         if ((not self.sub_intervals) or len(self.sources) == 1) and list(self.sources)[0] == "HaplotypeCaller":
