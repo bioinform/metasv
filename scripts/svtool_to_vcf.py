@@ -47,7 +47,7 @@ if __name__ == "__main__":
     parser.add_argument("--input", help="SV tool output file", required=False)
     parser.add_argument("--output", help="Output VCF to create", required=False)
     parser.add_argument("--tool", help="Tool name", required=False, default="BreakDancer",
-                        choices=["BreakDancer", "CNVnator", "Pindel"])
+                        choices=tool_to_reader.keys())
     parser.add_argument("--sample", help="Sample name", required=True)
     parser.add_argument("--reference", help = "Reference FASTA")
     parser.add_argument("--sort", action = "store_true", help = "Sort the VCF records before writing")
