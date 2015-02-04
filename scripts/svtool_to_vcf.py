@@ -9,11 +9,12 @@ import pysam
 from metasv.breakdancer_reader import BreakDancerReader
 from metasv.pindel_reader import PindelReader
 from metasv.cnvnator_reader import CNVnatorReader
+from metasv.breakseq_reader import BreakSeqReader
 from metasv.vcf_utils import get_template
 
 logger = logging.getLogger(__name__)
 
-tool_to_reader = {"BreakDancer": BreakDancerReader, "Pindel": PindelReader, "CNVnator": CNVnatorReader}
+tool_to_reader = {"BreakDancer": BreakDancerReader, "Pindel": PindelReader, "CNVnator": CNVnatorReader, "BreakSeq": BreakSeqReader}
 
 
 def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname, reference):
