@@ -17,8 +17,8 @@ mydir = os.path.dirname(os.path.realpath(__file__))
 vcf_template = os.path.join(mydir, "resources/template.vcf")
 
 
-def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template=vcf_template, sample=None, reference=None):
-    vcf_template_reader = vcf.Reader(open(vcf_template, "r"))
+def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_template, sample=None, reference=None):
+    vcf_template_reader = vcf.Reader(open(vcf_template_file, "r"))
 
     # The following are hacks to ensure sample name and contig names are put in the VCF header
     vcf_template_reader.samples = [sample]
@@ -44,15 +44,17 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template=vcf_templ
         svmethods = (";".join([name.split(",")[2] for name in sub_names])).split(";")
 
         index_to_use = 0
-        should_ignore = False
+        should_ignore = False  # Marghoob this is not used?
         if "DEL" in sub_types:
             index_to_use = sub_types.index("DEL")
-            svmethods_s = set(svmethods) - set(["SC"])
-            if len(svmethods_s) == 1: continue
+            svmethods_s = set(svmethods) - {"SC"}
+            if len(svmethods_s) == 1:
+                continue
         elif "INV" in sub_types:
             index_to_use = sub_types.index("INV")
-            svmethods_s = set(svmethods) - set(["SC"])
-            if len(svmethods_s) == 1: continue
+            svmethods_s = set(svmethods) - {"SC"}
+            if len(svmethods_s) == 1:
+                continue
         elif "INS" in sub_types and "SC" in sub_methods:
             index_to_use = sub_methods.index("SC")
 
@@ -62,7 +64,8 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template=vcf_templ
 
         sv_type = sub_types[index_to_use]
         if sv_type == "INS":
-            if end != pos + 1: continue
+            if end != pos + 1:
+                continue
             end = pos
         sv_id = "."
         ref = "."
@@ -94,5 +97,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    convert_metasv_bed_to_vcf(bedfile=args.bed, vcf_out=args.vcf, vcf_template=args.vcf_template, sample=args.sample,
+    convert_metasv_bed_to_vcf(bedfile=args.bed, vcf_out=args.vcf, vcf_template_file=args.vcf_template, sample=args.sample,
                               reference=args.reference)
