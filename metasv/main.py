@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
 from collections import defaultdict
-import shutil
-import argparse
-import sys
-import pysam
 
 from vcf_utils import *
 from sv_interval import SVInterval, get_gaps_file, interval_overlaps_interval_list, merge_intervals
@@ -16,6 +12,8 @@ from run_spades import run_spades_parallel
 from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
 from fasta_utils import get_contigs
+import shutil
+import argparse 
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -25,7 +23,7 @@ logger = logging.getLogger(__name__)
 def create_dirs(dirlist):
     for dirname in dirlist:
         if not os.path.isdir(dirname):
-            logger.info("Creating directory %s" % dirname)
+            logger.info("Creating directory %s" % (dirname))
             os.makedirs(dirname)
 
 
@@ -33,8 +31,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                breakseq_vcf=[], cnvnator_vcf=[], cnvnator_native=[], gatk_vcf=[], gaps=None, filter_gaps=False,
                keep_standard_contigs=False,
                wiggle=100, overlap_ratio=0.5, workdir="work", outdir="out", boost_ins=False, bam=None, chromosomes=[],
-               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=50, inswiggle=100,
-               enable_per_tool_output=False):
+               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=50, inswiggle=100, enable_per_tool_output = False):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -64,11 +61,11 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     spades -- Path for the SPAdes executable (default None)
     age -- Path for the AGE executable (default None)
     disable_assembly -- Flag to disable assembly (default False)
+
     """
 
     # Check if there is work to do
-    if not (
-                            pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + cnvnator_native):
+    if not (pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + cnvnator_native):
         logger.error("Nothing to do since no SV file specified")
         return 1
 
@@ -78,7 +75,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     # Reference handling
     if not os.path.isfile(reference + ".fai"):
-        logger.error("Reference file %s is not indexed" % reference)
+        logger.error("Reference file %s is not indexed" % (reference))
         return 1
 
     fasta_handle = pysam.Fastafile(reference) if os.path.isfile(reference) else None
@@ -90,7 +87,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     contig_whitelist = set(chromosomes) if chromosomes else set([contig.name for contig in contigs])
     if keep_standard_contigs:
         contig_whitelist &= set(
-            [str(i) for i in xrange(1, 23)] + ["chr%d" % i for i in xrange(1, 23)] + ["X", "Y", "MT", "chrX", "chrY",
+            [str(i) for i in xrange(1, 23)] + ["chr%d" % (i) for i in xrange(1, 23)] + ["X", "Y", "MT", "chrX", "chrY",
                                                                                         "chrM"])
     logger.info("Only SVs on the following contigs will be reported: %s" % (sorted(list(contig_whitelist))))
 
@@ -107,8 +104,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     gap_intervals = []
     if filter_gaps:
-        if not gaps:
-            gaps = get_gaps_file(contig_whitelist)
+        if not gaps: gaps = get_gaps_file(contig_whitelist)
         gap_intervals = sorted(load_gap_intervals(gaps))
 
     # Handles native input
@@ -156,7 +152,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         for vcffile in vcfname:
             if os.path.isdir(vcffile):
                 logger.info("Will load from per-chromosome VCFs from directory %s for tool %s" % (vcffile, toolname))
-                vcf_list += [os.path.join(vcffile, "%s.vcf.gz" % contig.name) for contig in contigs if
+                vcf_list += [os.path.join(vcffile, "%s.vcf.gz" % (contig.name)) for contig in contigs if
                              (not contig_whitelist or contig.name in contig_whitelist)]
             else:
                 vcf_list.append(vcffile)
@@ -215,6 +211,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
             vcf_writer.close()
             logger.info("Indexing single tool VCF for %s" % (str(toolname)))
             pysam.tabix_index(tool_out, force=True, preset="vcf")
+
 
     # Do merging here
     logger.info("Do merging")
@@ -306,13 +303,13 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
         create_dirs([spades_tmpdir, age_tmpdir])
 
-        assembly_bed = merged_bed # Marghoob grr
+        assembly_bed = merged_bed
 
         if boost_ins:
             logger.info("Generating intervals for insertions")
             assembly_bed = parallel_generate_sc_intervals([bam.name], list(contig_whitelist), merged_bed, workdir,
                                                           num_threads=num_threads)
-            logger.info("Generated intervals for assembly in %s" % assembly_bed)
+            logger.info("Generated intervals for assembly in %s" % (assembly_bed))
 
         logger.info("Will run assembly now")
 
@@ -331,6 +328,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
             pybedtools.BedTool(breakpoints_bed).saveas(final_bed)
 
         logger.info("Output final VCF file")
+
         convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample)
     else:
         shutil.copy(preasm_vcf, final_vcf)
@@ -386,18 +384,17 @@ if __name__ == "__main__":
     parser.add_argument("--spades", help="Path to SPAdes executable", required=False)
     parser.add_argument("--age", help="Path to AGE executable", required=False)
     parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
-    parser.add_argument("--enable_per_tool_output", action="store_true",
-                        help="Enable output of merged SVs for individual tools")
+    parser.add_argument("--enable_per_tool_output", action = "store_true", help = "Enable output of merged SVs for individual tools")
 
     args = parser.parse_args()
 
     sys.exit(run_metasv(args.sample, args.reference, pindel_vcf=args.pindel_vcf, pindel_native=args.pindel_native,
-                        breakdancer_vcf=args.breakdancer_vcf, breakdancer_native=args.breakdancer_native,
-                        breakseq_vcf=args.breakseq_vcf, cnvnator_vcf=args.cnvnator_vcf,
-                        cnvnator_native=args.cnvnator_native, gatk_vcf=args.gatk_vcf,
-                        gaps=args.gaps, filter_gaps=args.filter_gaps, keep_standard_contigs=args.keep_standard_contigs,
-                        wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
-                        workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
-                        chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
-                        disable_assembly=args.disable_assembly, minsvlen=args.minsvlen, inswiggle=args.inswiggle))
+        breakdancer_vcf=args.breakdancer_vcf, breakdancer_native=args.breakdancer_native,
+        breakseq_vcf=args.breakseq_vcf, cnvnator_vcf=args.cnvnator_vcf,
+        cnvnator_native=args.cnvnator_native, gatk_vcf=args.gatk_vcf,
+        gaps=args.gaps, filter_gaps=args.filter_gaps, keep_standard_contigs=args.keep_standard_contigs,
+        wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
+        workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
+        chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
+        disable_assembly=args.disable_assembly, minsvlen = args.minsvlen, inswiggle = args.inswiggle))
 
