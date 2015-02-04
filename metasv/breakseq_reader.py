@@ -1,6 +1,5 @@
 import logging
 import sys
-import os
 
 import vcf
 
@@ -9,7 +8,6 @@ from sv_interval import SVInterval
 
 logger = logging.getLogger(__name__)
 
-mydir = os.path.dirname(os.path.realpath(__file__))
 valid_svs = set(["DEL", "INS"])
 tool_name = "BreakSeq"
 source = set([tool_name])
@@ -18,25 +16,24 @@ sv_name_dict = {"Deletion": "DEL", "Insertion": "INS", "Inversion": "INV"}
 class BreakSeqRecord:
     def __init__(self, record_string):
         self.name = tool_name
-        fields = record_string.split()
+        fields = record_string.split("\t")
         self.chromosome = fields[0]
         self.start = int(fields[3]) - 1
         self.end = int(fields[4])
         self.score = int(fields[5])
 
-        info_fields = {f.split(" ")[0]: f.split(" ")[1] for f in fields[8].split(";")}
+        info_fields = dict([f.split(" ") for f in fields[8].split(";")])
         self.filter = info_fields["QUAL"]
-        self.abc_counts = zip(["A", "B", "C"], info_fields["ABC"].split(" ")[1].split(","))
+        self.abc_counts = zip(["A", "B", "C"], map(int, info_fields["ABC"].split(",")))
         self.pe_count = int(info_fields["PE"])
-        self.sv_type = sv_name_dict(fields[2])
+        self.sv_type = sv_name_dict[fields[2]]
         self.sv_len = 0 if self.sv_type == "INS" else (self.end - self.start)
         self.info = {
-            "BS_CHR": self.chromosome,
             "BS_START": self.start,
             "BS_END": self.end,
             "BS_SCORE": self.score,
             "BS_FILTER": self.filter,
-            "BS_ABC_COUNTS": ",".join(map(str, self.abc_counts)),
+            "BS_ABC_COUNTS": ",".join(map(lambda x: str(x[1]), self.abc_counts)),
             "BS_PE_COUNT": self.pe_count
         }
 
@@ -50,31 +47,16 @@ class BreakSeqRecord:
         if self.sv_type not in valid_svs:
             return None
 
-        if self.sv_type == "DEL":
-            return SVInterval(self.chromosome,
-                              self.start,
-                              self.end,  # fudge
-                              name=self.name,
-                              sv_type=self.sv_type,
-                              length=self.sv_len,
-                              sources=source,
-                              cipos=[],
-                              info=self.info,
-                              native_sv=self)
-        elif self.sv_type == "INS":
-            return SVInterval(self.chromosome,
-                              self.start,
-                              self.end,  # fudge
-                              name=self.name,
-                              sv_type=self.sv_type,
-                              length=self.sv_len,
-                              sources=source,
-                              cipos=[],
-                              info=self.info,
-                              native_sv=self)
-        else:
-            logger.error("Bad SV type: " + repr(self))
-            return None
+        return SVInterval(self.chromosome,
+                          self.start,
+                          self.end,
+                          name=self.name,
+                          sv_type=self.sv_type,
+                          length=self.sv_len,
+                          sources=source,
+                          cipos=[],
+                          info=self.info,
+                          native_sv=self)
 
     def to_vcf_record(self, sample):
         alt = ["<%s>" % self.sv_type]
@@ -85,18 +67,17 @@ class BreakSeqRecord:
 
         info.update(self.info)
 
-        vcf_record = vcf.model._Record(self.chromosome,
-                                       self.start,
-                                       ".",
-                                       "N",
-                                       alt,
-                                       ".",
-                                       ".",
-                                       info,
-                                       "GT",
-                                       [0],
-                                       [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT="1/1"))])
-        return vcf_record
+        return vcf.model._Record(self.chromosome,
+                                 self.start,
+                                 ".",
+                                 "N",
+                                 alt,
+                                 ".",
+                                 ".",
+                                 info,
+                                 "GT",
+                                 [0],
+                                 [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT="1/1"))])
 
 
 class BreakSeqReader:
