@@ -13,6 +13,7 @@ tool_name = "BreakSeq"
 source = set([tool_name])
 sv_name_dict = {"Deletion": "DEL", "Insertion": "INS", "Inversion": "INV"}
 
+
 class BreakSeqRecord:
     def __init__(self, record_string):
         self.name = tool_name

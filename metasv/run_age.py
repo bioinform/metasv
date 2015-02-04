@@ -54,7 +54,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
     try:
         for region in region_list:
             bedtools_interval = pybedtools.Interval(region[0], region[1], region[3])
-            #matching_intervals = intervals_bedtool.all_hits(bedtools_interval, overlap=1.0) #marghoob this is not used?
+            # matching_intervals = intervals_bedtool.all_hits(bedtools_interval, overlap=1.0) #marghoob this is not used?
             matching_intervals = [interval for interval in intervals_bedtool if (
                 interval.start == bedtools_interval.start and interval.end == bedtools_interval.end and interval.chrom == bedtools_interval.chrom)]
             if not matching_intervals:
@@ -85,7 +85,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             for contig in contig_dict[region]:
                 thread_logger.info(
                     "Writing the assembeled sequence %s of length %s" % (contig.raw_name, contig.sequence_len))
-                if contig.sequence_len * region_object.length() >= 1000000000: # Marghoob: this is pretty big!
+                if contig.sequence_len * region_object.length() >= 1000000000:  # Marghoob: this is pretty big!
                     thread_logger.info("Skipping contig because AGE problem is large")
                     continue
 
@@ -142,7 +142,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                     bedtools_fields += map(str, breakpoints + [breakpoints[1] - breakpoints[0]])
                 else:
                     bedtools_fields += map(str, [bedtools_fields[1], bedtools_fields[2], -1])
-                bedtools_fields += repr(info_dict)
+                bedtools_fields.append(repr(info_dict))
                 thread_logger.info("Writing out fields %s" % (str(bedtools_fields)))
                 bedtools_intervals.append(pybedtools.create_interval_from_list(bedtools_fields))
 

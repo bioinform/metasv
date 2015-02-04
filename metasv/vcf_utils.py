@@ -124,7 +124,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
             if svlen < minsvlen:
                 continue
             wiggle = max(inswiggle, wiggle) if (
-            source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
+                source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
             if source == "Pindel" and sv_type == "INS":
                 vcf_record.POS += 1
             interval = SVInterval(vcf_record.CHROM, vcf_record.POS, int(vcf_record.INFO["END"]), source, sv_type, svlen,

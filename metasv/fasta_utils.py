@@ -1,5 +1,6 @@
 import os
 
+
 class Contig:
     def __init__(self, name, length):
         self.name = name

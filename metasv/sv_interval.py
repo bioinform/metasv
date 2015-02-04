@@ -177,26 +177,32 @@ class SVInterval:
                 self.start = mid
                 self.end = mid
 
+    def get_info(self):
+        temp_info = {}
+        if not self.sub_intervals:
+            temp_info.update(self.info)
+        else:
+            if self.info:
+                temp_info.update(self.info)
+            for interval in self.sub_intervals:
+                # TODO: this will just overwrite the other dict entries... this should be ok for pass variants
+                # TODO: kind of strange
+                if interval.info:
+                    temp_info.update(interval.info)
+        return temp_info
+
     def to_vcf_record(self, fasta_handle=None, sample=""):
-        if self.start <= 0: return None
-        if self.sv_type not in svs_of_interest: return None
+        if self.start <= 0:
+            return None
+        if self.sv_type not in svs_of_interest:
+            return None
 
         # ignore private haplotype caller calls
         if ((not self.sub_intervals) or len(self.sources) == 1) and list(self.sources)[0] == "HaplotypeCaller":
             return None
 
         # formulate the INFO field
-        info = {}
-        if not self.sub_intervals:
-            info.update(self.info)
-        else:
-            if self.info:
-                info.update(self.info)
-            for interval in self.sub_intervals:
-                # TODO: this will just overwrite the other dict entries... this should be ok for pass variants
-                # TODO: kind of strange
-                if interval.info:
-                    info.update(interval.info)
+        info = self.get_info()
         svmethods = [sv_sources_to_type[tool] for tool in self.sources]
         svmethods.sort()
         sv_len = -self.length if self.sv_type == "DEL" else self.length
@@ -230,20 +236,22 @@ class SVInterval:
                                        [vcf.model._Call(None, sample, vcf.model.make_calldata_tuple("GT")(GT="1/1"))])
         return vcf_record
 
-
     def to_bed_interval(self, sample_name):
-        if self.start <= 0: return None
+        if self.start <= 0:
+            return None
         if self.sv_type not in ["DEL", "INS", "INV"]: return None
         # if not self.sub_intervals and list(self.sources)[0] == "HaplotypeCaller": return None
         # if len(self.sources) == 1 and list(self.sources)[0] == "HaplotypeCaller": return None
         end = self.end if self.sv_type != "INS" else (self.end + 1)
 
-        return pybedtools.Interval(self.chrom, self.start, end, name="%s,%d,%s" % (
-            self.sv_type, self.length, ";".join(sorted([sv_sources_to_type[tool] for tool in self.sources]))),
-                                   score=str(len(self.sources)))
+        return pybedtools.Interval(self.chrom, self.start, end, name="%s,%d,%s,%r" % (
+            self.sv_type, self.length, ";".join(sorted([sv_sources_to_type[tool] for tool in self.sources])),
+            self.get_info()),
+            score=str(len(self.sources)))
 
     def to_svp_record(self, sample_name, id_num):
-        if self.start <= 0: return None
+        if self.start <= 0:
+            return None
         if self.sv_type not in ["DEL", "INS", "INV"]: return None
         if not self.sub_intervals and list(self.sources)[0] == "HaplotypeCaller": return None
         if len(self.sources) == 1 and list(self.sources)[0] == "HaplotypeCaller": return None
