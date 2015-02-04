@@ -327,7 +327,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                                            min_contig_len=100, age_workdir=age_tmpdir)
 
         final_bed = os.path.join(workdir, "final.bed")
-        if ignored_bed:  # Marghoob what?
+        if ignored_bed: 
             pybedtools.BedTool(breakpoints_bed)\
                 .cat(pybedtools.BedTool(ignored_bed), postmerge=False)\
                 .sort().saveas(final_bed)
