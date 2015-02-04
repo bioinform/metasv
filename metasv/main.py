@@ -337,7 +337,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
         logger.info("Output final VCF file")
 
-        convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample)
+        convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample, pass_calls=False)
     else:
         shutil.copy(preasm_vcf, final_vcf)
         pysam.tabix_index(final_vcf, force=True, preset="vcf")

@@ -62,9 +62,7 @@ class BreakSeqRecord:
     def to_vcf_record(self, sample):
         alt = ["<%s>" % self.sv_type]
         sv_len = -self.sv_len if self.sv_type == "DEL" else self.sv_len
-        info = {"SVLEN": sv_len,
-                "SVTYPE": self.sv_type}
-        info["END"] = self.end
+        info = {"SVLEN": sv_len, "SVTYPE": self.sv_type, "END": self.end}
 
         info.update(self.info)
 

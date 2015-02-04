@@ -19,7 +19,7 @@ mydir = os.path.dirname(os.path.realpath(__file__))
 vcf_template = os.path.join(mydir, "resources/template.vcf")
 
 
-def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_template, sample=None, reference=None):
+def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_template, sample=None, reference=None, pass_calls=True):
     vcf_template_reader = vcf.Reader(open(vcf_template_file, "r"))
 
     # The following are hacks to ensure sample name and contig names are put in the VCF header
@@ -53,12 +53,12 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         if "DEL" in sub_types:
             index_to_use = sub_types.index("DEL")
             svmethods_s = set(svmethods) - {"SC"}
-            if len(svmethods_s) == 1:
+            if pass_calls and len(svmethods_s) == 1:
                 continue
         elif "INV" in sub_types:
             index_to_use = sub_types.index("INV")
             svmethods_s = set(svmethods) - {"SC"}
-            if len(svmethods_s) == 1:
+            if pass_calls and len(svmethods_s) == 1:
                 continue
         elif "INS" in sub_types and "SC" in sub_methods:
             index_to_use = sub_methods.index("SC")
@@ -69,7 +69,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
 
         sv_type = sub_types[index_to_use]
         if sv_type == "INS":
-            if end != pos + 1:
+            if pass_calls and end != pos + 1:
                 continue
             end = pos
         sv_id = "."
