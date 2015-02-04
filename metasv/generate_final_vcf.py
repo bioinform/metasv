@@ -6,6 +6,7 @@ import datetime
 import os
 from collections import OrderedDict
 import json
+import base64
 
 import pybedtools
 import pysam
@@ -43,9 +44,9 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         sub_types = map(lambda x: x.split(",")[0], sub_names)
         sub_methods = [name.split(",")[2] for name in sub_names]
         svmethods = (";".join([name.split(",")[2] for name in sub_names])).split(";")
-        info = json.loads(name.split(",")[3])
+        info = json.loads(base64.b64decode(name.split(",")[3]))
         if len(interval.fields) > 9:
-            info.update(json.loads(interval.fields[9]))
+            info.update(json.loads(base64.b64decode(interval.fields[9])))
 
         index_to_use = 0
         should_ignore = False  # Marghoob this is not used?
