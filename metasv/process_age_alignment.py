@@ -2,6 +2,7 @@ from __future__ import print_function
 import logging
 import multiprocessing
 from collections import defaultdict
+import json
 
 import pybedtools
 
