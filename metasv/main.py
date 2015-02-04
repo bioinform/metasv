@@ -327,7 +327,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                                            min_contig_len=100, age_workdir=age_tmpdir)
 
         final_bed = os.path.join(workdir, "final.bed")
-        if ignored_bed: 
+        if ignored_bed:
             pybedtools.BedTool(breakpoints_bed)\
                 .cat(pybedtools.BedTool(ignored_bed), postmerge=False)\
                 .sort().saveas(final_bed)
@@ -339,7 +339,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample)
     else:
         shutil.copy(preasm_vcf, final_vcf)
-        pysam.tabix_index(final_vcf, force=True, preset="vcf")
+
+    pysam.tabix_index(final_vcf, force=True, preset="vcf")
 
     logger.info("Clean up pybedtools")
 
