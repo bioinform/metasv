@@ -7,6 +7,8 @@ import multiprocessing
 import subprocess
 import hashlib
 from functools import partial
+import json
+import base64
 
 import pysam
 import pybedtools
@@ -142,7 +144,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                     bedtools_fields += map(str, breakpoints + [breakpoints[1] - breakpoints[0]])
                 else:
                     bedtools_fields += map(str, [bedtools_fields[1], bedtools_fields[2], -1])
-                bedtools_fields.append(repr(info_dict))
+                bedtools_fields.append(base64.b64encode(json.dumps(info_dict)))
                 thread_logger.info("Writing out fields %s" % (str(bedtools_fields)))
                 bedtools_intervals.append(pybedtools.create_interval_from_list(bedtools_fields))
 

@@ -7,6 +7,8 @@ import copy
 import bisect
 import pybedtools
 import vcf
+import json
+import base64
 
 svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV"]
 sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"]  # order is important!
@@ -244,9 +246,9 @@ class SVInterval:
         # if len(self.sources) == 1 and list(self.sources)[0] == "HaplotypeCaller": return None
         end = self.end if self.sv_type != "INS" else (self.end + 1)
 
-        return pybedtools.Interval(self.chrom, self.start, end, name="%s,%d,%s,%r" % (
+        return pybedtools.Interval(self.chrom, self.start, end, name="%s,%d,%s,%s" % (
             self.sv_type, self.length, ";".join(sorted([sv_sources_to_type[tool] for tool in self.sources])),
-            self.get_info()),
+            base64.b64encode(json.dumps(self.get_info()))),
             score=str(len(self.sources)))
 
     def to_svp_record(self, sample_name, id_num):

@@ -5,6 +5,8 @@ import sys
 import datetime
 import os
 from collections import OrderedDict
+import json
+import base64
 
 import pybedtools
 import pysam
@@ -17,7 +19,7 @@ mydir = os.path.dirname(os.path.realpath(__file__))
 vcf_template = os.path.join(mydir, "resources/template.vcf")
 
 
-def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_template, sample=None, reference=None):
+def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_template, sample=None, reference=None, pass_calls=True):
     vcf_template_reader = vcf.Reader(open(vcf_template_file, "r"))
 
     # The following are hacks to ensure sample name and contig names are put in the VCF header
@@ -42,18 +44,21 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         sub_types = map(lambda x: x.split(",")[0], sub_names)
         sub_methods = [name.split(",")[2] for name in sub_names]
         svmethods = (";".join([name.split(",")[2] for name in sub_names])).split(";")
+        info = json.loads(base64.b64decode(name.split(",")[3]))
+        if len(interval.fields) > 9:
+            info.update(json.loads(base64.b64decode(interval.fields[9])))
 
         index_to_use = 0
         should_ignore = False  # Marghoob this is not used?
         if "DEL" in sub_types:
             index_to_use = sub_types.index("DEL")
             svmethods_s = set(svmethods) - {"SC"}
-            if len(svmethods_s) == 1:
+            if pass_calls and len(svmethods_s) == 1:
                 continue
         elif "INV" in sub_types:
             index_to_use = sub_types.index("INV")
             svmethods_s = set(svmethods) - {"SC"}
-            if len(svmethods_s) == 1:
+            if pass_calls and len(svmethods_s) == 1:
                 continue
         elif "INS" in sub_types and "SC" in sub_methods:
             index_to_use = sub_methods.index("SC")
@@ -64,7 +69,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
 
         sv_type = sub_types[index_to_use]
         if sv_type == "INS":
-            if end != pos + 1:
+            if pass_calls and end != pos + 1:
                 continue
             end = pos
         sv_id = "."
@@ -72,7 +77,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         alt = ["<%s>" % sv_type]
         qual = "."
         sv_filter = "."
-        info = {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)}
+        info.update({"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
         sv_format = "GT"
         sample_indexes = [0]
         samples = [vcf.model._Call(None, sample, ["1/1"])]

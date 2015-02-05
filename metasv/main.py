@@ -3,6 +3,7 @@
 from collections import defaultdict
 import shutil
 import argparse
+import sys
 
 from vcf_utils import *
 from sv_interval import SVInterval, get_gaps_file, interval_overlaps_interval_list, merge_intervals
@@ -340,7 +341,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
         logger.info("Output final VCF file")
 
-        convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample)
+        convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample, pass_calls=False)
     else:
         shutil.copy(preasm_vcf, final_vcf)
         pysam.tabix_index(final_vcf, force=True, preset="vcf")
