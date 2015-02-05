@@ -20,6 +20,8 @@ if __name__ == "__main__":
                     required=False, default=[])
     parser.add_argument("--breakseq_vcf", nargs="+", metavar="breakseq_vcf", help="VCF file or dir for BreakSeq VCFs",
                     required=False, default=[])
+    parser.add_argument("--breakseq_native", nargs="+", metavar="breakseq_native", help="BreakSeq native GFF files",
+                    required=False, default=[])
     parser.add_argument("--cnvnator_vcf", nargs="+", metavar="cnvnator_vcf", help="VCF file or dir for CNVnator VCFs",
                     required=False, default=[])
     parser.add_argument("--cnvnator_native", nargs="+", metavar="File list", help="CNVnator native files", required=False,
@@ -53,7 +55,7 @@ if __name__ == "__main__":
     
     sys.exit(run_metasv(args.sample, args.reference, pindel_vcf=args.pindel_vcf, pindel_native=args.pindel_native,
                     breakdancer_vcf=args.breakdancer_vcf, breakdancer_native=args.breakdancer_native,
-                    breakseq_vcf=args.breakseq_vcf, cnvnator_vcf=args.cnvnator_vcf,
+                    breakseq_vcf=args.breakseq_vcf, breakseq_native=args.breakseq_native, cnvnator_vcf=args.cnvnator_vcf,
                     cnvnator_native=args.cnvnator_native, gatk_vcf=args.gatk_vcf,
                     gaps=args.gaps, filter_gaps=args.filter_gaps, keep_standard_contigs=args.keep_standard_contigs,
                     wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
