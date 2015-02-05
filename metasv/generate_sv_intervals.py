@@ -7,6 +7,7 @@ import multiprocessing
 import logging
 import collections
 import itertools
+import traceback
 from functools import partial
 
 import pysam
@@ -101,34 +102,44 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=20, min_ma
     pybedtools.set_tempdir(workdir)
 
     unmerged_intervals = []
-    sam_file = pysam.Samfile(bam, "rb")
-    for aln in sam_file.fetch(reference=chromosome):
-        if abs(aln.tlen) > max_isize: continue
-        if not is_good_candidate(aln, min_avg_base_qual=min_avg_base_qual, min_mapq=min_mapq,
-                                 min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip): continue
-        interval = get_interval(aln, pad=pad)
-        soft_clip_location = sum(interval) / 2
-        strand = "-" if aln.is_reverse else "+"
-        name = "%d,%s" % (soft_clip_location, strand)
-        unmerged_intervals.append(
-            pybedtools.Interval(chromosome, interval[0], interval[1], name=name, score="1", strand=strand))
-    sam_file.close()
+    try:
+        sam_file = pysam.Samfile(bam, "rb")
+        for aln in sam_file.fetch(reference=chromosome):
+            if abs(aln.tlen) > max_isize: continue
+            if not is_good_candidate(aln, min_avg_base_qual=min_avg_base_qual, min_mapq=min_mapq,
+                                     min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip): continue
+            interval = get_interval(aln, pad=pad)
+            soft_clip_location = sum(interval) / 2
+            strand = "-" if aln.is_reverse else "+"
+            name = "%d,%s" % (soft_clip_location, strand)
+            unmerged_intervals.append(
+                pybedtools.Interval(chromosome, interval[0], interval[1], name=name, score="1", strand=strand))
+        sam_file.close()
 
-    if not unmerged_intervals:
-        func_logger.warn("No intervals generated")
-        return None
+        if not unmerged_intervals:
+            func_logger.warn("No intervals generated")
+            return None
 
-    unmerged_bed = os.path.join(workdir, "unmerged.bed")
-    bedtool = pybedtools.BedTool(unmerged_intervals).sort().moveto(unmerged_bed)
-    func_logger.info("%d candidate reads" % (bedtool.count()))
+        unmerged_bed = os.path.join(workdir, "unmerged.bed")
+        bedtool = pybedtools.BedTool(unmerged_intervals).sort().moveto(unmerged_bed)
+        func_logger.info("%d candidate reads" % (bedtool.count()))
 
-    merged_bed = os.path.join(workdir, "merged.bed")
-    bedtool = bedtool.merge(c="4,5", o="collapse,sum", d=-500).moveto(merged_bed)
-    func_logger.info("%d merged intervals" % (bedtool.count()))
+        merged_bed = os.path.join(workdir, "merged.bed")
+        bedtool = bedtool.merge(c="4,5", o="collapse,sum", d=-500).moveto(merged_bed)
+        func_logger.info("%d merged intervals" % (bedtool.count()))
 
-    filtered_bed = os.path.join(workdir, "filtered_merged.bed")
-    bedtool = bedtool.filter(lambda x: int(x.score) >= min_support).each(merged_interval_features).moveto(filtered_bed)
-    func_logger.info("%d filtered intervals" % (bedtool.count()))
+        filtered_bed = os.path.join(workdir, "filtered_merged.bed")
+        bedtool = bedtool.filter(lambda x: int(x.score) >= min_support).each(merged_interval_features).moveto(filtered_bed)
+        func_logger.info("%d filtered intervals" % (bedtool.count()))
+    except Exception as e:
+        func_logger.error('Caught exception in worker thread')
+
+        # This prints the type, value, and stack trace of the
+        # current exception being handled.
+        traceback.print_exc()
+
+        print()
+        raise e
 
     pybedtools.cleanup(remove_all=True)
 

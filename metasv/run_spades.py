@@ -6,6 +6,7 @@ import logging
 import multiprocessing
 import subprocess
 import fileinput
+import traceback
 from functools import partial, update_wrapper
 
 import pysam
@@ -58,24 +59,34 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=0, myi
                    extract_pairs.discordant)  # wrap to make sure the partial object has __name__ attribute
     update_wrapper(extract_fns[3], extract_pairs.discordant_with_normal_orientation)
 
-    for interval in intervals:
-        region = "%s:%d-%d" % (interval.chrom, interval.start, interval.end)
-        thread_logger.info("Processing interval %s" % (str(interval).strip()))
+    try:
+        for interval in intervals:
+            region = "%s:%d-%d" % (interval.chrom, interval.start, interval.end)
+            thread_logger.info("Processing interval %s" % (str(interval).strip()))
 
-        sv_type = interval.name.split(",")[0]
+            sv_type = interval.name.split(",")[0]
 
-        for fn_id, ((end1, end2), extracted_count) in enumerate(
-                extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad)):
-            extract_fn_name = extract_fns[fn_id].__name__
-            if extracted_count >= 5:
-                extra_opt = "--sc" if not fn_id == 0 else ""
-                retcode = run_cmd("bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 %s\"" % (
-                    timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger, spades_log_fd)
-                if retcode == 0:
-                    append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % extract_fn_name, interval,
-                                   merged_contigs, fn_id, sv_type)
-            else:
-                thread_logger.info("Too few read pairs (%d) extracted. Skipping assembly." % extracted_count)
+            for fn_id, ((end1, end2), extracted_count) in enumerate(
+                    extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad)):
+                extract_fn_name = extract_fns[fn_id].__name__
+                if extracted_count >= 5:
+                    extra_opt = "--sc" if not fn_id == 0 else ""
+                    retcode = run_cmd("bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 %s\"" % (
+                        timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger, spades_log_fd)
+                    if retcode == 0:
+                        append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % extract_fn_name, interval,
+                                       merged_contigs, fn_id, sv_type)
+                else:
+                    thread_logger.info("Too few read pairs (%d) extracted. Skipping assembly." % extracted_count)
+    except Exception as e:
+        thread_logger.error('Caught exception in worker thread')
+
+        # This prints the type, value, and stack trace of the
+        # current exception being handled.
+        traceback.print_exc()
+
+        print()
+        raise e
 
     merged_contigs.close()
 
