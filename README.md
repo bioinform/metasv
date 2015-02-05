@@ -6,7 +6,7 @@ MetaSV: An accurate and integrative structural-variant caller for next generatio
 # Software Dependencies
 MetaSV uses the following Python packages which must be available on the `PYTHONPATH` environment variable:
 * [pysam](http://pysam.readthedocs.org/en/latest/): Only version 0.7.7 has been tested to work with MetaSV
-* [pybedtools](http://pythonhosted.org/pybedtools/)
+* [pybedtools](http://pythonhosted.org/pybedtools/): Note that [bedtools](https://github.com/arq5x/bedtools2) (version 2.21 or greater) has to be installed separately in order for pybedtools to work.
 * [pyvcf](https://github.com/jamescasbon/PyVCF)
 
 In addition, it requires the following software to be installed:
