@@ -36,7 +36,8 @@ def pair_intervals(intervals, reference_length, min_interval_length=200, window=
     func_logger.info("Paired %s as %s" % (str(intervals), str(interval_pairs)))
     func_logger.info("Overlap intervals %s" % (str(overlap_intervals)))
 
-    if not overlap_intervals: return 0, -1, -1
+    if not overlap_intervals:
+        return 0, -1, -1
 
     low = min([interval[0] for interval in overlap_intervals])
     high = max([interval[1] for interval in overlap_intervals])
