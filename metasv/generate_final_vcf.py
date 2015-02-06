@@ -44,7 +44,10 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         sub_types = map(lambda x: x.split(",")[0], sub_names)
         sub_methods = [name.split(",")[2] for name in sub_names]
         svmethods = (";".join([name.split(",")[2] for name in sub_names])).split(";")
-        info = json.loads(base64.b64decode(name.split(",")[3]))
+        try:
+            info = json.loads(base64.b64decode(name.split(",")[3]))
+        except TypeError:
+            info = dict()
         if len(interval.fields) > 9:
             info.update(json.loads(base64.b64decode(interval.fields[9])))
 
