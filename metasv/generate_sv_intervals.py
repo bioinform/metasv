@@ -9,6 +9,8 @@ import collections
 import itertools
 import traceback
 from functools import partial
+import json
+import base64
 
 import pysam
 import pybedtools
@@ -80,7 +82,7 @@ def merged_interval_features(feature):
     plus_support = len([i for i in support_list[1::2] if i == "+"])
     minus_support = len(locations) - plus_support
     locations_span = max(locations) - min(locations)
-    name = "INS,0,SC,%d,%d,%d,%d,%s" % (plus_support, minus_support, locations_span, num_unique_locations, count_str)
+    name = "%s,INS,0,SC,%d,%d,%d,%d,%s" % (base64.b64encode(json.dumps(dict())), plus_support, minus_support, locations_span, num_unique_locations, count_str)
 
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score)
 
@@ -105,7 +107,8 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=20, min_ma
     try:
         sam_file = pysam.Samfile(bam, "rb")
         for aln in sam_file.fetch(reference=chromosome):
-            if abs(aln.tlen) > max_isize: continue
+            if abs(aln.tlen) > max_isize:
+                continue
             if not is_good_candidate(aln, min_avg_base_qual=min_avg_base_qual, min_mapq=min_mapq,
                                      min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip): continue
             interval = get_interval(aln, pad=pad)

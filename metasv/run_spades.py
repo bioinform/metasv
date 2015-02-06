@@ -66,7 +66,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=0, myi
             region = "%s:%d-%d" % (interval.chrom, interval.start, interval.end)
             thread_logger.info("Processing interval %s" % (str(interval).strip()))
 
-            sv_type = interval.name.split(",")[0]
+            sv_type = interval.name.split(",")[1]
 
             for fn_id, ((end1, end2), extracted_count) in enumerate(
                     extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad)):
@@ -103,7 +103,7 @@ def run_spades_single_callback(result, result_list):
 def should_be_assembled(interval, max_interval_size=50000):
     if interval.length > max_interval_size: return False
     name_fields = interval.name.split(",")
-    methods = set(name_fields[2].split(";"))
+    methods = set(name_fields[3].split(";"))
     return len(methods) == 1 or not (methods & precise_methods)
 
 
@@ -114,12 +114,12 @@ def shouldnt_be_assembled(interval, max_interval_size=50000):
 def add_breakpoints(interval):
     fields = interval.fields
     name_fields = interval.name.split(",")
-    methods = set(name_fields[2].split(";"))
+    methods = set(name_fields[3].split(";"))
     breakpoints = [-1, -1]
     if len(methods) > 1 and methods & precise_methods:
         breakpoints = [interval.start, interval.end]
     fields += map(str, breakpoints)
-    fields += name_fields[1:2]
+    fields += name_fields[2:3]
     fields.append(base64.b64encode(json.dumps(dict())))  # Does nothing, make sure the fields line up
     return pybedtools.create_interval_from_list(fields)
 
