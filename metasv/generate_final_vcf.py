@@ -39,7 +39,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         end = interval.end
 
         sub_names = interval.name.split(":")
-        sub_lengths = map(lambda x: int(x.split(",")[1]), sub_names)
+        sub_lengths = map(lambda x: int(x.split(",")[2]), sub_names)
 
         sub_types = map(lambda x: x.split(",")[0], sub_names)
         sub_methods = [name.split(",")[3] for name in sub_names]

@@ -50,7 +50,6 @@ if __name__ == "__main__":
     parser.add_argument("--enable_per_tool_output", action = "store_true", help = "Enable output of merged SVs for individual tools")
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
-    
     args = parser.parse_args()
     
     sys.exit(run_metasv(args.sample, args.reference, pindel_vcf=args.pindel_vcf, pindel_native=args.pindel_native,
