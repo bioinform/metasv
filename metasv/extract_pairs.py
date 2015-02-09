@@ -1,12 +1,12 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
-import pysam
-import os
-import sys
 import argparse
 import logging
 import multiprocessing
 from functools import partial
+
+import pysam
+
 
 compl_table = [chr(i) for i in xrange(256)]
 compl_table[ord('A')] = 'T'
@@ -27,7 +27,7 @@ def get_sequence_quality(aln):
 
 
 def write_read(fd, aln):
-    end_id = 1 if aln.is_read1 else 2;
+    end_id = 1 if aln.is_read1 else 2
 
     sequence, quality = get_sequence_quality(aln)
     fd.write("@%s/%d\n%s\n+\n%s\n" % (aln.qname, end_id, sequence, quality))
@@ -36,7 +36,7 @@ def write_read(fd, aln):
 # Returns true if the alignment is soft of hard clipped
 # on both sides or if it is unmapped
 def is_clipped_both(aln):
-    if aln.cigar == None:
+    if aln.cigar is None:
         return True
     clipped_left = aln.cigar[0][0] == 4 or aln.cigar[0][0] == 5
     clipped_right = aln.cigar[-1][0] == 4 or aln.cigar[-1][0] == 5
@@ -46,7 +46,7 @@ def is_clipped_both(aln):
 # this is the criteria to keep a read
 def keep_read(aln, aln_chr, chromosome, start, end):
     return aln_chr == chromosome and (
-    not is_clipped_both(aln)) and aln.mapq >= 40 and aln.pos >= start and aln.pos < end
+        not is_clipped_both(aln)) and aln.mapq >= 40 and start <= aln.pos < end
 
 
 # this function will determine whether the pair is kept
@@ -61,7 +61,7 @@ def keep_pair(aln, mate, aln_chr, mate_chr, chromosome, start, end):
 
 def is_all(aln, mate):
     return (
-    (aln.cigarstring == '100M' and mate.cigarstring == '100M') and ( aln.is_proper_pair and mate.is_proper_pair))
+        (aln.cigarstring == '100M' and mate.cigarstring == '100M') and ( aln.is_proper_pair and mate.is_proper_pair))
 
 
 def all_pair(aln, mate):
@@ -74,13 +74,13 @@ def non_perfect(aln, mate):
 
 def discordant(aln, mate, isize_min=300, isize_max=400):
     if aln.tlen == 0: return True
-    return not (abs(aln.tlen) >= isize_min and abs(aln.tlen) <= isize_max)
+    return not (isize_min <= abs(aln.tlen) <= isize_max)
 
 
 def discordant_with_normal_orientation(aln, mate, isize_min=300, isize_max=400):
     if aln.tlen == 0: return True
     if aln.is_reverse and mate.is_reverse or not aln.is_reverse and not mate.is_reverse: return False
-    return not (abs(aln.tlen) >= isize_min and abs(aln.tlen) <= isize_max)
+    return not (isize_min <= abs(aln.tlen) <= isize_max)
 
 
 def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0):
@@ -91,7 +91,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0):
 
     extract_fn_names = [extract_fn.__name__ for extract_fn in extract_fns]
     logger.info("Extracting reads from %s for region %s with padding %d using functions %s" % (
-    bamname, region, pad, extract_fn_names))
+        bamname, region, pad, extract_fn_names))
 
     bam = pysam.Samfile(bamname, "rb")
     bammate = pysam.Samfile(bamname, "rb")
@@ -141,7 +141,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0):
         end1.close()
         end2.close()
 
-    logger.info("Examined %d pairs" % (examine_count))
+    logger.info("Examined %d pairs" % examine_count)
     logger.info("Extraction counts %s" % (zip(extract_fn_names, selected_pair_counts)))
 
     return zip([(end[0].name, end[1].name) for end in ends], selected_pair_counts)

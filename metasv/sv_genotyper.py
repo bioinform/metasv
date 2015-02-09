@@ -1,10 +1,10 @@
 #!/usr/bin/env python2.7
 
 import sys
-import os
 import argparse
-import subprocess
+
 import pysam
+
 
 parser = argparse.ArgumentParser("Compute zygosity for SV tools output",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -46,13 +46,13 @@ def get_num_reads_supporting_ref(bam_handles, min_isize, max_isize, chromosome, 
             else:
                 if not (aln.pnext > aln.pos and aln.mate_is_reverse): continue
             tlen = aln.tlen if aln.tlen > 0 else (-aln.tlen)
-            if tlen >= min_isize and tlen <= max_isize:
+            if min_isize <= tlen <= max_isize:
                 total_normal_reads = total_normal_reads + 1
                 total_read_bases = total_read_bases + aln.qlen
     return total_normal_reads, total_read_bases
 
 
-pindel_sv_type_dict = {"D": "DEL", "I": "INS", "TD": "DUP:TANDEM", "LI": "LI", "INV": "INV"};
+pindel_sv_type_dict = {"D": "DEL", "I": "INS", "TD": "DUP:TANDEM", "LI": "LI", "INV": "INV"}
 
 
 def parse_line(line, tool):
@@ -104,7 +104,7 @@ for input_handle in input_handles:
             normal_coverage = float(normal_read_bases) / max(1, pos2 - pos1)
             gt = "0/1" if normal_coverage / float(max(1, num_reads)) > 0.2 else "1/1"
         print "%s\t%s\t%d\t%d\t%d\t%d\t%d\t%g\t%s\t%s" % \
-            (sv_type, chr1, pos1 + 1, pos2, size, normal_read_count, num_reads, score, gt, tool)
+              (sv_type, chr1, pos1 + 1, pos2, size, normal_read_count, num_reads, score, gt, tool)
         sys.stdout.flush()
     input_handle.close()
 

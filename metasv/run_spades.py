@@ -1,17 +1,21 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
-import pysam
 import os
-import sys
 import argparse
 import logging
 import multiprocessing
-import pybedtools
-import extract_pairs
 import subprocess
-import itertools
 import fileinput
+import traceback
 from functools import partial, update_wrapper
+import json
+import base64
+
+import pysam
+import pybedtools
+
+import extract_pairs
+
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -21,10 +25,10 @@ precise_methods = set(["AS", "SR", "JM"])
 
 
 def run_cmd(cmd, logger, spades_log_fd):
-    logger.info("Running command %s" % (cmd))
+    logger.info("Running command %s" % cmd)
     spades_log_fd.write("*************************************************\n")
     retcode = subprocess.call(cmd, shell=True, stderr=spades_log_fd, stdout=spades_log_fd)
-    logger.info("Returned code %d" % (retcode))
+    logger.info("Returned code %d" % retcode)
 
     return retcode
 
@@ -44,7 +48,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=0, myi
     thread_logger = logging.getLogger("%s-%s" % (run_spades_single.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(work):
-        thread_logger.info("Creating %s" % (work))
+        thread_logger.info("Creating %s" % work)
         os.makedirs(work)
 
     merged_contigs = open(os.path.join(work, "merged.fa"), "w")
@@ -57,24 +61,34 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=0, myi
                    extract_pairs.discordant)  # wrap to make sure the partial object has __name__ attribute
     update_wrapper(extract_fns[3], extract_pairs.discordant_with_normal_orientation)
 
-    for interval in intervals:
-        region = "%s:%d-%d" % (interval.chrom, interval.start, interval.end)
-        thread_logger.info("Processing interval %s" % (str(interval).strip()))
+    try:
+        for interval in intervals:
+            region = "%s:%d-%d" % (interval.chrom, interval.start, interval.end)
+            thread_logger.info("Processing interval %s" % (str(interval).strip()))
 
-        sv_type = interval.name.split(",")[0]
+            sv_type = interval.name.split(",")[1]
 
-        for fn_id, ((end1, end2), extracted_count) in enumerate(
-                extract_pairs.extract_read_pairs(bam, region, "%s/" % (work), extract_fns, pad=pad)):
-            extract_fn_name = extract_fns[fn_id].__name__
-            if extracted_count >= 5:
-                extra_opt = "--sc" if not fn_id == 0 else ""
-                retcode = run_cmd("bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 %s\"" % (
-                timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger, spades_log_fd)
-                if retcode == 0:
-                    append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % (extract_fn_name), interval,
-                                   merged_contigs, fn_id, sv_type)
-            else:
-                thread_logger.info("Too few read pairs (%d) extracted. Skipping assembly." % (extracted_count))
+            for fn_id, ((end1, end2), extracted_count) in enumerate(
+                    extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad)):
+                extract_fn_name = extract_fns[fn_id].__name__
+                if extracted_count >= 5:
+                    extra_opt = "--sc" if not fn_id == 0 else ""
+                    retcode = run_cmd("bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 %s\"" % (
+                        timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger, spades_log_fd)
+                    if retcode == 0:
+                        append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % extract_fn_name, interval,
+                                       merged_contigs, fn_id, sv_type)
+                else:
+                    thread_logger.info("Too few read pairs (%d) extracted. Skipping assembly." % extracted_count)
+    except Exception as e:
+        thread_logger.error('Caught exception in worker thread')
+
+        # This prints the type, value, and stack trace of the
+        # current exception being handled.
+        traceback.print_exc()
+
+        print()
+        raise e
 
     merged_contigs.close()
 
@@ -89,7 +103,7 @@ def run_spades_single_callback(result, result_list):
 def should_be_assembled(interval, max_interval_size=50000):
     if interval.length > max_interval_size: return False
     name_fields = interval.name.split(",")
-    methods = set(name_fields[2].split(";"))
+    methods = set(name_fields[3].split(";"))
     return len(methods) == 1 or not (methods & precise_methods)
 
 
@@ -100,12 +114,13 @@ def shouldnt_be_assembled(interval, max_interval_size=50000):
 def add_breakpoints(interval):
     fields = interval.fields
     name_fields = interval.name.split(",")
-    methods = set(name_fields[2].split(";"))
+    methods = set(name_fields[3].split(";"))
     breakpoints = [-1, -1]
     if len(methods) > 1 and methods & precise_methods:
         breakpoints = [interval.start, interval.end]
     fields += map(str, breakpoints)
-    fields += name_fields[1:2]
+    fields += name_fields[2:3]
+    fields.append(base64.b64encode(json.dumps(dict())))  # Does nothing, make sure the fields line up
     return pybedtools.create_interval_from_list(fields)
 
 
@@ -170,7 +185,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not os.path.isdir(args.work):
-        logger.info("Creating %s" % (args.work))
+        logger.info("Creating %s" % args.work)
         os.makedirs(args.work)
 
     run_spades_parallel(bam=args.bam, spades=args.spades, bed=args.bed, work=args.work, pad=args.pad,

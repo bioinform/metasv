@@ -9,10 +9,11 @@ FORMAT = '%(levelname)s %(asctime)-15s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 logger = logging.getLogger(__name__)
 
-parser = argparse.ArgumentParser("Take all and false MetaSV VCF. Make BED with features out of them.\n",
+parser = argparse.ArgumentParser("Take all and false MetaSV VCF (from VarSim). Make BED with features out of them.\n",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--in_all_vcf", help="VCF file of all variants", required=True)
-parser.add_argument("--in_false_vcf", help="VCF file of all variants", required=True)
+parser.add_argument("--in_false_vcf", help="VCF file of false positive variants", required=True)
+parser.add_argument("--in_unknown_vcf", help="VCF file of unknown status variants", required=True)
 parser.add_argument("--out_bed", help="Output BED file")
 
 args = parser.parse_args()
@@ -20,7 +21,7 @@ args = parser.parse_args()
 
 class VcfRec:
     def __init__(self, line):
-        ll = line.split("\t");
+        ll = line.split("\t")
         self.chrom = ll[0]
         self.loc = int(ll[1])
         self.ref = ll[3]
@@ -54,7 +55,6 @@ class VcfRec:
 
 def read_all_vcf(vcf_file):
     f = open(vcf_file, 'r')
-
     vcf_list = []
 
     for line in f:
@@ -73,14 +73,21 @@ false_vcf_dict = {}  # this just stores some things that will make the VCF recor
 for line in false_vcf:
     false_vcf_dict["-".join([line.chrom, str(line.loc), line.alt, line.info["SVLEN"]])] = 1
 
+# read in the unknown VCF and store in a dictionary
+unknown_vcf = read_all_vcf(args.in_unknown_vcf)
+unknown_vcf_dict = {}  # this just stores some things that will make the VCF record unique (chr,loc,alt,SVLEN)
+for line in unknown_vcf:
+    unknown_vcf_dict["-".join([line.chrom, str(line.loc), line.alt, line.info["SVLEN"]])] = 1
 
 # open the output file
 outf = sys.stdout
-if not args.out_bed == None:
+if not args.out_bed is None:
     outf = open(args.out_bed, 'w')
 
 """
-# Example line 14      106880906       .       T       <DEL>   .       PASS    END=107175027;SVLEN=-242290;SVTYPE=DEL;
+# Example lines
+
+14      106880906       .       T       <DEL>   .       PASS    END=107175027;SVLEN=-242290;SVTYPE=DEL;
 DP=58;SVTOOL=MetaSVMerge;SOURCES=14-106550910-106924720-373810-BreakDancer,14-106791601-106792400-799-CNVnator,
 14-106805001-106814100-9099-CNVnator,14-106857201-106858000-799-CNVnator,14-106876601-106880600-3999-CNVnator,
 14-106881006-107065514-184507-BreakSeq,14-106932636-107174927-242290-BreakSeq,14-106883201-106918800-35599-CNVnator,
@@ -92,6 +99,13 @@ CN_EVAL2=8.9711e-12;CN_EVAL3=1.0;CN_EVAL4=1.0;CN_NORMALIZED_RD=0.311274;CN_Q0=0.
 MLEAC=1;MLEAF=0.500;MQ=59.74;MQ0=0;MQRankSum=0.181;QD=11.86;ReadPosRankSum=1.354;
 VQSLOD=-1.060e-01;culprit=DP   GT      1/1
 
+1       953160  .       C       <DEL>   .       PASS    END=953319;SVLEN=-158;SVTYPE=DEL;SVTOOL=MetaSVMerge;
+SOURCES=1-953028-953326-165-BreakDancer,1-953161-953319-158-Pindel;NUM_SVMETHODS=2;VT=SV;SVMETHOD=RP,SR;
+BD_CHR1=1;BD_CHR2=1;BD_ORI1=3+0-;BD_ORI2=0+3-;BD_POS1=953027;BD_POS2=953326;BD_SCORE=43.0;BD_SUPPORTING_READ_PAIRS=3;
+PD_BP_RANGE_END=953344;PD_BP_RANGE_START=953161;PD_DOWN_READ_SUPP=5;PD_DOWN_UNIQ_READ_SUPP=5;PD_HOMLEN=25;
+PD_HOMSEQ=;PD_NT_ADDED=;PD_NUM_NT_ADDED=0;PD_NUM_SAMPLE=1;PD_NUM_SAMPLE_SUPP=1;PD_NUM_SAMPLE_UNIQ_SUPP=1;
+PD_READ_SUPP=8;PD_SIMPLE_SCORE=24;PD_SUM_MAPQ=440;PD_UNIQ_READ_SUPP=8;PD_UP_READ_SUPP=3;
+PD_UP_UNIQ_READ_SUPP=3      GT      1/1
 
 """
 # read in all VCF and flag the ones that are false
@@ -113,8 +127,14 @@ details = [("CN_EVAL1", 0),
            ("ReadPosRankSum", 0),
            ("BD_SCORE", 0),
            ("BD_SUPPORTING_READ_PAIRS", 0),
-           ("BaseQRankSum", 0)
-           ]
+           ("BaseQRankSum", 0),
+           ("PD_DOWN_UNIQ_READ_SUPP", 0),
+           ("PD_UP_UNIQ_READ_SUPP", 0),
+           ("PD_UNIQ_READ_SUPP", 0),
+           ("PD_SIMPLE_SCORE", 0),
+           ("PD_SUM_MAPQ", 0),
+           ("PD_HOMLEN", 0)
+]
 
 outf.write("#" + "\t".join(features))
 
@@ -126,6 +146,11 @@ all_vcf = read_all_vcf(args.in_all_vcf)
 
 for line in all_vcf:
     false_vec = "-".join([line.chrom, str(line.loc), line.alt, line.info["SVLEN"]])
+
+    if false_vec in unknown_vcf_dict:
+        # ignore the unknown state records for analysis
+        continue
+
     true_var = True
     if false_vec in false_vcf_dict:
         true_var = False
@@ -143,13 +168,13 @@ for line in all_vcf:
     # END
     out_vec.append(str(line.loc + abs(int(line.info["SVLEN"]))))
 
-    #LEN
+    # LEN
     out_vec.append(str(abs(int(line.info["SVLEN"]))))
 
-    #TRUE
+    # TRUE
     out_vec.append(str(true_var))
 
-    #NUM_METHODS
+    # NUM_METHODS
     out_vec.append(str(len(method_ll)))
 
     #RP,RD,SR,JT,AS
@@ -165,7 +190,6 @@ for line in all_vcf:
             out_vec.append(str(line.info[d[0]]))
         else:
             out_vec.append(str(d[1]))
-
 
     outf.write('\t'.join(out_vec) + '\n')
 

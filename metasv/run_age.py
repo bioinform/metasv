@@ -1,22 +1,24 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
 import traceback
-import pysam
 import os
-import sys
 import argparse
-import logging
 import multiprocessing
 import subprocess
-import fileinput
 import hashlib
+from functools import partial
+import json
+import base64
+
+import pysam
+import pybedtools
+
 from spades_contig import SpadesContig
 from tigra_contig import TigraContig
 from svregion import SVRegion
 from age_parser import *
 from process_age_alignment import process_age_records
-import pybedtools
-from functools import partial
+
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -28,9 +30,9 @@ def get_age_file_prefix(contig):
 
 
 def run_cmd(cmd, logger, out, err):
-    logger.info("Running command %s" % (cmd))
+    logger.info("Running command %s" % cmd)
     retcode = subprocess.call(cmd, shell=True, stderr=err, stdout=out)
-    logger.info("Returned code %d" % (retcode))
+    logger.info("Returned code %d" % retcode)
 
     return retcode
 
@@ -39,7 +41,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                    age_workdir=None, timeout=300, keep_temp=False, myid=0):
     thread_logger = logging.getLogger("%s-%s" % (run_age_single.__name__, multiprocessing.current_process()))
 
-    log_fd = open(os.path.join(age_workdir, "age_%d.log" % (myid)), "w")
+    log_fd = open(os.path.join(age_workdir, "age_%d.log" % myid), "w")
 
     bedtools_intervals = []
     intervals_bedtool = pybedtools.BedTool(intervals_bed)
@@ -54,9 +56,9 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
     try:
         for region in region_list:
             bedtools_interval = pybedtools.Interval(region[0], region[1], region[3])
-            matching_intervals = intervals_bedtool.all_hits(bedtools_interval, overlap=1.0)
+            # matching_intervals = intervals_bedtool.all_hits(bedtools_interval, overlap=1.0) #marghoob this is not used?
             matching_intervals = [interval for interval in intervals_bedtool if (
-            interval.start == bedtools_interval.start and interval.end == bedtools_interval.end and interval.chrom == bedtools_interval.chrom)]
+                interval.start == bedtools_interval.start and interval.end == bedtools_interval.end and interval.chrom == bedtools_interval.chrom)]
             if not matching_intervals:
                 thread_logger.info("Matching interval not found for %s" % (str(bedtools_interval)))
                 matching_interval = bedtools_interval
@@ -64,17 +66,19 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 matching_interval = matching_intervals[0]
             thread_logger.info("Matching interval %s" % (str(matching_interval)))
 
-            if region not in contig_dict: continue
-            if not contig_dict[region]: continue
+            if region not in contig_dict:
+                continue
+            if not contig_dict[region]:
+                continue
 
             region_object = SVRegion(region[0], region[1], region[2], region[3])
 
             reference_sequence = reference_fasta.fetch(reference=region_object.chrom1, start=region_object.pos1 - pad,
                                                        end=region_object.pos2 + pad)
             region_name = "%s.%d.%d" % (region_object.chrom1, region_object.pos1, region_object.pos2)
-            ref_name = os.path.join(age_workdir, "%s.ref.fa" % (region_name))
+            ref_name = os.path.join(age_workdir, "%s.ref.fa" % region_name)
 
-            thread_logger.info("Writing the ref sequence for region %s" % (region_name))
+            thread_logger.info("Writing the ref sequence for region %s" % region_name)
             with open(ref_name, "w") as file_handle:
                 file_handle.write(">{}.ref\n{}".format(region_name, reference_sequence))
 
@@ -83,22 +87,27 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             for contig in contig_dict[region]:
                 thread_logger.info(
                     "Writing the assembeled sequence %s of length %s" % (contig.raw_name, contig.sequence_len))
-                if contig.sequence_len * region_object.length() >= 1000000000:
+                if contig.sequence_len * region_object.length() >= 1000000000:  # Marghoob: this is pretty big!
                     thread_logger.info("Skipping contig because AGE problem is large")
                     continue
 
                 contig_sequence = assembly_fasta.fetch(contig.raw_name)
 
                 prefix = get_age_file_prefix(contig)
-                asm_name = os.path.join(age_workdir, "%s.as.fa" % (prefix))
-                out = os.path.join(age_workdir, "%s.age.out" % (prefix))
-                err = os.path.join(age_workdir, "%s.age.err" % (prefix))
+                asm_name = os.path.join(age_workdir, "%s.as.fa" % prefix)
+                out = os.path.join(age_workdir, "%s.age.out" % prefix)
+                err = os.path.join(age_workdir, "%s.age.err" % prefix)
 
                 with open(asm_name, "w") as file_handle:
                     file_handle.write(">{}.as\n{}".format(region_name, contig_sequence))
 
                 age_cmd = "%s %s -both -go=-6 %s %s >%s 2>%s" % (
-                age, "-inv" if contig.sv_type == "INV" else "-indel", ref_name, asm_name, out, err)
+                    age,
+                    "-inv" if contig.sv_type == "INV" else "-indel",
+                    ref_name,
+                    asm_name,
+                    out,
+                    err)
                 execute_cmd = "timeout %ds %s" % (timeout, age_cmd)
 
                 retcode = run_cmd(execute_cmd, thread_logger, None, None)
@@ -109,7 +118,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                         age_record.contig = contig
                         age_records.append(age_record)
                     else:
-                        thread_logger.error("Number of inputs != 2 in age output file %s. Skipping." % (out))
+                        thread_logger.error("Number of inputs != 2 in age output file %s. Skipping." % out)
 
                 if not keep_temp:
                     os.remove(asm_name)
@@ -126,8 +135,8 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 thread_logger.error("Some problem. Mixed SV types for this interval %s" % (str(sv_types)))
             else:
                 sv_type = sv_types[0]
-                thread_logger.info("Processing region of type %s" % (sv_type))
-                breakpoints = process_age_records(unique_age_records, sv_type=sv_type, pad=pad)
+                thread_logger.info("Processing region of type %s" % sv_type)
+                breakpoints, info_dict = process_age_records(unique_age_records, sv_type=sv_type, pad=pad)
                 bedtools_fields = matching_interval.fields
                 if len(breakpoints) == 1 and sv_type == "INS":
                     bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1]])
@@ -135,6 +144,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                     bedtools_fields += map(str, breakpoints + [breakpoints[1] - breakpoints[0]])
                 else:
                     bedtools_fields += map(str, [bedtools_fields[1], bedtools_fields[2], -1])
+                bedtools_fields.append(base64.b64encode(json.dumps(info_dict)))
                 thread_logger.info("Writing out fields %s" % (str(bedtools_fields)))
                 bedtools_intervals.append(pybedtools.create_interval_from_list(bedtools_fields))
 
@@ -155,7 +165,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
 
     thread_logger.info("Writing %d intervals" % (len(bedtools_intervals)))
     if bedtools_intervals:
-        breakpoints_bed = os.path.join(age_workdir, "%d_breakpoints.bed" % (myid))
+        breakpoints_bed = os.path.join(age_workdir, "%d_breakpoints.bed" % myid)
         pybedtools.BedTool(bedtools_intervals).saveas(breakpoints_bed)
 
     return breakpoints_bed
@@ -172,14 +182,14 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=500,
     func_logger = logging.getLogger("%s-%s" % (run_age_parallel.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(age_workdir):
-        func_logger.info("Creating %s" % (age_workdir))
+        func_logger.info("Creating %s" % age_workdir)
         os.makedirs(age_workdir)
 
-    if not os.path.isfile("%s.fai" % (assembly)):
+    if not os.path.isfile("%s.fai" % assembly):
         func_logger.info("Assembly FASTA wasn't indexed. Will attempt to index now.")
         pysam.faidx(assembly)
 
-    func_logger.info("Loading assembly contigs from %s" % (assembly))
+    func_logger.info("Loading assembly contigs from %s" % assembly)
     with open(assembly) as assembly_fd:
         if assembly_tool == "spades":
             contigs = [SpadesContig(line[1:]) for line in assembly_fd if line[0] == '>']
@@ -190,7 +200,7 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=500,
     sv_types = set(sv_types)
     contig_dict = {contig.sv_region.to_tuple(): [] for contig in contigs if (len(
         chrs) == 0 or contig.sv_region.chrom1 in chrs) and contig.sequence_len >= min_contig_len and contig.sv_region.length() <= max_region_len and (
-                   len(sv_types) == 0 or contig.sv_type in sv_types)}
+                       len(sv_types) == 0 or contig.sv_type in sv_types)}
 
     func_logger.info("Generating the contig dictionary for parallel execution")
     small_contigs_count = 0
@@ -206,7 +216,7 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=500,
     nthreads = min(nthreads, len(region_list))
 
     func_logger.info("Will process %d regions with %d contigs (%d small contigs ignored) using %d threads" % (
-    len(region_list), sum([len(value) for value in contig_dict.values()]), small_contigs_count, nthreads))
+        len(region_list), sum([len(value) for value in contig_dict.values()]), small_contigs_count, nthreads))
 
     pybedtools.set_tempdir(age_workdir)
     pool = multiprocessing.Pool(nthreads)

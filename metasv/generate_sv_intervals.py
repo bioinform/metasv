@@ -1,13 +1,18 @@
 #!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
 
-import sys, os, re
-import pysam
+import sys
+import os
 import argparse
 import multiprocessing
 import logging
 import collections
 import itertools
+import traceback
 from functools import partial
+import json
+import base64
+
+import pysam
 import pybedtools
 
 
@@ -20,7 +25,8 @@ def concatenate_files(files, output):
 
 
 def get_max_soft_clip(aln):
-    if aln.cigar is None: return 0
+    if aln.cigar is None:
+        return 0
     return max([length for (op, length) in aln.cigar if op == 4] + [0])
 
 
@@ -30,20 +36,26 @@ def is_good_soft_clip(aln):
 
 
 def is_discordant(aln):
-    return abs(aln.tlen) < 200 and abs(aln.tlen) > 0
+    return 200 > abs(aln.tlen) > 0
 
 
 def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_soft_clip=50):
-    if aln.is_duplicate: return False
-    if aln.is_unmapped: return False
-    if aln.mapq < min_mapq: return False
-    if aln.cigar is None: return False
+    if aln.is_duplicate:
+        return False
+    if aln.is_unmapped:
+        return False
+    if aln.mapq < min_mapq:
+        return False
+    if aln.cigar is None:
+        return False
 
     soft_clips = [length for (op, length) in aln.cigar if op == 4]
-    if len(soft_clips) != 1: return False
+    if len(soft_clips) != 1:
+        return False
     soft_clip = soft_clips[0]
 
-    if not (min_soft_clip <= soft_clip <= max_soft_clip): return False
+    if not (min_soft_clip <= soft_clip <= max_soft_clip):
+        return False
 
     if aln.cigar[0][0] == 4:
         avg_base_quality = float(sum(map(ord, aln.qual[:soft_clip]))) / soft_clip
@@ -58,8 +70,8 @@ def get_interval(aln, pad=500):
     end = aln.aend
 
     if aln.cigar[0][0] == 4:
-        return (start - pad, start + pad)
-    return (end - pad, end + pad)
+        return start - pad, start + pad
+    return end - pad, end + pad
 
 
 def merged_interval_features(feature):
@@ -70,7 +82,7 @@ def merged_interval_features(feature):
     plus_support = len([i for i in support_list[1::2] if i == "+"])
     minus_support = len(locations) - plus_support
     locations_span = max(locations) - min(locations)
-    name = "INS,0,SC,%d,%d,%d,%d,%s" % (plus_support, minus_support, locations_span, num_unique_locations, count_str)
+    name = "%s,INS,0,SC,%d,%d,%d,%d,%s" % (base64.b64encode(json.dumps(dict())), plus_support, minus_support, locations_span, num_unique_locations, count_str)
 
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score)
 
@@ -85,41 +97,52 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=20, min_ma
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
-        func_logger.error("Working directory %s doesn't exist" % (workdir))
+        func_logger.error("Working directory %s doesn't exist" % workdir)
         return None
 
     func_logger.info("Generating candidate insertion intervals from %s for chromsome %s" % (bam, chromosome))
     pybedtools.set_tempdir(workdir)
 
     unmerged_intervals = []
-    sam_file = pysam.Samfile(bam, "rb")
-    for aln in sam_file.fetch(reference=chromosome):
-        if abs(aln.tlen) > max_isize: continue
-        if not is_good_candidate(aln, min_avg_base_qual=min_avg_base_qual, min_mapq=min_mapq,
-                                 min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip): continue
-        interval = get_interval(aln, pad=pad)
-        soft_clip_location = sum(interval) / 2
-        strand = "-" if aln.is_reverse else "+"
-        name = "%d,%s" % (soft_clip_location, strand)
-        unmerged_intervals.append(
-            pybedtools.Interval(chromosome, interval[0], interval[1], name=name, score="1", strand=strand))
-    sam_file.close()
+    try:
+        sam_file = pysam.Samfile(bam, "rb")
+        for aln in sam_file.fetch(reference=chromosome):
+            if abs(aln.tlen) > max_isize:
+                continue
+            if not is_good_candidate(aln, min_avg_base_qual=min_avg_base_qual, min_mapq=min_mapq,
+                                     min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip): continue
+            interval = get_interval(aln, pad=pad)
+            soft_clip_location = sum(interval) / 2
+            strand = "-" if aln.is_reverse else "+"
+            name = "%d,%s" % (soft_clip_location, strand)
+            unmerged_intervals.append(
+                pybedtools.Interval(chromosome, interval[0], interval[1], name=name, score="1", strand=strand))
+        sam_file.close()
 
-    if not unmerged_intervals:
-        func_logger.warn("No intervals generated")
-        return None
+        if not unmerged_intervals:
+            func_logger.warn("No intervals generated")
+            return None
 
-    unmerged_bed = os.path.join(workdir, "unmerged.bed")
-    bedtool = pybedtools.BedTool(unmerged_intervals).sort().moveto(unmerged_bed)
-    func_logger.info("%d candidate reads" % (bedtool.count()))
+        unmerged_bed = os.path.join(workdir, "unmerged.bed")
+        bedtool = pybedtools.BedTool(unmerged_intervals).sort().moveto(unmerged_bed)
+        func_logger.info("%d candidate reads" % (bedtool.count()))
 
-    merged_bed = os.path.join(workdir, "merged.bed")
-    bedtool = bedtool.merge(c="4,5", o="collapse,sum", d=-500).moveto(merged_bed)
-    func_logger.info("%d merged intervals" % (bedtool.count()))
+        merged_bed = os.path.join(workdir, "merged.bed")
+        bedtool = bedtool.merge(c="4,5", o="collapse,sum", d=-500).moveto(merged_bed)
+        func_logger.info("%d merged intervals" % (bedtool.count()))
 
-    filtered_bed = os.path.join(workdir, "filtered_merged.bed")
-    bedtool = bedtool.filter(lambda x: int(x.score) >= min_support).each(merged_interval_features).moveto(filtered_bed)
-    func_logger.info("%d filtered intervals" % (bedtool.count()))
+        filtered_bed = os.path.join(workdir, "filtered_merged.bed")
+        bedtool = bedtool.filter(lambda x: int(x.score) >= min_support).each(merged_interval_features).moveto(filtered_bed)
+        func_logger.info("%d filtered intervals" % (bedtool.count()))
+    except Exception as e:
+        func_logger.error('Caught exception in worker thread')
+
+        # This prints the type, value, and stack trace of the
+        # current exception being handled.
+        traceback.print_exc()
+
+        print()
+        raise e
 
     pybedtools.cleanup(remove_all=True)
 
@@ -132,7 +155,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         "%s-%s" % (parallel_generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
-        func_logger.info("Creating directory %s" % (workdir))
+        func_logger.info("Creating directory %s" % workdir)
         os.makedirs(workdir)
 
     if not chromosomes:

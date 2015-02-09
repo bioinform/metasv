@@ -35,32 +35,31 @@ class AgeInput:
 
 class AgeRecord:
     def __init__(self, age_out_file=None):
+        # Index 0 corresponds to the reference sequence
         self.aligned_bases = 0
-        self.breakpoint_identities = []
+        self.breakpoint_identities = []  # Homology lengths around the breakpoints
         self.inputs = []  # inputs[1] is expected to have an insertion w.r.t. inputs[0]
-        self.percent = 100
-        self.percents = [100, 100]
-        self.start1_end1s = []
-        self.start2_end2s = []
-        self.excised_regions = []
-        self.n_alt = 0
+        self.percent = 100  # Percent of matching bases in alignment
+        self.percents = [100, 100]  # Percent of matching bases in alignment for each flank
+        self.start1_end1s = []  # Alignment intervals for the first sequence
+        self.start2_end2s = []  # Alignment intervals for the second sequence
+        self.excised_regions = []  # List of excised regions as intervals
+        self.n_alt = 0  # Number of alternate regions
         self.alternate_regions = []
 
-        self.flanking_regions = [0, 0]
-        self.ref_flanking_regions = [0, 0]
-        self.hom = 0
-        self.flank_percent = 0
-        self.nfrags = 1
+        self.flanking_regions = [0, 0]  # Length of each flank on the donor sequence
+        self.ref_flanking_regions = [0, 0]  # Length of each flank on the ref requence
+        self.hom = 0  # Length of sequence homology
+        self.flank_percent = 0  # Percent of total length in the flanks
+        self.nfrags = 1  # Number of fragments in the alignment
 
-        self.cs = 0
-        self.ce = 0
-
-        self.very_bad_assembly = False
-        self.bad_assembly = False
+        # The following fields are set later on when processing the alignments
+        self.very_bad_assembly = False  # Alignment failed some basic checks
+        self.bad_assembly = False  # Only one fragment in the alignment
 
         self.start = -1
         self.end = -1
-        self.excised_lengths = [0, 0]
+        self.excised_lengths = [0, 0]  # Lengths of each excised region
 
         self.assembly_contig = None
         self.used = False
@@ -122,8 +121,6 @@ class AgeRecord:
                     self.ref_flanking_regions[0] = abs(self.start1_end1s[0][1] - self.start1_end1s[0][0] + 1)
                     self.ref_flanking_regions[1] = 0 if len(self.start1_end1s) == 1 else abs(
                         self.start1_end1s[1][1] - self.start1_end1s[1][0] + 1)
-                    if len(self.start2_end2s) > 1:
-                        cs, ce = self.start1_end1s[0][1], self.start2_end2s[1][0]
                     continue
 
                 if line.startswith("EXCISED REGION(S):"):
@@ -145,7 +142,7 @@ class AgeRecord:
 
         if len(self.inputs) == 0:
             self.flank_percent = 0
-            logger.warn("%s has problems" % (age_out_file))
+            logger.warn("%s has problems" % age_out_file)
         else:
             self.flank_percent = int(round(100.0 * sum(self.flanking_regions) / self.inputs[0].length))
 
@@ -173,8 +170,7 @@ class AgeRecord:
             self.ref_flanking_regions[0], self.ref_flanking_regions[1]) >= min_len
 
     def has_only_long_left_flank(self, min_len):
-        return min(self.ref_flanking_regions[0], self.flanking_regions[0]) >= min_len and self.flanking_regions[
-                                                                                              1] <= min_len
+        return min(self.ref_flanking_regions[0], self.flanking_regions[0]) >= min_len >= self.flanking_regions[1]
 
     def has_only_long_right_flank(self, min_len):
         return self.flanking_regions[0] <= min_len and self.flanking_regions[1] >= min_len + self.hom and \
