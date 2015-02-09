@@ -239,7 +239,8 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=500,
 
     pybedtools.cleanup(remove_all=True)
 
-    if not breakpoints_beds: return None
+    if not breakpoints_beds:
+        return None
 
     bedtool = pybedtools.BedTool(breakpoints_beds[0])
     for bed_file in breakpoints_beds[1:]:
