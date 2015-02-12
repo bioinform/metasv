@@ -82,7 +82,7 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
 
     # Read though VCF one line at a time
     for inVCF in vcfs:
-        vcf_reader = vcf.Reader(open(inVCF))
+        vcf_reader = vcf.Reader(open(inVCF.name))
         vcf_template_reader = vcf.Reader(open(inVCF.name))
         vcf_writer = vcf.Writer(open("anno_"+inVCF.name, 'w'), vcf_template_reader)
         for vcf_record in vcf_reader:
