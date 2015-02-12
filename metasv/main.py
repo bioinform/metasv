@@ -11,7 +11,7 @@ from pindel_reader import PindelReader
 from breakdancer_reader import BreakDancerReader
 from breakseq_reader import BreakSeqReader
 from cnvnator_reader import CNVnatorReader
-from generate_sv_intervals import parallel_generate_sc_intervals, DEFAULT_MIN_SUPPORT
+from generate_sv_intervals import parallel_generate_sc_intervals, DEFAULT_MIN_SUPPORT, DEFAULT_MIN_SUPPORT_FRAC
 from run_spades import run_spades_parallel
 from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
@@ -30,11 +30,13 @@ def create_dirs(dirlist):
 
 
 def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_vcf=[], breakdancer_native=[],
-               breakseq_vcf=[], breakseq_native=[], cnvnator_vcf=[], cnvnator_native=[], gatk_vcf=[], gaps=None, filter_gaps=False,
+               breakseq_vcf=[], breakseq_native=[], cnvnator_vcf=[], cnvnator_native=[], gatk_vcf=[], gaps=None,
+               filter_gaps=False,
                keep_standard_contigs=False,
                wiggle=100, overlap_ratio=0.5, workdir="work", outdir="out", boost_ins=False, bam=None, chromosomes=[],
                num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=50, inswiggle=100,
-               enable_per_tool_output=False, min_support=DEFAULT_MIN_SUPPORT):
+               enable_per_tool_output=False, min_support=DEFAULT_MIN_SUPPORT,
+               min_support_frac=DEFAULT_MIN_SUPPORT_FRAC):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -71,7 +73,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     # Check if there is work to do
     if not (
-                            pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + breakseq_native + cnvnator_native):
+                                        pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + breakseq_native + cnvnator_native):
         logger.error("Nothing to do since no SV file specified")
         return 1
 
@@ -319,7 +321,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         if boost_ins:
             logger.info("Generating intervals for insertions")
             assembly_bed = parallel_generate_sc_intervals([bam.name], list(contig_whitelist), merged_bed, workdir,
-                                                          num_threads=num_threads, min_support=min_support)
+                                                          num_threads=num_threads, min_support=min_support,
+                                                          min_support_frac=min_support_frac)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
         logger.info("Will run assembly now")
@@ -333,8 +336,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
         final_bed = os.path.join(workdir, "final.bed")
         if ignored_bed:
-            pybedtools.BedTool(breakpoints_bed)\
-                .cat(pybedtools.BedTool(ignored_bed), postmerge=False)\
+            pybedtools.BedTool(breakpoints_bed) \
+                .cat(pybedtools.BedTool(ignored_bed), postmerge=False) \
                 .sort().saveas(final_bed)
         else:
             pybedtools.BedTool(breakpoints_bed).saveas(final_bed)
