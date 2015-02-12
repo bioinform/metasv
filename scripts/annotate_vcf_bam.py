@@ -49,10 +49,13 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
 
         curr_num = 0
         for aln in alignments:
+            if aln.mapq < 18:
+                continue
             curr_num += 1
             cover_sum += 1
-            insert_sum += aln.tlen
-            insert_sq_sum += aln.tlen * aln.tlen
+            insert_size = abs(aln.tlen)
+            insert_sum += insert_size
+            insert_sq_sum += insert_size * insert_size
 
         if curr_num > 0:
             num_read += 1
