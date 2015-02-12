@@ -40,8 +40,7 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
     # this is temporary, needs to read the reference to be sensible
     num_read = 0.0
     cover_sum = 0.0
-    insert_sum = 0.0
-    insert_sq_sum = 0.0
+    template_list = list()
     first_chr = sam_file.getrname(0)
     for i in xrange(0, read_limit):
         loc = random.randint(0, 30000000)
@@ -53,12 +52,22 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
                 continue
             curr_num += 1
             cover_sum += 1
-            insert_size = abs(aln.tlen)
-            insert_sum += insert_size
-            insert_sq_sum += insert_size * insert_size
+            template_list.append(abs(aln.tlen))
 
         if curr_num > 0:
             num_read += 1
+
+    template_list.sort()
+    num_template = float(len(template_list))
+    low_bound = int(math.floor(num_template*0.05))
+    upp_bound = int(math.ceil(num_template*0.95))
+
+    insert_sum = 0.0
+    insert_sq_sum = 0.0
+
+    for i in xrange(low_bound,upp_bound):
+        insert_sum += template_list[i]
+        insert_sq_sum += template_list[i] * template_list[i]
 
     mean_coverage = cover_sum/num_read
     mean_insert_size = insert_sum/cover_sum
