@@ -23,6 +23,16 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
     # Load indexed BAM file
     sam_file = pysam.Samfile(bam.name, "rb")
 
+    if not chromosomes:
+        func_logger.info("Chromosome list unspecified. Inferring from the BAMs")
+        chromosomes += list(sam_file.references)
+        chromosomes = sorted(list(set(chromosomes)))
+        func_logger.info("Chromosome list inferred as %s" % (str(chromosomes)))
+
+    if not chromosomes or len(chromosomes) == 0:
+        func_logger.error("Chromosome list empty")
+        return None
+
     # Read through samfile and get some statistics
     # hard code this for now
     read_limit = 1000
