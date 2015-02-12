@@ -16,6 +16,9 @@ import pysam
 import pybedtools
 
 
+DEFAULT_MIN_SUPPORT = 5
+
+
 def concatenate_files(files, output):
     with open(output, 'w') as outfile:
         for fname in files:
@@ -93,7 +96,7 @@ def generate_sc_intervals_callback(result, result_list):
 
 
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20,
-                          max_soft_clip=50, pad=500, min_support=5, max_isize=1000000000):
+                          max_soft_clip=50, pad=500, min_support=DEFAULT_MIN_SUPPORT, max_isize=1000000000):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
@@ -150,7 +153,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=20, min_ma
 
 
 def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_threads=1, min_avg_base_qual=20,
-                                   min_mapq=5, min_soft_clip=20, max_soft_clip=50, pad=500, min_support=2):
+                                   min_mapq=5, min_soft_clip=20, max_soft_clip=50, pad=500, min_support=DEFAULT_MIN_SUPPORT):
     func_logger = logging.getLogger(
         "%s-%s" % (parallel_generate_sc_intervals.__name__, multiprocessing.current_process()))
 
@@ -230,7 +233,7 @@ if __name__ == "__main__":
     parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=20, type=int)
     parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=50, type=int)
     parser.add_argument("--pad", help="Padding on both sides of the candidate locations", default=500, type=int)
-    parser.add_argument("--min_support", help="Minimum supporting reads", default=5, type=int)
+    parser.add_argument("--min_support", help="Minimum supporting reads", default=DEFAULT_MIN_SUPPORT, type=int)
     parser.add_argument("--skip_bed", help="BED regions with which no overlap should happen", type=file)
 
     args = parser.parse_args()
