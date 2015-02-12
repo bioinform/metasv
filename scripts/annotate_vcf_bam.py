@@ -81,13 +81,18 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
     func_logger.info("Estimated template size Q95:  {0:.2f}".format(template_list[upp_bound - 1]))
 
     # Read though VCF one line at a time
+
     for inVCF in vcfs:
         vcf_reader = vcf.Reader(open(inVCF.name))
         vcf_template_reader = vcf.Reader(open(inVCF.name))
         vcf_writer = vcf.Writer(open("anno_"+inVCF.name, 'w'), vcf_template_reader)
+        num_processed = 0
         for vcf_record in vcf_reader:
             if vcf_record.CHROM not in chromosomes:
                 continue
+            num_processed += 1
+            if num_processed % 1000 == 0:
+                func_logger.info("{0} read from {1}".format(num_processed,inVCF.name))
 
             # get the interval that corresponds to the SV
             breakpoints = (vcf_record.start, vcf_record.INFO['END'])
@@ -98,17 +103,22 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
 
             if process_variant:
                 # get reads between breakpoints
-                alignments = sam_file.fetch(vcf_record.CHROM,breakpoints[0], breakpoints[1])
+
 
                 # get coverage between the breakpoints
-                unique_coverage = 0
-                total_coverage = 0
-                for rec in alignments:
-                    if rec.mapq >= 20:
-                        unique_coverage += 1
-                    total_coverage += 1
-                vcf_record.INFO["AA_UNIQ_COV"] = unique_coverage/mean_coverage
-                vcf_record.INFO["AA_TOTAL_COV"] = total_coverage/mean_coverage
+                # sample with replacement 100 point
+                unique_coverage = 0.0
+                total_coverage = 0.0
+                num_repeat = 100
+                for i in xrange(0, num_repeat):
+                    loc = random.randint(breakpoints[0], breakpoints[1])
+                    alignments = sam_file.fetch(vcf_record.CHROM, loc, loc + 1)
+                    for rec in alignments:
+                        if rec.mapq >= 18:
+                            unique_coverage += 1
+                        total_coverage += 1
+                vcf_record.INFO["AA_UNIQ_COV"] = (unique_coverage/num_repeat)/mean_coverage
+                vcf_record.INFO["AA_TOTAL_COV"] = (total_coverage/num_repeat)/mean_coverage
 
 
             # get strand bias
