@@ -91,7 +91,7 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
             if vcf_record.CHROM not in chromosomes:
                 continue
             num_processed += 1
-            if num_processed % 1000 == 0:
+            if num_processed % 100 == 0:
                 func_logger.info("{0} read from {1}".format(num_processed,inVCF.name))
 
             # get the interval that corresponds to the SV
@@ -103,23 +103,28 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
 
             if process_variant:
                 # get reads between breakpoints
-
-
-                # get coverage between the breakpoints
-                # sample with replacement 100 point
+                # sample with replacement 100 points
                 unique_coverage = 0.0
                 total_coverage = 0.0
-                num_repeat = 100
+
+                num_forward = 0.0
+
+                num_repeat = 10
                 for i in xrange(0, num_repeat):
                     loc = random.randint(breakpoints[0], breakpoints[1])
                     alignments = sam_file.fetch(vcf_record.CHROM, loc, loc + 1)
                     for rec in alignments:
                         if rec.mapq >= 18:
                             unique_coverage += 1
+                            if not rec.is_reverse:
+                                num_forward += 1
                         total_coverage += 1
+
+                # get coverage between the breakpoints
                 vcf_record.INFO["AA_UNIQ_COV"] = (unique_coverage/num_repeat)/mean_coverage
                 vcf_record.INFO["AA_TOTAL_COV"] = (total_coverage/num_repeat)/mean_coverage
 
+                vcf_record.INFO["AA_TOTAL_STRAND"] = (num_forward/unique_coverage - 0.5) ** 2
 
             # get strand bias
 
