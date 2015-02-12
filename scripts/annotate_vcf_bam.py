@@ -90,7 +90,7 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
                 continue
 
             # get the interval that corresponds to the SV
-            breakpoints = (vcf_record.affected_start, vcf_record.affected_end)
+            breakpoints = (vcf_record.start, vcf_record.INFO['END'])
 
             process_variant = True
             if breakpoints[1] - breakpoints[0] > 1000000:
