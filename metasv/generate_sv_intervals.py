@@ -232,14 +232,14 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
 
     bedtool = bedtool.moveto(os.path.join(workdir, "intervals.bed"))
 
+    func_logger.info("Selecting the top %d intervals based on normalized read support" % max_intervals)
     top_intervals_file = os.path.join(workdir, "top_intervals.bed")
     if bedtool.count() <= max_intervals:
         bedtool = bedtool.saveas(top_intervals_file)
     else:
         # Sample the top intervals
-        top_fraction_cutoff = sorted([float(interval.score) / float(interval.fields[6]) for interval in bedtool], reverse=True)[max_intervals]
+        top_fraction_cutoff = sorted([float(interval.score) / float(interval.fields[6]) for interval in bedtool], reverse=True)[max_intervals-1]
         bedtool = bedtool.filter(lambda x: float(x.score) / float(x.fields[6]) >= top_fraction_cutoff).moveto(top_intervals_file)
-
     pybedtools.cleanup(remove_all=True)
 
     return bedtool.fn
