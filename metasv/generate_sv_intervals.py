@@ -18,6 +18,7 @@ import pybedtools
 
 DEFAULT_MIN_SUPPORT = 5
 DEFAULT_MIN_SUPPORT_FRAC = 0.1
+DEFAULT_MAX_INTERVALS = 10000
 
 
 def concatenate_files(files, output):
@@ -129,7 +130,6 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=20, min_ma
             name = "%d,%s" % (soft_clip_location, strand)
             unmerged_intervals.append(
                 pybedtools.Interval(chromosome, interval[0], interval[1], name=name, score="1", strand=strand))
-        sam_file.close()
 
         if not unmerged_intervals:
             sam_file.close()
@@ -172,7 +172,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=20, min_ma
 
 def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_threads=1, min_avg_base_qual=20,
                                    min_mapq=5, min_soft_clip=20, max_soft_clip=50, pad=500,
-                                   min_support=DEFAULT_MIN_SUPPORT, min_support_frac=DEFAULT_MIN_SUPPORT_FRAC):
+                                   min_support=DEFAULT_MIN_SUPPORT, min_support_frac=DEFAULT_MIN_SUPPORT_FRAC, max_intervals=DEFAULT_MAX_INTERVALS):
     func_logger = logging.getLogger(
         "%s-%s" % (parallel_generate_sc_intervals.__name__, multiprocessing.current_process()))
 
@@ -231,6 +231,15 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         func_logger.info("After merging with %s %d features" % (skip_bed, bedtool.count()))
 
     bedtool = bedtool.moveto(os.path.join(workdir, "intervals.bed"))
+
+    top_intervals_file = os.path.join(workdir, "top_intervals.bed")
+    if bedtool.count() <= max_intervals:
+        bedtool = bedtool.saveas(top_intervals_file)
+    else:
+        # Sample the top intervals
+        top_fraction_cutoff = sorted([float(interval.score) / float(interval.fields[6]) for interval in bedtool], reverse=True)[max_intervals]
+        bedtool = bedtool.filter(lambda x: float(x.score) / float(x.fields[6]) >= top_fraction_cutoff).moveto(top_intervals_file)
+
     pybedtools.cleanup(remove_all=True)
 
     return bedtool.fn
@@ -257,6 +266,7 @@ if __name__ == "__main__":
     parser.add_argument("--min_support_frac", help="Minimum fraction of total reads for interval",
                         default=DEFAULT_MIN_SUPPORT_FRAC, type=float)
     parser.add_argument("--skip_bed", help="BED regions with which no overlap should happen", type=file)
+    parser.add_argument("--max_intervals", help="Maximum number of intervals to process. Intervals are ranked by normalized read-support", type=int, default=DEFAULT_MAX_INTERVALS)
 
     args = parser.parse_args()
 
@@ -266,4 +276,4 @@ if __name__ == "__main__":
                                    num_threads=args.num_threads, min_avg_base_qual=args.min_avg_base_qual,
                                    min_mapq=args.min_mapq, min_soft_clip=args.min_soft_clip,
                                    max_soft_clip=args.max_soft_clip, pad=args.pad, min_support=args.min_support,
-                                   min_support_frac=args.min_support_frac)
+                                   min_support_frac=args.min_support_frac, max_intervals=args.max_intervals)

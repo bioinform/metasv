@@ -11,7 +11,7 @@ from pindel_reader import PindelReader
 from breakdancer_reader import BreakDancerReader
 from breakseq_reader import BreakSeqReader
 from cnvnator_reader import CNVnatorReader
-from generate_sv_intervals import parallel_generate_sc_intervals, DEFAULT_MIN_SUPPORT, DEFAULT_MIN_SUPPORT_FRAC
+from generate_sv_intervals import parallel_generate_sc_intervals, DEFAULT_MIN_SUPPORT, DEFAULT_MIN_SUPPORT_FRAC, DEFAULT_MAX_INTERVALS
 from run_spades import run_spades_parallel
 from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
@@ -36,7 +36,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                wiggle=100, overlap_ratio=0.5, workdir="work", outdir="out", boost_ins=False, bam=None, chromosomes=[],
                num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=50, inswiggle=100,
                enable_per_tool_output=False, min_support=DEFAULT_MIN_SUPPORT,
-               min_support_frac=DEFAULT_MIN_SUPPORT_FRAC):
+               min_support_frac=DEFAULT_MIN_SUPPORT_FRAC, max_intervals=DEFAULT_MAX_INTERVALS):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -322,7 +322,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
             logger.info("Generating intervals for insertions")
             assembly_bed = parallel_generate_sc_intervals([bam.name], list(contig_whitelist), merged_bed, workdir,
                                                           num_threads=num_threads, min_support=min_support,
-                                                          min_support_frac=min_support_frac)
+                                                          min_support_frac=min_support_frac, max_intervals=max_intervals)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
         logger.info("Will run assembly now")
