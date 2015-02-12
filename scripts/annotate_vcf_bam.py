@@ -124,7 +124,8 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
                 vcf_record.INFO["AA_UNIQ_COV"] = (unique_coverage/num_repeat)/mean_coverage
                 vcf_record.INFO["AA_TOTAL_COV"] = (total_coverage/num_repeat)/mean_coverage
 
-                vcf_record.INFO["AA_TOTAL_STRAND"] = (num_forward/unique_coverage - 0.5) ** 2
+                if unique_coverage > 0:
+                    vcf_record.INFO["AA_TOTAL_STRAND"] = (num_forward/unique_coverage - 0.5) ** 2
 
             # get strand bias
 
