@@ -46,14 +46,16 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
     for i in xrange(0, read_limit):
         loc = random.randint(0, 30000000)
         alignments = sam_file.fetch(first_chr, loc, loc+1)
-        if len(alignments) == 0:
-            continue
 
+        curr_num = 0
         for aln in alignments:
+            curr_num += 1
             cover_sum += 1
             insert_sum += aln.tlen
             insert_sq_sum += aln.tlen * aln.tlen
-        num_read += 1
+
+        if curr_num > 0:
+            num_read += 1
 
     mean_coverage = cover_sum/num_read
     mean_insert_size = insert_sum/cover_sum
