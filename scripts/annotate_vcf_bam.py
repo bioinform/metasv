@@ -65,16 +65,18 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
     insert_sum = 0.0
     insert_sq_sum = 0.0
 
-    for i in xrange(low_bound,upp_bound):
+    for i in xrange(low_bound, upp_bound):
         insert_sum += template_list[i]
         insert_sq_sum += template_list[i] * template_list[i]
 
     mean_coverage = cover_sum/num_read
     mean_insert_size = insert_sum/cover_sum
     sd_insert_size = math.sqrt((insert_sq_sum/cover_sum) - (mean_insert_size * mean_insert_size))
-    func_logger.info("Estimated coverage mean: {0:.2f}".format(mean_coverage))
+    func_logger.info("Estimated coverage mean:      {0:.2f}".format(mean_coverage))
     func_logger.info("Estimated template size mean: {0:.2f}".format(mean_insert_size))
-    func_logger.info("Estimated template size sd: {0:.2f}".format(sd_insert_size))
+    func_logger.info("Estimated template size sd:   {0:.2f}".format(sd_insert_size))
+    func_logger.info("Estimated template size Q5:   {0:.2f}".format(template_list[low_bound]))
+    func_logger.info("Estimated template size Q95:  {0:.2f}".format(template_list[upp_bound - 1]))
 
     # Read though VCF one line at a time
     for inVCF in vcfs:
