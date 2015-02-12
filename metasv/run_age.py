@@ -87,7 +87,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             for contig in contig_dict[region]:
                 thread_logger.info(
                     "Writing the assembeled sequence %s of length %s" % (contig.raw_name, contig.sequence_len))
-                if contig.sequence_len * region_object.length() >= 1000000000:  # Marghoob: this is pretty big!
+                if contig.sequence_len * region_object.length() >= 100000000:
                     thread_logger.info("Skipping contig because AGE problem is large")
                     continue
 
