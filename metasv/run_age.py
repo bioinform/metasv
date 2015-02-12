@@ -1,4 +1,4 @@
-#!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
+#!/usr/bin/env python
 
 import traceback
 import os
@@ -41,8 +41,6 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                    age_workdir=None, timeout=300, keep_temp=False, myid=0):
     thread_logger = logging.getLogger("%s-%s" % (run_age_single.__name__, multiprocessing.current_process()))
 
-    log_fd = open(os.path.join(age_workdir, "age_%d.log" % myid), "w")
-
     bedtools_intervals = []
     intervals_bedtool = pybedtools.BedTool(intervals_bed)
 
@@ -56,7 +54,6 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
     try:
         for region in region_list:
             bedtools_interval = pybedtools.Interval(region[0], region[1], region[3])
-            # matching_intervals = intervals_bedtool.all_hits(bedtools_interval, overlap=1.0) #marghoob this is not used?
             matching_intervals = [interval for interval in intervals_bedtool if (
                 interval.start == bedtools_interval.start and interval.end == bedtools_interval.end and interval.chrom == bedtools_interval.chrom)]
             if not matching_intervals:
