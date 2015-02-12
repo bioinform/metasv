@@ -150,7 +150,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     logger.info("Load VCF files")
     for toolname, vcfname in vcf_name_list:
         # If no VCF is given, ignore the tool
-        if not vcfname: continue
+        if not vcfname:
+            continue
 
         tools.append(toolname)
         intervals[toolname] = {}
@@ -159,7 +160,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         for vcffile in vcfname:
             if os.path.isdir(vcffile):
                 logger.info("Will load from per-chromosome VCFs from directory %s for tool %s" % (vcffile, toolname))
-                vcf_list += [os.path.join(vcffile, "%s.vcf.gz" % (contig.name)) for contig in contigs if
+                vcf_list += [os.path.join(vcffile, "%s.vcf.gz" % contig.name) for contig in contigs if
                              (not contig_whitelist or contig.name in contig_whitelist)]
             else:
                 vcf_list.append(vcffile)
