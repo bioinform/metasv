@@ -116,6 +116,9 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
                 bases_aligned = 0.0
                 total_bases = 0.0
 
+                end_bases_aligned = 0.0
+                end_total_bases = 0.0
+
                 num_discordant_high = 0.0
                 num_discordant_low = 0.0
 
@@ -137,10 +140,13 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
                 for loc in [max(breakpoints[0] - sd_insert_size, 0), breakpoints[1] + sd_insert_size]:
                     alignments = sam_file.fetch(vcf_record.CHROM, loc, loc + 1)
                     for rec in alignments:
-                        if rec.mapq >= 18 and abs(rec.tlen) > template_upper_bound:
-                            num_discordant_high += 1
-                        if rec.mapq >= 18 and abs(rec.tlen) < template_lower_bound:
-                            num_discordant_low += 1
+                        if rec.mapq >= 18:
+                            if abs(rec.tlen) > template_upper_bound:
+                                num_discordant_high += 1
+                            if abs(rec.tlen) < template_lower_bound:
+                                num_discordant_low += 1
+                            end_total_bases += rec.rlen
+                            end_bases_aligned += rec.qlen
 
                 # get coverage between the breakpoints
                 vcf_record.INFO["AA_UNIQ_COV"] = (unique_coverage/num_repeat)/mean_coverage
@@ -157,6 +163,8 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
                 # get clipped reads stats
                 if total_bases > 0.0:
                     vcf_record.INFO["AA_PROP_ALIGNED"] = bases_aligned/total_bases
+                if end_total_bases > 0.0:
+                    vcf_record.INFO["AA_END_PROP_ALIGNED"] = end_bases_aligned/end_total_bases
 
                 # get discordant reads stats
                 vcf_record.INFO["AA_DISCORDANT_HIGH"] = num_discordant_high
