@@ -117,23 +117,26 @@ methods = ["RP", "RD", "SR", "JM", "AS"]
 features = ["CHROM", "START", "END", "LEN", "TRUE", "NUM_METHODS"] + methods
 
 # List of tuples, feature name and default value
-details = [("CN_EVAL1", 0),
-           ("CN_NORMALIZED_RD", 0),
-           ("CN_Q0", 0),
-           ("MQRankSum", 0),
-           ("QD", 0),
-           ("MQ0", 0),
-           ("MQ", 0),
-           ("ReadPosRankSum", 0),
-           ("BD_SCORE", 0),
-           ("BD_SUPPORTING_READ_PAIRS", 0),
-           ("BaseQRankSum", 0),
-           ("PD_DOWN_UNIQ_READ_SUPP", 0),
-           ("PD_UP_UNIQ_READ_SUPP", 0),
-           ("PD_UNIQ_READ_SUPP", 0),
-           ("PD_SIMPLE_SCORE", 0),
-           ("PD_SUM_MAPQ", 0),
-           ("PD_HOMLEN", 0)
+details = [("CN_EVAL1", -1),
+           ("CN_EVAL2", -1),
+           ("CN_EVAL3", -1),
+           ("CN_EVAL4", -1),
+           ("CN_NORMALIZED_RD", -1),
+           ("CN_Q0", -1),
+           ("MQRankSum", -1),
+           ("QD", -1),
+           ("MQ0", -1),
+           ("MQ", -1),
+           ("ReadPosRankSum", -1),
+           ("BD_SCORE", -1),
+           ("BD_SUPPORTING_READ_PAIRS", -1),
+           ("BaseQRankSum", -1),
+           ("PD_DOWN_UNIQ_READ_SUPP", -1),
+           ("PD_UP_UNIQ_READ_SUPP", -1),
+           ("PD_UNIQ_READ_SUPP", -1),
+           ("PD_SIMPLE_SCORE", -1),
+           ("PD_SUM_MAPQ", -1),
+           ("PD_HOMLEN", -1)
 ]
 
 outf.write("#" + "\t".join(features))
