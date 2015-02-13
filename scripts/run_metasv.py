@@ -3,7 +3,7 @@
 import sys
 import argparse
 from metasv.main import run_metasv
-from metasv.generate_sv_intervals import DEFAULT_MIN_SUPPORT
+from metasv.defaults import *
 from metasv._version import __version__
 
 
@@ -35,16 +35,21 @@ if __name__ == "__main__":
     parser.add_argument("--gaps", metavar="gaps", help="Gap bed file", required=False, default=None)
     parser.add_argument("--filter_gaps", help="Filter out gaps", action="store_true", required=False)
     parser.add_argument("--keep_standard_contigs", action="store_true", help="Keep only the major contigs + MT")
-    parser.add_argument("--wiggle", help="Wiggle for interval overlap", default=100, type=int, required=False)
-    parser.add_argument("--inswiggle", help="Wiggle for insertions, overides wiggle", default=100, type=int,
+    parser.add_argument("--wiggle", help="Wiggle for interval overlap", default=WIGGLE, type=int, required=False)
+    parser.add_argument("--inswiggle", help="Wiggle for insertions, overides wiggle", default=INS_WIGGLE, type=int,
                         required=False)
-    parser.add_argument("--minsvlen", help="Minimum length acceptable to be an SV", default=50, type=int,
+    parser.add_argument("--minsvlen", help="Minimum length acceptable to be an SV", default=MIN_SV_LENGTH, type=int,
                         required=False)
-    parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=0.5, type=float, required=False)
+    parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=OVERLAP_RATIO, type=float, required=False)
     parser.add_argument("--workdir", help="Scratch directory for working", default="work", required=False)
     parser.add_argument("--boost_ins", help="Use soft-clips for improving insertion detection", action="store_true")
     parser.add_argument("--min_ins_support", help="Minimum read support for calling insertions using soft-clips",
-                        type=int, default=DEFAULT_MIN_SUPPORT)
+                        type=int, default=MIN_SUPPORT)
+    parser.add_argument("--min_ins_support_frac",
+                        help="Minimum fraction of reads supporting insertion using soft-clips", type=float,
+                        default=MIN_SUPPORT_FRAC)
+    parser.add_argument("--max_ins_intervals", help="Maximum number of insertion intervals to generate", type=int,
+                        default=MAX_INTERVALS)
     parser.add_argument("--bam", help="BAM", type=file)
     parser.add_argument("--chromosomes",
                         help="Chromosome list to process. If unspecified, then all chromosomes will be considered.",
@@ -70,5 +75,6 @@ if __name__ == "__main__":
                         workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
                         chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
                         disable_assembly=args.disable_assembly, minsvlen=args.minsvlen, inswiggle=args.inswiggle,
-                        enable_per_tool_output=args.enable_per_tool_output, min_support=args.min_support))
+                        enable_per_tool_output=args.enable_per_tool_output, min_support=args.min_ins_support,
+                        min_support_frac=args.min_ins_support_frac, max_intervals=args.max_ins_intervals))
 

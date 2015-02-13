@@ -1,4 +1,4 @@
-#!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
+#!/usr/bin/env python
 
 import os
 import argparse
@@ -15,6 +15,7 @@ import pysam
 import pybedtools
 
 import extract_pairs
+from defaults import *
 
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
@@ -43,8 +44,8 @@ def append_contigs(src, interval, dst_fd, fn_id=0, sv_type="INS"):
                 dst_fd.write(line)
 
 
-def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=0, myid=0, timeout=300, isize_min=300,
-                      isize_max=500):
+def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES_PAD, timeout=SPADES_TIMEOUT, isize_min=ISIZE_MIN,
+                      isize_max=ISIZE_MAX):
     thread_logger = logging.getLogger("%s-%s" % (run_spades_single.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(work):
@@ -100,14 +101,14 @@ def run_spades_single_callback(result, result_list):
         result_list.append(result)
 
 
-def should_be_assembled(interval, max_interval_size=50000):
+def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE):
     if interval.length > max_interval_size: return False
     name_fields = interval.name.split(",")
     methods = set(name_fields[3].split(";"))
     return len(methods) == 1 or not (methods & precise_methods)
 
 
-def shouldnt_be_assembled(interval, max_interval_size=50000):
+def shouldnt_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE):
     return not should_be_assembled(interval, max_interval_size=max_interval_size)
 
 
@@ -124,8 +125,8 @@ def add_breakpoints(interval):
     return pybedtools.create_interval_from_list(fields)
 
 
-def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=0, nthreads=1, chrs=[], max_interval_size=50000,
-                        timeout=300, isize_min=250, isize_max=450):
+def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_PAD, nthreads=1, chrs=[], max_interval_size=50000,
+                        timeout=SPADES_TIMEOUT, isize_min=ISIZE_MIN, isize_max=ISIZE_MAX):
     pybedtools.set_tempdir(work)
 
     bedtool = pybedtools.BedTool(bed)
@@ -142,7 +143,7 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=0, nthre
     for i in xrange(nthreads):
         intervals = [interval for (j, interval) in enumerate(selected_intervals) if (j % nthreads) == i]
         kwargs_dict = {"intervals": intervals, "bam": bam, "spades": spades, "work": "%s/%d" % (work, i), "pad": pad,
-                       "myid": i, "timeout": timeout, "isize_min": isize_min, "isize_max": isize_max}
+                       "timeout": timeout, "isize_min": isize_min, "isize_max": isize_max}
         pool.apply_async(run_spades_single, kwds=kwargs_dict,
                          callback=partial(run_spades_single_callback, result_list=assembly_fastas))
 
@@ -174,13 +175,13 @@ if __name__ == "__main__":
     parser.add_argument("--spades", help="Spades python executable", required=True)
     parser.add_argument("--work", help="Work directory", default="work")
     parser.add_argument("--bed", help="BED file for assembly regions", required=True)
-    parser.add_argument("--pad", help="Padding to apply on both sides of the bed regions", type=int, default=0)
+    parser.add_argument("--pad", help="Padding to apply on both sides of the bed regions", type=int, default=SPADES_PAD)
     parser.add_argument("--nthreads", help="Number of threads to use", type=int, default=1)
     parser.add_argument("--chrs", help="Chromosome list to process", nargs="+", default=[])
-    parser.add_argument("--timeout", help="Max time for assembly processes to run", type=int, default=300)
-    parser.add_argument("--max_interval_size", help="Maximum size of interval to process", type=int, default=50000)
-    parser.add_argument("--isize_min", help="Minimum insert size for normal pair", type=int, default=250)
-    parser.add_argument("--isize_max", help="Maximum insert size for normal pair", type=int, default=450)
+    parser.add_argument("--timeout", help="Max time for assembly processes to run", type=int, default=SPADES_TIMEOUT)
+    parser.add_argument("--max_interval_size", help="Maximum size of interval to process", type=int, default=SPADES_MAX_INTERVAL_SIZE)
+    parser.add_argument("--isize_min", help="Minimum insert size for normal pair", type=int, default=ISIZE_MIN)
+    parser.add_argument("--isize_max", help="Maximum insert size for normal pair", type=int, default=ISIZE_MAX)
 
     args = parser.parse_args()
 

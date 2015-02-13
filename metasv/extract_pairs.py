@@ -1,5 +1,4 @@
-#!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
-
+#!/usr/bin/env python
 import argparse
 import logging
 import multiprocessing

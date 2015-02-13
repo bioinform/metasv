@@ -71,7 +71,7 @@ class BreakDancerHeader:
             self.header_dict["software"] = header_line.split()[1]
         elif header_line.startswith("#Command:"):
             self.header_dict["command"] = header_line.split()[1:]
-        elif not (header_line.startswith("#Library") or header_line.startswith("#Chr1")):  # marghoob, what?
+        elif not (header_line.startswith("#Library") or header_line.startswith("#Chr1")):
             fields = header_line[1:].split()
             self.header_dict[fields[0]] = dict(field.split(":") for field in fields[1:])
         logger.info(self.header_dict)

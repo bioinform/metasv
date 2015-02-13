@@ -1,4 +1,4 @@
-#!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
+#!/usr/bin/env python
 
 import traceback
 import os
@@ -18,6 +18,7 @@ from tigra_contig import TigraContig
 from svregion import SVRegion
 from age_parser import *
 from process_age_alignment import process_age_records
+from defaults import *
 
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
@@ -37,11 +38,9 @@ def run_cmd(cmd, logger, out, err):
     return retcode
 
 
-def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference=None, assembly=None, pad=500, age=None,
-                   age_workdir=None, timeout=300, keep_temp=False, myid=0):
+def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference=None, assembly=None, pad=AGE_PAD, age=None,
+                   age_workdir=None, timeout=AGE_TIMEOUT, keep_temp=False, myid=0):
     thread_logger = logging.getLogger("%s-%s" % (run_age_single.__name__, multiprocessing.current_process()))
-
-    log_fd = open(os.path.join(age_workdir, "age_%d.log" % myid), "w")
 
     bedtools_intervals = []
     intervals_bedtool = pybedtools.BedTool(intervals_bed)
@@ -56,7 +55,6 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
     try:
         for region in region_list:
             bedtools_interval = pybedtools.Interval(region[0], region[1], region[3])
-            # matching_intervals = intervals_bedtool.all_hits(bedtools_interval, overlap=1.0) #marghoob this is not used?
             matching_intervals = [interval for interval in intervals_bedtool if (
                 interval.start == bedtools_interval.start and interval.end == bedtools_interval.end and interval.chrom == bedtools_interval.chrom)]
             if not matching_intervals:
@@ -87,7 +85,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             for contig in contig_dict[region]:
                 thread_logger.info(
                     "Writing the assembeled sequence %s of length %s" % (contig.raw_name, contig.sequence_len))
-                if contig.sequence_len * region_object.length() >= 1000000000:  # Marghoob: this is pretty big!
+                if contig.sequence_len * region_object.length() >= 100000000:
                     thread_logger.info("Skipping contig because AGE problem is large")
                     continue
 
@@ -176,9 +174,9 @@ def run_age_single_callback(result, result_list):
         result_list.append(result)
 
 
-def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=500, age=None, age_workdir=None,
-                     timeout=300, keep_temp=False, assembly_tool="spades", chrs=[], nthreads=1, min_contig_len=200,
-                     max_region_len=50000, sv_types=[]):
+def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_PAD, age=None, age_workdir=None,
+                     timeout=AGE_TIMEOUT, keep_temp=False, assembly_tool="spades", chrs=[], nthreads=1, min_contig_len=AGE_MIN_CONTIG_LENGTH,
+                     max_region_len=AGE_MAX_REGION_LENGTH, sv_types=[]):
     func_logger = logging.getLogger("%s-%s" % (run_age_parallel.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(age_workdir):
@@ -259,15 +257,15 @@ if __name__ == "__main__":
     parser.add_argument("--assembly", help="Assembly FASTA", required=True, type=file)
     parser.add_argument("--age", help="Path to AGE executable", required=True, type=file)
     parser.add_argument("--work", help="Work directory", default="work")
-    parser.add_argument("--pad", help="Padding to apply on both sides of the bed regions", type=int, default=500)
+    parser.add_argument("--pad", help="Padding to apply on both sides of the bed regions", type=int, default=AGE_PAD)
     parser.add_argument("--nthreads", help="Number of threads to use", type=int, default=1)
     parser.add_argument("--chrs", help="Chromosome list to process", nargs="+", default=[])
     parser.add_argument("--sv_types", help="SV types list to process (INS, DEL, INV)", nargs="+", default=[])
-    parser.add_argument("--timeout", help="Max time for assembly processes to run", type=int, default=300)
+    parser.add_argument("--timeout", help="Max time for assembly processes to run", type=int, default=AGE_TIMEOUT)
     parser.add_argument("--keep_temp", help="Don't delete temporary files", action="store_true")
     parser.add_argument("--assembly_tool", help="Tool used for assembly", choices=["spades", "tigra"], default="spades")
-    parser.add_argument("--min_contig_len", help="Minimum length of contig to consider", type=int, default=200)
-    parser.add_argument("--max_region_len", help="Maximum length of an SV interval", type=int, default=50000)
+    parser.add_argument("--min_contig_len", help="Minimum length of contig to consider", type=int, default=AGE_MIN_CONTIG_LENGTH)
+    parser.add_argument("--max_region_len", help="Maximum length of an SV interval", type=int, default=AGE_MAX_REGION_LENGTH)
     parser.add_argument("--intervals_bed", help="BED file for assembly", type=file, required=True)
 
     args = parser.parse_args()
