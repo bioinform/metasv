@@ -1,4 +1,4 @@
-#!/net/kodiak/volumes/lake/shared/users/marghoob/my_env/bin/python
+#!/usr/bin/env python
 import sys
 import os
 import argparse
@@ -191,7 +191,6 @@ if __name__ == "__main__":
     parser.add_argument("--bam", help="BAM file", required=True, type=file)
     parser.add_argument("--chromosomes", nargs="+", help="Chromosomes", default=[])
     parser.add_argument("--workdir", help="Working directory", default="work")
-    parser.add_argument("--num_threads", help="Number of threads to use", default=1, type=int)
     parser.add_argument("--vcfs", nargs="+", help="Input VCF files", type=file)
 
     args = parser.parse_args()
