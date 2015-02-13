@@ -99,7 +99,13 @@ def annotate_vcfs(bam, chromosomes, vcfs):
                 func_logger.info("{0} read from {1}".format(num_processed,inVCF.name))
 
             # get the interval that corresponds to the SV
-            breakpoints = (vcf_record.start, vcf_record.INFO['END'])
+            if vcf_record.INFO['SVTYPE'] == 'INS':
+                breakpoints = (vcf_record.start, vcf_record.start + 1)
+            else:
+                if 'END' in vcf_record.INFO:
+                    breakpoints = (vcf_record.start, vcf_record.INFO['END'])
+                else:
+                    breakpoints = (vcf_record.start, abs(int(vcf_record.INFO['SVLEN'])))
 
             process_variant = True
             if breakpoints[1] - breakpoints[0] > 1000000:
