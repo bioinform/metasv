@@ -38,6 +38,7 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
     read_limit = 1000
 
     # this is temporary, needs to read the reference to be sensible
+    # TODODODODODO!!!
     num_read = 0.0
     cover_sum = 0.0
     template_list = list()
@@ -80,6 +81,9 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
     func_logger.info("Estimated template size Q5:   {0:.2f}".format(template_list[low_bound]))
     func_logger.info("Estimated template size Q95:  {0:.2f}".format(template_list[upp_bound - 1]))
 
+    template_upper_bound = mean_insert_size + (3 * sd_insert_size)
+    template_lower_bound = mean_insert_size - (3 * sd_insert_size)
+
     # Read though VCF one line at a time
 
     for inVCF in vcfs:
@@ -109,6 +113,12 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
 
                 num_forward = 0.0
 
+                bases_aligned = 0.0
+                total_bases = 0.0
+
+                num_discordant_high = 0.0
+                num_discordant_low = 0.0
+
                 num_repeat = 10
                 for i in xrange(0, num_repeat):
                     loc = random.randint(breakpoints[0], breakpoints[1])
@@ -118,24 +128,42 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
                             unique_coverage += 1
                             if not rec.is_reverse:
                                 num_forward += 1
+                            total_bases += rec.rlen
+                            bases_aligned += rec.qlen
+
                         total_coverage += 1
+
+                # compute number of discordant
+                for loc in [max(breakpoints[0] - sd_insert_size, 0), breakpoints[1] + sd_insert_size]:
+                    alignments = sam_file.fetch(vcf_record.CHROM, loc, loc + 1)
+                    for rec in alignments:
+                        if rec.mapq >= 18 and abs(rec.tlen) > template_upper_bound:
+                            num_discordant_high += 1
+                        if rec.mapq >= 18 and abs(rec.tlen) < template_lower_bound:
+                            num_discordant_low += 1
 
                 # get coverage between the breakpoints
                 vcf_record.INFO["AA_UNIQ_COV"] = (unique_coverage/num_repeat)/mean_coverage
                 vcf_record.INFO["AA_TOTAL_COV"] = (total_coverage/num_repeat)/mean_coverage
 
-                if unique_coverage > 0:
+                # get strand bias
+                if unique_coverage > 0.0:
                     vcf_record.INFO["AA_TOTAL_STRAND"] = (num_forward/unique_coverage - 0.5) ** 2
 
-            # get strand bias
+                # get mapping quality stats
+                if total_coverage > 0.0:
+                    vcf_record.INFO["AA_PROP_REPEAT"] = unique_coverage/total_coverage
 
-            # get mapping quality stats
+                # get clipped reads stats
+                if total_bases > 0.0:
+                    vcf_record.INFO["AA_PROP_ALIGNED"] = bases_aligned/total_bases
 
-            # get clipped reads stats
+                # get discordant reads stats
+                vcf_record.INFO["AA_DISCORDANT_HIGH"] = num_discordant_high
+                vcf_record.INFO["AA_DISCORDANT_LOW"] = num_discordant_low
 
-            # get discordant reads stats
-
-            # get supplementary alignment stats
+                # get supplementary alignment stats
+                # Skip this for now
 
             vcf_writer.write_record(vcf_record)
 
