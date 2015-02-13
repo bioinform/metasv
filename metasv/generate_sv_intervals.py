@@ -223,6 +223,21 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     for bed_file in bed_files[1:]:
         bedtool = bedtool.cat(pybedtools.BedTool(bed_file), postmerge=False)
 
+    bedtool = bedtool.moveto(os.path.join(workdir, "all_intervals.bed"))
+
+    func_logger.info("Selecting the top %d intervals based on normalized read support" % max_intervals)
+    top_intervals_all_cols_file = os.path.join(workdir, "top_intervals_all_cols.bed")
+    if bedtool.count() <= max_intervals:
+        bedtool = bedtool.saveas(top_intervals_all_cols_file)
+    else:
+        # Sample the top intervals
+        top_fraction_cutoff = sorted([float(interval.score) / float(interval.fields[6]) for interval in bedtool], reverse=True)[max_intervals-1]
+        bedtool = bedtool.filter(lambda x: float(x.score) / float(x.fields[6]) >= top_fraction_cutoff).moveto(top_intervals_all_cols_file)
+
+    # Filter out the extra column added to simplify life later on
+    top_intervals_file = os.path.join(workdir, "top_intervals.bed")
+    bedtool = bedtool.cut(xrange(6)).moveto(top_intervals_file)
+
     if skip_bed:
         skip_bedtool = pybedtools.BedTool(skip_bed)
         func_logger.info(
@@ -232,14 +247,6 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
 
     bedtool = bedtool.moveto(os.path.join(workdir, "intervals.bed"))
 
-    func_logger.info("Selecting the top %d intervals based on normalized read support" % max_intervals)
-    top_intervals_file = os.path.join(workdir, "top_intervals.bed")
-    if bedtool.count() <= max_intervals:
-        bedtool = bedtool.saveas(top_intervals_file)
-    else:
-        # Sample the top intervals
-        top_fraction_cutoff = sorted([float(interval.score) / float(interval.fields[6]) for interval in bedtool], reverse=True)[max_intervals-1]
-        bedtool = bedtool.filter(lambda x: float(x.score) / float(x.fields[6]) >= top_fraction_cutoff).moveto(top_intervals_file)
     pybedtools.cleanup(remove_all=True)
 
     return bedtool.fn
