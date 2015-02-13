@@ -136,7 +136,15 @@ details = [("CN_EVAL1", -1),
            ("PD_UNIQ_READ_SUPP", -1),
            ("PD_SIMPLE_SCORE", -1),
            ("PD_SUM_MAPQ", -1),
-           ("PD_HOMLEN", -1)
+           ("PD_HOMLEN", -1),
+           ("AA_UNIQ_COV", -1),
+           ("AA_TOTAL_COV", -1),
+           ("AA_TOTAL_STRAND", -1),
+           ("AA_PROP_REPEAT", -1),
+           ("AA_PROP_ALIGNED", -1),
+           ("AA_DISCORDANT_HIGH", -1),
+           ("AA_DISCORDANT_LOW", -1),
+           ("AA_END_PROP_ALIGNED", -1)
 ]
 
 outf.write("#" + "\t".join(features))
