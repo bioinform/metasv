@@ -91,7 +91,7 @@ def merged_interval_features(feature, bam_handle):
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score, otherfields=[str(interval_readcount)])
 
 
-def coverage_filter(feature, bam_handle, min_support_frac=DEFAULT_MIN_SUPPORT_FRAC):
+def coverage_filter(feature, bam_handle, min_support_frac=MIN_SUPPORT_FRAC):
     total_count = bam_handle.count(reference=feature.chrom, start=feature.start, end=feature.end)
     return float(feature.score) >= min_support_frac * float(total_count)
 
@@ -101,9 +101,9 @@ def generate_sc_intervals_callback(result, result_list):
         result_list.append(result)
 
 
-def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20,
-                          max_soft_clip=50, pad=500, min_support=DEFAULT_MIN_SUPPORT, max_isize=1000000000,
-                          min_support_frac=DEFAULT_MIN_SUPPORT_FRAC):
+def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP,
+                          max_soft_clip=SC_MAX_SOFT_CLIP, pad=SC_PAD, min_support=MIN_SUPPORT, max_isize=1000000000,
+                          min_support_frac=MIN_SUPPORT_FRAC):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
@@ -167,9 +167,9 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=20, min_ma
     return coverage_filtered_bed
 
 
-def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_threads=1, min_avg_base_qual=20,
-                                   min_mapq=5, min_soft_clip=20, max_soft_clip=50, pad=500,
-                                   min_support=DEFAULT_MIN_SUPPORT, min_support_frac=DEFAULT_MIN_SUPPORT_FRAC, max_intervals=DEFAULT_MAX_INTERVALS):
+def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_threads=1, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL,
+                                   min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP, pad=SC_PAD,
+                                   min_support=MIN_SUPPORT, min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS):
     func_logger = logging.getLogger(
         "%s-%s" % (parallel_generate_sc_intervals.__name__, multiprocessing.current_process()))
 
@@ -260,16 +260,16 @@ if __name__ == "__main__":
     parser.add_argument("--chromosomes", nargs="+", help="Chromosomes", default=[])
     parser.add_argument("--workdir", help="Working directory", default="work")
     parser.add_argument("--num_threads", help="Number of threads to use", default=1, type=int)
-    parser.add_argument("--min_avg_base_qual", help="Minimum average base quality", default=20, type=int)
-    parser.add_argument("--min_mapq", help="Minimum MAPQ", default=5, type=int)
-    parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=20, type=int)
-    parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=50, type=int)
-    parser.add_argument("--pad", help="Padding on both sides of the candidate locations", default=500, type=int)
-    parser.add_argument("--min_support", help="Minimum supporting reads", default=DEFAULT_MIN_SUPPORT, type=int)
+    parser.add_argument("--min_avg_base_qual", help="Minimum average base quality", default=SC_MIN_AVG_BASE_QUAL, type=int)
+    parser.add_argument("--min_mapq", help="Minimum MAPQ", default=SC_MIN_MAPQ, type=int)
+    parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=SC_MIN_SOFT_CLIP, type=int)
+    parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=SC_MAX_SOFT_CLIP, type=int)
+    parser.add_argument("--pad", help="Padding on both sides of the candidate locations", default=SC_PAD, type=int)
+    parser.add_argument("--min_support", help="Minimum supporting reads", default=MIN_SUPPORT, type=int)
     parser.add_argument("--min_support_frac", help="Minimum fraction of total reads for interval",
-                        default=DEFAULT_MIN_SUPPORT_FRAC, type=float)
+                        default=MIN_SUPPORT_FRAC, type=float)
     parser.add_argument("--skip_bed", help="BED regions with which no overlap should happen", type=file)
-    parser.add_argument("--max_intervals", help="Maximum number of intervals to process. Intervals are ranked by normalized read-support", type=int, default=DEFAULT_MAX_INTERVALS)
+    parser.add_argument("--max_intervals", help="Maximum number of intervals to process. Intervals are ranked by normalized read-support", type=int, default=MAX_INTERVALS)
 
     args = parser.parse_args()
 
