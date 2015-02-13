@@ -16,7 +16,7 @@ import math
 
 import pysam
 
-def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
+def annotate_vcfs(bam, chromosomes, vcfs):
     func_logger = logging.getLogger("%s-%s" % (annotate_vcfs.__name__, multiprocessing.current_process()))
     random.seed(0)
 
@@ -190,13 +190,12 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--bam", help="BAM file", required=True, type=file)
     parser.add_argument("--chromosomes", nargs="+", help="Chromosomes", default=[])
-    parser.add_argument("--workdir", help="Working directory", default="work")
     parser.add_argument("--vcfs", nargs="+", help="Input VCF files", type=file)
 
     args = parser.parse_args()
 
     logger.info("Command-line: " + " ".join(sys.argv))
 
-    annotate_vcfs(args.bam, args.chromosomes, args.workdir, args.num_threads, args.vcfs)
+    annotate_vcfs(args.bam, args.chromosomes, args.vcfs)
 
     logger.info("All done!")
