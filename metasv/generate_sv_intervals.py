@@ -235,8 +235,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         bedtool = bedtool.filter(lambda x: float(x.score) / float(x.fields[6]) >= top_fraction_cutoff).moveto(top_intervals_all_cols_file)
 
     # Filter out the extra column added to simplify life later on
-    top_intervals_file = os.path.join(workdir, "top_intervals.bed")
-    bedtool = bedtool.cut(xrange(6)).moveto(top_intervals_file)
+    bedtool = bedtool.cut(xrange(6)).saveas(os.path.join(workdir, "top_intervals.bed"))
 
     if skip_bed:
         skip_bedtool = pybedtools.BedTool(skip_bed)
