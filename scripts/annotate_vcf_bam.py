@@ -191,3 +191,5 @@ if __name__ == "__main__":
     logger.info("Command-line: " + " ".join(sys.argv))
 
     annotate_vcfs(args.bam, args.chromosomes, args.workdir, args.num_threads, args.vcfs)
+
+    logger.info("All done!")
