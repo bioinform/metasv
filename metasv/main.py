@@ -2,16 +2,15 @@
 
 from collections import defaultdict
 import shutil
-import argparse
-import sys
 
+from defaults import *
 from vcf_utils import *
 from sv_interval import SVInterval, get_gaps_file, interval_overlaps_interval_list, merge_intervals
 from pindel_reader import PindelReader
 from breakdancer_reader import BreakDancerReader
 from breakseq_reader import BreakSeqReader
 from cnvnator_reader import CNVnatorReader
-from generate_sv_intervals import parallel_generate_sc_intervals, DEFAULT_MIN_SUPPORT, DEFAULT_MIN_SUPPORT_FRAC, DEFAULT_MAX_INTERVALS
+from generate_sv_intervals import parallel_generate_sc_intervals
 from run_spades import run_spades_parallel
 from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
@@ -33,10 +32,10 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                breakseq_vcf=[], breakseq_native=[], cnvnator_vcf=[], cnvnator_native=[], gatk_vcf=[], gaps=None,
                filter_gaps=False,
                keep_standard_contigs=False,
-               wiggle=100, overlap_ratio=0.5, workdir="work", outdir="out", boost_ins=False, bam=None, chromosomes=[],
-               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=50, inswiggle=100,
-               enable_per_tool_output=False, min_support=DEFAULT_MIN_SUPPORT,
-               min_support_frac=DEFAULT_MIN_SUPPORT_FRAC, max_intervals=DEFAULT_MAX_INTERVALS):
+               wiggle=WIGGLE, overlap_ratio=OVERLAP_RATIO, workdir="work", outdir="out", boost_ins=False, bam=None, chromosomes=[],
+               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=MIN_SV_LENGTH, inswiggle=INS_WIGGLE,
+               enable_per_tool_output=False, min_support=MIN_SUPPORT,
+               min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -328,11 +327,11 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         logger.info("Will run assembly now")
 
         assembled_fasta, ignored_bed = run_spades_parallel(bam=bam.name, spades=spades, bed=assembly_bed,
-                                                           work=spades_tmpdir, pad=500, nthreads=num_threads,
+                                                           work=spades_tmpdir, pad=SPADES_PAD, nthreads=num_threads,
                                                            chrs=list(contig_whitelist))
         breakpoints_bed = run_age_parallel(intervals_bed=assembly_bed, reference=reference, assembly=assembled_fasta,
-                                           pad=500, age=age, chrs=list(contig_whitelist), nthreads=num_threads,
-                                           min_contig_len=100, age_workdir=age_tmpdir)
+                                           pad=AGE_PAD, age=age, chrs=list(contig_whitelist), nthreads=num_threads,
+                                           min_contig_len=AGE_MIN_CONTIG_LENGTH, age_workdir=age_tmpdir)
 
         final_bed = os.path.join(workdir, "final.bed")
         if ignored_bed:

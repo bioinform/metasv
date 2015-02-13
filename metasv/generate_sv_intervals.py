@@ -15,10 +15,7 @@ import base64
 import pysam
 import pybedtools
 
-
-DEFAULT_MIN_SUPPORT = 5
-DEFAULT_MIN_SUPPORT_FRAC = 0.1
-DEFAULT_MAX_INTERVALS = 10000
+from defaults import *
 
 
 def concatenate_files(files, output):
