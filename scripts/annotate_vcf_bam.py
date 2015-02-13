@@ -1,19 +1,11 @@
 #!/usr/bin/env python
 import sys
-import os
 import argparse
 import multiprocessing
 import logging
-import collections
-import itertools
-import traceback
-from functools import partial
-import json
-import base64
 import vcf
 import random
 import math
-
 import pysam
 
 def annotate_vcfs(bam, chromosomes, vcfs):
