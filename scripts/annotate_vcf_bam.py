@@ -105,7 +105,7 @@ def annotate_vcfs(bam, chromosomes, vcfs):
                 if 'END' in vcf_record.INFO:
                     breakpoints = (vcf_record.start, vcf_record.INFO['END'])
                 else:
-                    breakpoints = (vcf_record.start, abs(int(vcf_record.INFO['SVLEN'])))
+                    breakpoints = (vcf_record.start, abs(int(vcf_record.INFO['SVLEN'][0])))
 
             process_variant = True
             if breakpoints[1] - breakpoints[0] > 1000000:
