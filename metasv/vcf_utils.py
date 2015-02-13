@@ -67,7 +67,8 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
     # Assume single sample for now
     sample = vcf_reader.samples[0] if vcf_reader.samples else None
     for vcf_record in vcf_reader:
-        if vcf_record.CHROM not in contig_whitelist: continue
+        if vcf_record.CHROM not in contig_whitelist:
+            continue
 
         gt = vcf_record.genotype(sample) if sample else None
 
