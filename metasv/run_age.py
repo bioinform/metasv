@@ -176,7 +176,7 @@ def run_age_single_callback(result, result_list):
 
 def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_PAD, age=None, age_workdir=None,
                      timeout=AGE_TIMEOUT, keep_temp=False, assembly_tool="spades", chrs=[], nthreads=1, min_contig_len=AGE_MIN_CONTIG_LENGTH,
-                     max_region_len=50000, sv_types=[]):
+                     max_region_len=AGE_MAX_REGION_LENGTH, sv_types=[]):
     func_logger = logging.getLogger("%s-%s" % (run_age_parallel.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(age_workdir):
