@@ -167,8 +167,6 @@ def annotate_vcfs(bam, chromosomes, workdir, num_threads, vcfs):
 
             vcf_writer.write_record(vcf_record)
 
-        vcf_reader.close()
-        vcf_template_reader.close()
         vcf_writer.close()
 
 
