@@ -113,6 +113,10 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
             if source == "BreakSeq" and "PASS" not in vcf_record.FILTER: continue
 
             if len(vcf_record.ALT) > 1: continue
+            if "SVTYPE" not in vcf_record.INFO or "END" not in vcf_record.INFO:
+                logger.error("Missing SVTYPE or INFO field in %s" % (str(vcf_record)))
+                continue
+
             sv_type = vcf_record.INFO["SVTYPE"]
             if sv_type == "DUP:TANDEM": sv_type = "DUP"
             if "SVLEN" not in vcf_record.INFO:
