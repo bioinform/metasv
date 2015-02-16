@@ -114,7 +114,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
 
             if len(vcf_record.ALT) > 1: continue
             if "SVTYPE" not in vcf_record.INFO or "END" not in vcf_record.INFO:
-                logger.error("Missing SVTYPE or INFO field in %s" % (str(vcf_record)))
+                logger.error("Ignoring record due to missing SVTYPE or INFO field in %s" % (str(vcf_record)))
                 continue
 
             sv_type = vcf_record.INFO["SVTYPE"]
