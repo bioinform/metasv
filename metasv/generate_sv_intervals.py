@@ -72,8 +72,8 @@ def get_interval(aln, pad=500):
     end = aln.aend
 
     if aln.cigar[0][0] == 4:
-        return start - pad, start + pad
-    return end - pad, end + pad
+        return max(0, start - pad), start + pad
+    return max(0, end - pad), end + pad
 
 
 def merged_interval_features(feature, bam_handle):
