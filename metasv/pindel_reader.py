@@ -158,9 +158,17 @@ class PindelRecord:
             self.homlen = self.bp_range[1] - self.end_pos
             self.homseq = reference_handle.fetch(self.chromosome, self.end_pos - 1,
                                                  self.bp_range[1] - 1) if reference_handle else ""
-            self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i + 1]),
-                             "ref_support_at_end": int(fields[i + 2]), "plus_support": int(fields[i + 3]),
-                             "minus_support": int(fields[i + 4])} for i in xrange(31, len(fields), 5)]
+            pindel024u_or_later = len(fields) > 31 + 5 * self.num_sample
+            if pindel024u_or_later:
+                self.samples = self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i + 1]),
+                                                "ref_support_at_end": int(fields[i + 2]),
+                                                "plus_support": sum(map(int, fields[i + 3:i + 5])),
+                                                "minus_support": sum(map(int, fields[i + 5:i + 7]))} for i in
+                                               xrange(31, len(fields), 5)]
+            else:
+                self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i + 1]),
+                                 "ref_support_at_end": int(fields[i + 2]), "plus_support": int(fields[i + 3]),
+                                 "minus_support": int(fields[i + 4])} for i in xrange(31, len(fields), 5)]
         else:
             self.sv_len = 0
             self.chromosome = fields[3]
