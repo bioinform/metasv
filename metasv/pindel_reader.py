@@ -164,7 +164,7 @@ class PindelRecord:
                                                 "ref_support_at_end": int(fields[i + 2]),
                                                 "plus_support": sum(map(int, fields[i + 3:i + 5])),
                                                 "minus_support": sum(map(int, fields[i + 5:i + 7]))} for i in
-                                               xrange(31, len(fields), 5)]
+                                               xrange(31, len(fields), 7)]
             else:
                 self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i + 1]),
                                  "ref_support_at_end": int(fields[i + 2]), "plus_support": int(fields[i + 3]),
