@@ -70,6 +70,9 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 continue
 
             region_object = SVRegion(region[0], region[1], region[2], region[3])
+            if region_object.pos1 - pad < 0:
+                thread_logger.error("Region too close to start of chromosome. Skipping.")
+                continue
 
             reference_sequence = reference_fasta.fetch(reference=region_object.chrom1, start=region_object.pos1 - pad,
                                                        end=region_object.pos2 + pad)
