@@ -105,33 +105,36 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0):
             extract_fn_names]
     selected_pair_counts = [0] * len(extract_fn_names)
 
-    for aln in bam.fetch(chr_name, start=chr_start, end=chr_end):
-        readname = aln.qname
-        if readname not in readnames:
-            mate = None
-            try:
-                mate = bammate.mate(aln)
-            except ValueError:
-                pass
+    if chr_start >= 0:
+        for aln in bam.fetch(chr_name, start=chr_start, end=chr_end):
+            readname = aln.qname
+            if readname not in readnames:
+                mate = None
+                try:
+                    mate = bammate.mate(aln)
+                except ValueError:
+                    pass
 
-            if mate is None:
-                continue
+                if mate is None:
+                    continue
 
-            examine_count += 1
+                examine_count += 1
 
-            for fn_index, extract_fn in enumerate(extract_fns):
-                if extract_fn(aln, mate):
-                    first = aln if aln.is_read1 else mate
-                    second = mate if aln.is_read1 else aln
+                for fn_index, extract_fn in enumerate(extract_fns):
+                    if extract_fn(aln, mate):
+                        first = aln if aln.is_read1 else mate
+                        second = mate if aln.is_read1 else aln
 
-                    end1 = ends[fn_index][0]
-                    end2 = ends[fn_index][1]
+                        end1 = ends[fn_index][0]
+                        end2 = ends[fn_index][1]
 
-                    write_read(end1, first)
-                    write_read(end2, second)
+                        write_read(end1, first)
+                        write_read(end2, second)
 
-                    selected_pair_counts[fn_index] += 1
-            readnames.add(readname)
+                        selected_pair_counts[fn_index] += 1
+                readnames.add(readname)
+    else:
+        logger.error("Skipping read extraction since interval too close to chromosome beginning")
 
     bam.close()
     bammate.close()
