@@ -40,7 +40,8 @@ if __name__ == "__main__":
                         required=False)
     parser.add_argument("--minsvlen", help="Minimum length acceptable to be an SV", default=MIN_SV_LENGTH, type=int,
                         required=False)
-    parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=OVERLAP_RATIO, type=float, required=False)
+    parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=OVERLAP_RATIO, type=float,
+                        required=False)
     parser.add_argument("--workdir", help="Scratch directory for working", default="work", required=False)
     parser.add_argument("--boost_ins", help="Use soft-clips for improving insertion detection", action="store_true")
     parser.add_argument("--min_ins_support", help="Minimum read support for calling insertions using soft-clips",
@@ -62,6 +63,7 @@ if __name__ == "__main__":
     parser.add_argument("--enable_per_tool_output", action="store_true",
                         help="Enable output of merged SVs for individual tools")
     parser.add_argument("--disable_deletion_assembly", action="store_true", help="Disable assembly for deletions")
+    parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     args = parser.parse_args()
@@ -77,5 +79,7 @@ if __name__ == "__main__":
                         chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
                         disable_assembly=args.disable_assembly, minsvlen=args.minsvlen, inswiggle=args.inswiggle,
                         enable_per_tool_output=args.enable_per_tool_output, min_support=args.min_ins_support,
-                        min_support_frac=args.min_ins_support_frac, max_intervals=args.max_ins_intervals, disable_deletion_assembly=args.disable_deletion_assembly))
+                        min_support_frac=args.min_ins_support_frac, max_intervals=args.max_ins_intervals,
+                        disable_deletion_assembly=args.disable_deletion_assembly,
+                        stop_spades_on_fail=args.stop_spades_on_fail))
 

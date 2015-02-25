@@ -45,7 +45,7 @@ def append_contigs(src, interval, dst_fd, fn_id=0, sv_type="INS"):
 
 
 def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES_PAD, timeout=SPADES_TIMEOUT, isize_min=ISIZE_MIN,
-                      isize_max=ISIZE_MAX):
+                      isize_max=ISIZE_MAX, stop_on_fail=False):
     thread_logger = logging.getLogger("%s-%s" % (run_spades_single.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(work):
@@ -74,11 +74,17 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
                 extract_fn_name = extract_fns[fn_id].__name__
                 if extracted_count >= 5:
                     extra_opt = "--sc" if not fn_id == 0 else ""
-                    retcode = run_cmd("bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 %s\"" % (
+                    spades_log_fd.write("Running spades for interval %s with extraction function %s\n" % (str(interval).strip(), extract_fn_name))
+                    retcode = run_cmd("bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 --phred-offset 33 %s\"" % (
                         timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger, spades_log_fd)
                     if retcode == 0:
                         append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % extract_fn_name, interval,
                                        merged_contigs, fn_id, sv_type)
+                    elif retcode == 1:
+                        thread_logger.error("Spades failed for some reason")
+                        if stop_on_fail:
+                            thread_logger.error("Aborting!")
+                            raise Exception("Spades failure on interval %s for extraction function %s\n" % (str(interval).strip(), extract_fn_name))
                 else:
                     thread_logger.info("Too few read pairs (%d) extracted. Skipping assembly." % extracted_count)
     except Exception as e:
@@ -127,7 +133,7 @@ def add_breakpoints(interval):
 
 
 def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_PAD, nthreads=1, chrs=[], max_interval_size=50000,
-                        timeout=SPADES_TIMEOUT, isize_min=ISIZE_MIN, isize_max=ISIZE_MAX, disable_deletion_assembly=False):
+                        timeout=SPADES_TIMEOUT, isize_min=ISIZE_MIN, isize_max=ISIZE_MAX, disable_deletion_assembly=False, stop_on_fail=False):
     pybedtools.set_tempdir(work)
 
     bedtool = pybedtools.BedTool(bed)
@@ -144,7 +150,7 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
     for i in xrange(nthreads):
         intervals = [interval for (j, interval) in enumerate(selected_intervals) if (j % nthreads) == i]
         kwargs_dict = {"intervals": intervals, "bam": bam, "spades": spades, "work": "%s/%d" % (work, i), "pad": pad,
-                       "timeout": timeout, "isize_min": isize_min, "isize_max": isize_max}
+                       "timeout": timeout, "isize_min": isize_min, "isize_max": isize_max, "stop_on_fail": stop_on_fail}
         pool.apply_async(run_spades_single, kwds=kwargs_dict,
                          callback=partial(run_spades_single_callback, result_list=assembly_fastas))
 

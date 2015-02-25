@@ -35,7 +35,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                wiggle=WIGGLE, overlap_ratio=OVERLAP_RATIO, workdir="work", outdir="out", boost_ins=False, bam=None, chromosomes=[],
                num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=MIN_SV_LENGTH, inswiggle=INS_WIGGLE,
                enable_per_tool_output=False, min_support=MIN_SUPPORT,
-               min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS, disable_deletion_assembly=False):
+               min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS, disable_deletion_assembly=False, stop_spades_on_fail=False):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -329,7 +329,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
         assembled_fasta, ignored_bed = run_spades_parallel(bam=bam.name, spades=spades, bed=assembly_bed,
                                                            work=spades_tmpdir, pad=SPADES_PAD, nthreads=num_threads,
-                                                           chrs=list(contig_whitelist), disable_deletion_assembly=disable_deletion_assembly)
+                                                           chrs=list(contig_whitelist), disable_deletion_assembly=disable_deletion_assembly, stop_on_fail=stop_spades_on_fail)
         breakpoints_bed = run_age_parallel(intervals_bed=assembly_bed, reference=reference, assembly=assembled_fasta,
                                            pad=AGE_PAD, age=age, chrs=list(contig_whitelist), nthreads=num_threads,
                                            min_contig_len=AGE_MIN_CONTIG_LENGTH, age_workdir=age_tmpdir)
