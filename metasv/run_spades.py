@@ -109,6 +109,8 @@ def run_spades_single_callback(result, result_list):
 
 def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE, disable_deletion_assembly=False):
     if interval.length > max_interval_size: return False
+    # TODO: fix this later to make MetaSV do the right thing
+    if interval.name.find("INV") >= 0: return False
     if interval.name.find("DEL") >= 0 and disable_deletion_assembly: return False
     name_fields = interval.name.split(",")
     methods = set(name_fields[3].split(";"))
