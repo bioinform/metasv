@@ -82,7 +82,7 @@ def discordant_with_normal_orientation(aln, mate, isize_min=300, isize_max=400):
     return not (isize_min <= abs(aln.tlen) <= isize_max)
 
 
-def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0):
+def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pairs=1000):
     logger = logging.getLogger("%s-%s" % (extract_read_pairs.__name__, multiprocessing.current_process()))
 
     readnames = set()
@@ -119,6 +119,10 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0):
                     continue
 
                 examine_count += 1
+                if examine_count > max_read_pairs:
+                    logger.error("Too many reads encountered. Skipping assembly")
+                    selected_pair_counts = [0] * len(extract_fn_names)
+                    break
 
                 for fn_index, extract_fn in enumerate(extract_fns):
                     if extract_fn(aln, mate):
