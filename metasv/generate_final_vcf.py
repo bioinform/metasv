@@ -81,7 +81,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
             if pass_calls and end != pos + 1:
                 continue
             end = pos
-            is_pass = (svlen == 0) or (svlen >= 100)
+            is_pass = (int(interval.fields[8]) != -1) and (svlen == 0 or svlen >= 100)
         sv_id = "."
         ref = "."
         alt = ["<%s>" % sv_type]
