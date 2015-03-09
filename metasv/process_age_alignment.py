@@ -56,8 +56,8 @@ def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", 
     if not bedtools_intervals:
         return []
 
-    potential_breakpoints = sorted(
-        [interval.start for interval in bedtools_intervals] + [interval.end for interval in bedtools_intervals])
+    potential_breakpoints = sorted(list(set(
+        [interval.start for interval in bedtools_intervals] + [interval.end for interval in bedtools_intervals])))
 
     breakpoints = []
     for breakpoint in potential_breakpoints[1:-1]:
