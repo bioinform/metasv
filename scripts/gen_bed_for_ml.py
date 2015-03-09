@@ -113,7 +113,7 @@ PD_UP_UNIQ_READ_SUPP=3      GT      1/1
 # and also output the BED file
 
 # The order matters here
-methods = ["RP", "RD", "SR", "JM", "AS"]
+methods = ["RP", "RD", "SR", "JM", "AS", "SC"]
 features = ["CHROM", "START", "END", "LEN", "TRUE", "NUM_METHODS"] + methods
 
 # List of tuples, feature name and default value
@@ -144,7 +144,13 @@ details = [("CN_EVAL1", -1),
            ("AA_PROP_ALIGNED", -1),
            ("AA_DISCORDANT_HIGH", -1),
            ("AA_DISCORDANT_LOW", -1),
-           ("AA_END_PROP_ALIGNED", -1)
+           ("AA_END_PROP_ALIGNED", -1),
+           ("BA_FLANK_PERCENT", -1),
+           ("BA_NFRAGS", -1),
+           ("BA_NUM_ALT", -1),
+           ("BA_NUM_BP", -1),
+           ("BA_NUM_GOOD_REC", -1),
+           ("BA_PERCENT_MATCH", -1)
 ]
 
 outf.write("#" + "\t".join(features))
