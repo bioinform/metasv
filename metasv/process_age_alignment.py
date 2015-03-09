@@ -56,9 +56,6 @@ def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", 
     if not bedtools_intervals:
         return []
 
-    interval_pairs = []
-    breakpoints_intervals = set()
-
     potential_breakpoints = sorted(
         [interval.start for interval in bedtools_intervals] + [interval.end for interval in bedtools_intervals])
 
@@ -71,6 +68,8 @@ def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", 
                                                                             max_diff=49)) and age_record.breakpoint_match(
             breakpoint, window)]
         if counter_examples:
+            counter_example_ends = [age_record.start1_end1s for age_record in counter_examples]
+            func_logger.info("Skipping breakpoint %d due to %s" % (breakpoint, str(counter_example_ends)))
             continue
 
         if (left_support and right_support) and min(
@@ -115,20 +114,6 @@ def overlap(s1, e1, s2, e2):
     return min(e1, e2) - max(s1, s2) + 1
 
 
-def select_best_assembly(assemblies):
-    if not assemblies:
-        return age.AgeRecord()  # return dummy assembly, Marghoob this is not defined?
-
-    best_assembly = assemblies[0]
-
-    for assembly in assemblies[1:]:
-        if assembly.tigra_contig.sequence_len > best_assembly.tigra_contig.sequence_len:
-            best_assembly = assembly
-        elif assembly.tigra_contig.covs > best_assembly.tigra_contig.covs:
-            best_assembly = assembly
-    return best_assembly
-
-
 def are_positions_consistent(assemblies):
     if not assemblies:
         return 0
@@ -136,18 +121,6 @@ def are_positions_consistent(assemblies):
     high = max([assembly.end for assembly in assemblies])
 
     return (len(assemblies) > 1) and (high - low) <= 20
-
-
-def generate_assembly_features(assemblies):
-    best_assembly = select_best_assembly(assemblies)
-    is_consistent = int(are_positions_consistent(assemblies))
-
-    unique_assemblies = set([(assembly.start, assembly.end) for assembly in assemblies])
-    logger.info("Unique assemblies = " + str(unique_assemblies) + " is_consistent = %d" % is_consistent)
-
-    return map(str, [len(assemblies), len(unique_assemblies), int(len(assemblies) > 0), is_consistent,
-                     best_assembly.insertion_length, best_assembly.start, best_assembly.end,
-                     best_assembly.excised_lengths[0], best_assembly.excised_lengths[1]])
 
 
 def are_overlap_intervals_close(overlaps):
