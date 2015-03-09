@@ -180,7 +180,7 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Run spades on a bed file.")
+    parser = argparse.ArgumentParser(description="Run spades on a bed file.", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--bam", help="BAM file to use reads from", required=True)
     parser.add_argument("--spades", help="Spades python executable", required=True)
     parser.add_argument("--work", help="Work directory", default="work")
