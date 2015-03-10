@@ -76,7 +76,7 @@ def get_insertion_breakpoints(age_records, intervals, window=20, start=0):
         if left_support:
             func_logger.info("\tLeft support %s" % (str(left_support)))
         if right_support:
-            func_logger.info("\tRight support %s" % (str(left_support)))
+            func_logger.info("\tRight support %s" % (str(right_support)))
 
         if (left_support and right_support) and min(
                         [window + 1] + [abs(b[0] - breakpoint) for b in breakpoints]) > window:
