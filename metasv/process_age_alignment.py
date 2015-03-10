@@ -83,9 +83,9 @@ def get_insertion_breakpoints(age_records, intervals, window=20, start=0):
             both_support = [age_record for age_record in age_records if
                             age_record.has_insertion(min_diff=50, max_diff=1000000000) and age_record.breakpoint_match(
                                 breakpoint, window)]
-            func_logger.info("\tboth_support = %s" % (str(both_support)))
-            func_logger.info(
-                "\tinsertion lengths = %s" % (str([age_record.insertion_length() for age_record in both_support])))
+            if both_support:
+                func_logger.info("\tboth_support = %s" % (str(both_support)))
+                func_logger.info("\tinsertion lengths = %s" % (str([age_record.insertion_length() for age_record in both_support])))
             insertion_length = max([0] + [age_record.insertion_length() for age_record in both_support])
             func_logger.info("\tInsertion length = %d" % insertion_length)
             breakpoints.append((breakpoint, insertion_length))
