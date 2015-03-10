@@ -159,7 +159,7 @@ details = [("CN_EVAL1", -1),
            ("BA_NUM_BP", -1),
            ("BA_NUM_GOOD_REC", -1),
            ("BA_PERCENT_MATCH", -1),
-           ("BA_BP_SCORE", -1)
+           ("BA_BP_SCORE", 10000)
 
 ]
 
