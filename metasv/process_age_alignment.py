@@ -61,6 +61,9 @@ def get_insertion_breakpoints(age_records, intervals, window=20, start=0):
 
     breakpoints = []
     for breakpoint in potential_breakpoints[1:-1]:
+        # Check if the breakpoint is within window distance of a validated breakpoint
+        if min([window + 1] + [abs(b[0] - breakpoint) for b in breakpoints]) <= window:
+            continue
         func_logger.info("\tExamining potential breakpoint %d for support" % breakpoint)
         left_support = [interval[0] for interval in intervals if abs(interval[0] - breakpoint) <= window]
         right_support = [interval[1] for interval in intervals if abs(interval[1] - breakpoint) <= window]
