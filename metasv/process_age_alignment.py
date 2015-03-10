@@ -49,7 +49,7 @@ def pair_intervals(intervals, reference_length, min_interval_length=200, window=
     return len(overlap_intervals), -1, -1
 
 
-def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", start=0, pad=500):
+def get_insertion_breakpoints(age_records, intervals, window=20, start=0):
     func_logger = logging.getLogger("%s-%s" % (get_insertion_breakpoints.__name__, multiprocessing.current_process()))
     bedtools_intervals = [pybedtools.Interval("1", interval[0], interval[1]) for interval in sorted(intervals)]
     func_logger.info("bedtools_intervals %s" % (str(bedtools_intervals)))
@@ -61,6 +61,7 @@ def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", 
 
     breakpoints = []
     for breakpoint in potential_breakpoints[1:-1]:
+        func_logger.info("\tExamining potential breakpoint %d for support" % breakpoint)
         left_support = [interval[0] for interval in intervals if abs(interval[0] - breakpoint) <= window]
         right_support = [interval[1] for interval in intervals if abs(interval[1] - breakpoint) <= window]
         counter_examples = [age_record for age_record in age_records if age_record.has_long_ref_flanks() and (
@@ -69,19 +70,24 @@ def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", 
             breakpoint, window)]
         if counter_examples:
             counter_example_ends = [age_record.start1_end1s for age_record in counter_examples]
-            func_logger.info("Skipping breakpoint %d due to %s" % (breakpoint, str(counter_example_ends)))
+            func_logger.info("\tSkipping breakpoint %d due to %s" % (breakpoint, str(counter_example_ends)))
             continue
+
+        if left_support:
+            func_logger.info("\tLeft support %s" % (str(left_support)))
+        if right_support:
+            func_logger.info("\tRight support %s" % (str(left_support)))
 
         if (left_support and right_support) and min(
                         [window + 1] + [abs(b[0] - breakpoint) for b in breakpoints]) > window:
             both_support = [age_record for age_record in age_records if
                             age_record.has_insertion(min_diff=50, max_diff=1000000000) and age_record.breakpoint_match(
                                 breakpoint, window)]
-            func_logger.info("both_support = %s" % (str(both_support)))
+            func_logger.info("\tboth_support = %s" % (str(both_support)))
             func_logger.info(
-                "insertion lengths = %s" % (str([age_record.insertion_length() for age_record in both_support])))
+                "\tinsertion lengths = %s" % (str([age_record.insertion_length() for age_record in both_support])))
             insertion_length = max([0] + [age_record.insertion_length() for age_record in both_support])
-            func_logger.info("Insertion length = %d" % insertion_length)
+            func_logger.info("\tInsertion length = %d" % insertion_length)
             breakpoints.append((breakpoint, insertion_length))
 
     func_logger.info("Gathered breakpoints as %s" % (str(breakpoints)))
