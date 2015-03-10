@@ -70,13 +70,13 @@ def get_insertion_breakpoints(age_records, intervals, window=20, start=0):
             breakpoint, window)]
         if counter_examples:
             counter_example_ends = [age_record.start1_end1s for age_record in counter_examples]
-            func_logger.info("\tSkipping breakpoint %d due to %s" % (breakpoint, str(counter_example_ends)))
+            func_logger.info("\t\tSkipping breakpoint %d due to %s" % (breakpoint, str(counter_example_ends)))
             continue
 
         if left_support:
-            func_logger.info("\tLeft support %s" % (str(left_support)))
+            func_logger.info("\t\tLeft support %s" % (str(left_support)))
         if right_support:
-            func_logger.info("\tRight support %s" % (str(right_support)))
+            func_logger.info("\t\tRight support %s" % (str(right_support)))
 
         if (left_support and right_support) and min(
                         [window + 1] + [abs(b[0] - breakpoint) for b in breakpoints]) > window:
@@ -84,10 +84,10 @@ def get_insertion_breakpoints(age_records, intervals, window=20, start=0):
                             age_record.has_insertion(min_diff=50, max_diff=1000000000) and age_record.breakpoint_match(
                                 breakpoint, window)]
             if both_support:
-                func_logger.info("\tboth_support = %s" % (str(both_support)))
-                func_logger.info("\tinsertion lengths = %s" % (str([age_record.insertion_length() for age_record in both_support])))
+                func_logger.info("\t\tboth_support = %s" % (str(both_support)))
+                func_logger.info("\t\tinsertion lengths = %s" % (str([age_record.insertion_length() for age_record in both_support])))
             insertion_length = max([0] + [age_record.insertion_length() for age_record in both_support])
-            func_logger.info("\tInsertion length = %d" % insertion_length)
+            func_logger.info("\t\tInsertion length = %d" % insertion_length)
             breakpoints.append((breakpoint, insertion_length))
 
     func_logger.info("Gathered breakpoints as %s" % (str(breakpoints)))
