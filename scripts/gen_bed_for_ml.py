@@ -15,6 +15,8 @@ parser.add_argument("--in_all_vcf", help="VCF file of all variants", required=Tr
 parser.add_argument("--in_false_vcf", help="VCF file of false positive variants", required=True)
 parser.add_argument("--in_unknown_vcf", help="VCF file of unknown status variants", required=True)
 parser.add_argument("--out_bed", help="Output BED file")
+parser.add_argument("--ignore_len", help="Ignore the length when matching false positives", action="store_true")
+
 
 args = parser.parse_args()
 
@@ -67,17 +69,23 @@ def read_all_vcf(vcf_file):
 
     return vcf_list
 
+def gen_false_tuple(var):
+    if args.ignore_len:
+        return "-".join([line.chrom, str(line.loc), line.alt])
+    else:
+        return "-".join([line.chrom, str(line.loc), line.alt, line.info["SVLEN"]])
+
 # read in the false VCF and store in a dictionary
 false_vcf = read_all_vcf(args.in_false_vcf)
 false_vcf_dict = {}  # this just stores some things that will make the VCF record unique (chr,loc,alt,SVLEN)
 for line in false_vcf:
-    false_vcf_dict["-".join([line.chrom, str(line.loc), line.alt, line.info["SVLEN"]])] = 1
+    false_vcf_dict[gen_false_tuple(line)] = 1
 
 # read in the unknown VCF and store in a dictionary
 unknown_vcf = read_all_vcf(args.in_unknown_vcf)
 unknown_vcf_dict = {}  # this just stores some things that will make the VCF record unique (chr,loc,alt,SVLEN)
 for line in unknown_vcf:
-    unknown_vcf_dict["-".join([line.chrom, str(line.loc), line.alt, line.info["SVLEN"]])] = 1
+    unknown_vcf_dict[gen_false_tuple(line)] = 1
 
 # open the output file
 outf = sys.stdout
@@ -162,7 +170,7 @@ outf.write('\n')
 all_vcf = read_all_vcf(args.in_all_vcf)
 
 for line in all_vcf:
-    false_vec = "-".join([line.chrom, str(line.loc), line.alt, line.info["SVLEN"]])
+    false_vec = gen_false_tuple(line)
 
     if false_vec in unknown_vcf_dict:
         # ignore the unknown state records for analysis
