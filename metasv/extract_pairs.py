@@ -83,7 +83,7 @@ def discordant_with_normal_orientation(aln, mate, isize_min=300, isize_max=400):
     return not (isize_min <= abs(aln.tlen) <= isize_max)
 
 
-def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pairs=1000):
+def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pairs=10000):
     logger = logging.getLogger("%s-%s" % (extract_read_pairs.__name__, multiprocessing.current_process()))
 
     readnames = set()
