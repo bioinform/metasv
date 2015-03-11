@@ -106,28 +106,33 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
 
     start_time = time.time()
     if chr_start >= 0:
-        aln_list = [aln for aln in bam.fetch(chr_name, start=chr_start, end=chr_end)]
+        # Read alignments from the interval in memory and build a dictionary to get mate instead of calling bammate.mate() function
+        aln_list = [aln for aln in bam.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
         aln_dict = {}
         for aln in aln_list:
-            if aln.is_secondary: continue
             if aln.qname not in aln_dict:
                 aln_dict[aln.qname] = [None, None]
             if aln.is_read1:
                 aln_dict[aln.qname][0] = aln
             if aln.is_read2:
                 aln_dict[aln.qname][1] = aln
+                
+        for readname in aln_dict:
+            pairs = aln_dict[readname]
+            missing_index = 0 if pairs[0] is None else (1 if pairs[1] is None else 2)
+            if missing_index < 2:
+                mate = None
+                try:
+                    mate = bammate.mate(pairs[1-missing_index])
+                except ValueError:
+                    pass
+                if mate is not None:
+                    pairs[missing_index] = mate
 
         for aln in aln_list:
             readname = aln.qname
             if readname not in readnames:
-                mate = None
-                if readname in aln_dict:
-                    mate = aln_dict[readname][1 if aln.is_read1 else 0]
-                if mate is None:
-                    try:
-                        mate = bammate.mate(aln)
-                    except ValueError:
-                        pass
+                mate = aln_dict[readname][1 if aln.is_read1 else 0]
 
                 if mate is None:
                     continue
