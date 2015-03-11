@@ -27,8 +27,10 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
 
     # The following are hacks to ensure sample name and contig names are put in the VCF header
     vcf_template_reader.samples = [sample]
+    contigs = []
     if reference:
         contigs = fasta_utils.get_contigs(reference)
+        contigs_order_dict = {contig.name: index for (index, contig) in enumerate(contigs)}
         vcf_template_reader.contigs = OrderedDict([(contig.name, (contig.name, contig.length)) for contig in contigs])
         vcf_template_reader.metadata["reference"] = reference
 
@@ -37,6 +39,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
 
     vcf_writer = vcf.Writer(open(vcf_out, "w"), vcf_template_reader)
 
+    vcf_records = []
     for interval in pybedtools.BedTool(bedfile):
         chrom = interval.chrom
         pos = interval.start
@@ -93,9 +96,15 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         samples = [vcf.model._Call(None, sample, ["1/1"])]
         vcf_record = vcf.model._Record(chrom, pos, sv_id, ref, alt, qual, sv_filter, info, sv_format, sample_indexes,
                                        samples)
+        vcf_records.append(vcf_record)
 
+    if contigs:
+        vcf_records.sort(key=lambda x: (contigs_order_dict[x.CHROM], x.POS))
+    else:
+        vcf_records.sort(key=lambda x: (x.CHROM, x.POS))
+
+    for vcf_record in vcf_records:
         vcf_writer.write_record(vcf_record)
-
     vcf_writer.close()
 
     func_logger.info("Tabix compressing and indexing %s" % vcf_out)
