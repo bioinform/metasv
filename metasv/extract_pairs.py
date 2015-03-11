@@ -123,11 +123,11 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
                 mate = None
                 if readname in aln_dict:
                     mate = aln_dict[readname][1 if aln.is_read1 else 0]
-
-                try:
-                    mate = bammate.mate(aln)
-                except ValueError:
-                    pass
+                if mate is None:
+                    try:
+                        mate = bammate.mate(aln)
+                    except ValueError:
+                        pass
 
                 if mate is None:
                     continue
