@@ -297,21 +297,21 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
 
     # Add some features to an info dict
     info = defaultdict(float)
-    info["BA_NUM_GOOD_REC"] = len(good_age_records) if good_age_records else 0
+    info["BA_NUM_GOOD_REC"] = len(good_age_records)
+    if not good_age_records:
+        func_logger.warning("No good records found for getting breakpoints")
+        return [], dict(info)
+
     for rec in good_age_records:
         info["BA_FLANK_PERCENT"] = max(info["BA_FLANK_PERCENT"], rec.flank_percent)
         info["BA_NFRAGS"] = max(info["BA_NFRAGS"], rec.nfrags)
         info["BA_NUM_ALT"] = max(info["BA_NUM_ALT"], rec.n_alt)
         info["BA_PERCENT_MATCH"] = max(info["BA_PERCENT_MATCH"], rec.percent)
 
-    if not good_age_records:
-        func_logger.warning("No good records found for getting breakpoints")
-        return [], dict(info)
-    else:
-        func_logger.info("Found %d good records for getting breakpoints" % (len(good_age_records)))
-        func_logger.info("Good records")
-        for age_record in good_age_records:
-            func_logger.info(str(age_record))
+    func_logger.info("Found %d good records for getting breakpoints" % (len(good_age_records)))
+    func_logger.info("Good records")
+    for age_record in good_age_records:
+        func_logger.info(str(age_record))
 
     sv_region = good_age_records[0].contig.sv_region
     if sv_type == "DEL":
