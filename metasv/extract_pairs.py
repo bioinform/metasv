@@ -106,10 +106,24 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
 
     start_time = time.time()
     if chr_start >= 0:
-        for aln in bam.fetch(chr_name, start=chr_start, end=chr_end):
+        aln_list = [aln for aln in bam.fetch(chr_name, start=chr_start, end=chr_end)]
+        aln_dict = {}
+        for aln in aln_list:
+            if aln.is_secondary: continue
+            if aln.qname not in aln_dict:
+                aln_dict[aln.qname] = [None, None]
+            if aln.is_read1:
+                aln_dict[aln.qname][0] = aln
+            if aln.is_read2:
+                aln_dict[aln.qname][1] = aln
+
+        for aln in aln_list: #bam.fetch(chr_name, start=chr_start, end=chr_end):
             readname = aln.qname
             if readname not in readnames:
                 mate = None
+                if readname in aln_dict:
+                    mate = aln_dict[readname][1 if aln.is_read1 else 2]
+                    
                 try:
                     mate = bammate.mate(aln)
                 except ValueError:
