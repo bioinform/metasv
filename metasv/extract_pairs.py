@@ -2,6 +2,7 @@
 import argparse
 import logging
 import multiprocessing
+import time
 from functools import partial
 
 import pysam
@@ -95,8 +96,6 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
     bam = pysam.Samfile(bamname, "rb")
     bammate = pysam.Samfile(bamname, "rb")
 
-    ref = bam.references
-
     chr_name = region.split(':')[0]
     chr_start = int(region.split(':')[1].split("-")[0]) - pad
     chr_end = int(region.split(':')[1].split('-')[1]) + pad
@@ -105,6 +104,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
             extract_fn_names]
     selected_pair_counts = [0] * len(extract_fn_names)
 
+    start_time = time.time()
     if chr_start >= 0:
         for aln in bam.fetch(chr_name, start=chr_start, end=chr_end):
             readname = aln.qname
@@ -147,7 +147,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
         end1.close()
         end2.close()
 
-    logger.info("Examined %d pairs" % examine_count)
+    logger.info("Examined %d pairs in %g seconds" % (examine_count, time.time() - start_time))
     logger.info("Extraction counts %s" % (zip(extract_fn_names, selected_pair_counts)))
 
     return zip([(end[0].name, end[1].name) for end in ends], selected_pair_counts)
