@@ -117,6 +117,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
             if aln.is_read2:
                 aln_dict[aln.qname][1] = aln
 
+        logger.info("Building mate dictionary from %d reads" % len(aln_list))
         for readname in aln_dict:
             pairs = aln_dict[readname]
             missing_index = 0 if pairs[0] is None else (1 if pairs[1] is None else 2)
