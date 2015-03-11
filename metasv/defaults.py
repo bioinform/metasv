@@ -16,6 +16,9 @@ SC_MIN_MAPQ = 5
 ISIZE_MIN = 250
 ISIZE_MAX = 450
 
+# For assembly read-extraction
+EXTRACTION_MAX_READ_PAIRS=10000
+
 # For running SPAdes
 SPADES_TIMEOUT = 300 # in seconds
 SPADES_PAD = 500

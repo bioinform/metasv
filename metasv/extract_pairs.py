@@ -4,6 +4,7 @@ import logging
 import multiprocessing
 import time
 from functools import partial
+from defaults import EXTRACTION_MAX_READ_PAIRS
 
 import pysam
 
@@ -83,7 +84,7 @@ def discordant_with_normal_orientation(aln, mate, isize_min=300, isize_max=400):
     return not (isize_min <= abs(aln.tlen) <= isize_max)
 
 
-def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pairs=10000):
+def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pairs=EXTRACTION_MAX_READ_PAIRS):
     logger = logging.getLogger("%s-%s" % (extract_read_pairs.__name__, multiprocessing.current_process()))
 
     readnames = set()
@@ -177,7 +178,7 @@ if __name__ == "__main__":
     FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
 
-    parser = argparse.ArgumentParser("Extract reads and mates from a region for spades assembly",
+    parser = argparse.ArgumentParser(description="Extract reads and mates from a region for spades assembly",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--bam", help="BAM file to extract reads from", required=True)
     parser.add_argument("--region", help="Samtools region string", required=True)
@@ -187,6 +188,7 @@ if __name__ == "__main__":
     parser.add_argument("--pad", help="Padding to apply on both sides of the interval", type=int, default=0)
     parser.add_argument("--isize_min", help="Minimum insert size", default=200, type=int)
     parser.add_argument("--isize_max", help="Maximum insert size", default=500, type=int)
+    parser.add_argument("--max_read_pairs", help="Maximum read pairs to extract for an interval", default=EXTRACTION_MAX_READ_PAIRS, type=int)
 
     args = parser.parse_args()
 
@@ -198,4 +200,4 @@ if __name__ == "__main__":
         extract_fn = partial(discordant, isize_min=args.isize_min, isize_max=args.isize_max)
         update_wrapper(extract_fn, discordant)
 
-    extract_read_pairs(args.bam, args.region, args.prefix, [extract_fn], pad=args.pad)
+    extract_read_pairs(args.bam, args.region, args.prefix, [extract_fn], pad=args.pad, max_read_pairs=args.max_read_pairs)
