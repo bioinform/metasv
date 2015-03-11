@@ -10,6 +10,7 @@ import traceback
 from functools import partial, update_wrapper
 import json
 import base64
+import time
 
 import pysam
 import pybedtools
@@ -28,8 +29,9 @@ precise_methods = set(["AS", "SR", "JM"])
 def run_cmd(cmd, logger, spades_log_fd):
     logger.info("Running command %s" % cmd)
     spades_log_fd.write("*************************************************\n")
+    start_time = time.time()
     retcode = subprocess.call(cmd, shell=True, stderr=spades_log_fd, stdout=spades_log_fd)
-    logger.info("Returned code %d" % retcode)
+    logger.info("Returned code %d (%g seconds)" % (retcode, time.time() - start_time))
 
     return retcode
 
