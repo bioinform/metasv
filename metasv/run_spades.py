@@ -57,12 +57,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
     merged_contigs = open(os.path.join(work, "merged.fa"), "w")
     spades_log_fd = open(os.path.join(work, "spades.log"), "w")
 
-    extract_fns = [extract_pairs.all_pair, extract_pairs.non_perfect]#,
-                   #partial(extract_pairs.discordant, isize_min=isize_min, isize_max=isize_max),
-                   #partial(extract_pairs.discordant_with_normal_orientation, isize_min=isize_min, isize_max=isize_max)]
-    #update_wrapper(extract_fns[2],
-    #               extract_pairs.discordant)  # wrap to make sure the partial object has __name__ attribute
-    #update_wrapper(extract_fns[3], extract_pairs.discordant_with_normal_orientation)
+    extract_fns = [extract_pairs.all_pair, extract_pairs.non_perfect]
 
     try:
         for interval in intervals:
