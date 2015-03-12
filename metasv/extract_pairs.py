@@ -2,7 +2,9 @@
 import argparse
 import logging
 import multiprocessing
+import time
 from functools import partial
+from defaults import EXTRACTION_MAX_READ_PAIRS
 
 import pysam
 
@@ -82,7 +84,7 @@ def discordant_with_normal_orientation(aln, mate, isize_min=300, isize_max=400):
     return not (isize_min <= abs(aln.tlen) <= isize_max)
 
 
-def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0):
+def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pairs=EXTRACTION_MAX_READ_PAIRS):
     logger = logging.getLogger("%s-%s" % (extract_read_pairs.__name__, multiprocessing.current_process()))
 
     readnames = set()
@@ -95,8 +97,6 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0):
     bam = pysam.Samfile(bamname, "rb")
     bammate = pysam.Samfile(bamname, "rb")
 
-    ref = bam.references
-
     chr_name = region.split(':')[0]
     chr_start = int(region.split(':')[1].split("-")[0]) - pad
     chr_end = int(region.split(':')[1].split('-')[1]) + pad
@@ -105,20 +105,45 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0):
             extract_fn_names]
     selected_pair_counts = [0] * len(extract_fn_names)
 
+    start_time = time.time()
     if chr_start >= 0:
-        for aln in bam.fetch(chr_name, start=chr_start, end=chr_end):
-            readname = aln.qname
-            if readname not in readnames:
+        # Read alignments from the interval in memory and build a dictionary to get mate instead of calling bammate.mate() function
+        aln_list = [aln for aln in bam.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
+        aln_dict = {}
+        for aln in aln_list:
+            if aln.qname not in aln_dict:
+                aln_dict[aln.qname] = [None, None]
+            if aln.is_read1:
+                aln_dict[aln.qname][0] = aln
+            if aln.is_read2:
+                aln_dict[aln.qname][1] = aln
+
+        logger.info("Building mate dictionary from %d reads" % len(aln_list))
+        for readname in aln_dict:
+            pairs = aln_dict[readname]
+            missing_index = 0 if pairs[0] is None else (1 if pairs[1] is None else 2)
+            if missing_index < 2:
                 mate = None
                 try:
-                    mate = bammate.mate(aln)
+                    mate = bammate.mate(pairs[1-missing_index])
                 except ValueError:
                     pass
+                if mate is not None:
+                    pairs[missing_index] = mate
+
+        for aln in aln_list:
+            readname = aln.qname
+            if readname not in readnames:
+                mate = aln_dict[readname][1 if aln.is_read1 else 0]
 
                 if mate is None:
                     continue
 
                 examine_count += 1
+                if examine_count > max_read_pairs:
+                    logger.error("Too many reads encountered. Skipping assembly")
+                    selected_pair_counts = [0] * len(extract_fn_names)
+                    break
 
                 for fn_index, extract_fn in enumerate(extract_fns):
                     if extract_fn(aln, mate):
@@ -143,7 +168,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0):
         end1.close()
         end2.close()
 
-    logger.info("Examined %d pairs" % examine_count)
+    logger.info("Examined %d pairs in %g seconds" % (examine_count, time.time() - start_time))
     logger.info("Extraction counts %s" % (zip(extract_fn_names, selected_pair_counts)))
 
     return zip([(end[0].name, end[1].name) for end in ends], selected_pair_counts)
@@ -153,7 +178,7 @@ if __name__ == "__main__":
     FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
     logging.basicConfig(level=logging.INFO, format=FORMAT)
 
-    parser = argparse.ArgumentParser("Extract reads and mates from a region for spades assembly",
+    parser = argparse.ArgumentParser(description="Extract reads and mates from a region for spades assembly",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--bam", help="BAM file to extract reads from", required=True)
     parser.add_argument("--region", help="Samtools region string", required=True)
@@ -163,6 +188,7 @@ if __name__ == "__main__":
     parser.add_argument("--pad", help="Padding to apply on both sides of the interval", type=int, default=0)
     parser.add_argument("--isize_min", help="Minimum insert size", default=200, type=int)
     parser.add_argument("--isize_max", help="Maximum insert size", default=500, type=int)
+    parser.add_argument("--max_read_pairs", help="Maximum read pairs to extract for an interval", default=EXTRACTION_MAX_READ_PAIRS, type=int)
 
     args = parser.parse_args()
 
@@ -174,4 +200,4 @@ if __name__ == "__main__":
         extract_fn = partial(discordant, isize_min=args.isize_min, isize_max=args.isize_max)
         update_wrapper(extract_fn, discordant)
 
-    extract_read_pairs(args.bam, args.region, args.prefix, [extract_fn], pad=args.pad)
+    extract_read_pairs(args.bam, args.region, args.prefix, [extract_fn], pad=args.pad, max_read_pairs=args.max_read_pairs)

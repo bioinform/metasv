@@ -10,6 +10,7 @@ import traceback
 from functools import partial, update_wrapper
 import json
 import base64
+import time
 
 import pysam
 import pybedtools
@@ -28,8 +29,9 @@ precise_methods = set(["AS", "SR", "JM"])
 def run_cmd(cmd, logger, spades_log_fd):
     logger.info("Running command %s" % cmd)
     spades_log_fd.write("*************************************************\n")
+    start_time = time.time()
     retcode = subprocess.call(cmd, shell=True, stderr=spades_log_fd, stdout=spades_log_fd)
-    logger.info("Returned code %d" % retcode)
+    logger.info("Returned code %d (%g seconds)" % (retcode, time.time() - start_time))
 
     return retcode
 
@@ -55,12 +57,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
     merged_contigs = open(os.path.join(work, "merged.fa"), "w")
     spades_log_fd = open(os.path.join(work, "spades.log"), "w")
 
-    extract_fns = [extract_pairs.all_pair, extract_pairs.non_perfect,
-                   partial(extract_pairs.discordant, isize_min=isize_min, isize_max=isize_max),
-                   partial(extract_pairs.discordant_with_normal_orientation, isize_min=isize_min, isize_max=isize_max)]
-    update_wrapper(extract_fns[2],
-                   extract_pairs.discordant)  # wrap to make sure the partial object has __name__ attribute
-    update_wrapper(extract_fns[3], extract_pairs.discordant_with_normal_orientation)
+    extract_fns = [extract_pairs.all_pair, extract_pairs.non_perfect]
 
     try:
         for interval in intervals:
@@ -75,7 +72,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
                 if extracted_count >= 5:
                     extra_opt = "--sc" if not fn_id == 0 else ""
                     spades_log_fd.write("Running spades for interval %s with extraction function %s\n" % (str(interval).strip(), extract_fn_name))
-                    retcode = run_cmd("bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 --phred-offset 33 %s\"" % (
+                    retcode = run_cmd("bash -c \"timeout -k 1 %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 --phred-offset 33 %s\"" % (
                         timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger, spades_log_fd)
                     if retcode == 0:
                         append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % extract_fn_name, interval,
@@ -109,6 +106,9 @@ def run_spades_single_callback(result, result_list):
 
 def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE, disable_deletion_assembly=False):
     if interval.length > max_interval_size: return False
+    # TODO: fix this later to make MetaSV do the right thing
+    if interval.name.find("INV") >= 0: return False
+    if interval.name.find("DUP") >= 0: return False
     if interval.name.find("DEL") >= 0 and disable_deletion_assembly: return False
     name_fields = interval.name.split(",")
     methods = set(name_fields[3].split(";"))
@@ -177,7 +177,7 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Run spades on a bed file.")
+    parser = argparse.ArgumentParser(description="Run spades on a bed file.", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--bam", help="BAM file to use reads from", required=True)
     parser.add_argument("--spades", help="Spades python executable", required=True)
     parser.add_argument("--work", help="Work directory", default="work")

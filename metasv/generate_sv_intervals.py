@@ -11,6 +11,7 @@ import traceback
 from functools import partial
 import json
 import base64
+import time
 
 import pysam
 import pybedtools
@@ -114,6 +115,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
     pybedtools.set_tempdir(workdir)
 
     unmerged_intervals = []
+    start_time = time.time()
     try:
         sam_file = pysam.Samfile(bam, "rb")
         for aln in sam_file.fetch(reference=chromosome):
@@ -163,6 +165,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         raise e
 
     pybedtools.cleanup(remove_all=True)
+    func_logger.info("Generated intervals in %g seconds" % (time.time() - start_time))
 
     return coverage_filtered_bed
 

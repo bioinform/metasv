@@ -49,21 +49,22 @@ def pair_intervals(intervals, reference_length, min_interval_length=200, window=
     return len(overlap_intervals), -1, -1
 
 
-def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", start=0, pad=500):
+def get_insertion_breakpoints(age_records, intervals, window=20, start=0):
     func_logger = logging.getLogger("%s-%s" % (get_insertion_breakpoints.__name__, multiprocessing.current_process()))
     bedtools_intervals = [pybedtools.Interval("1", interval[0], interval[1]) for interval in sorted(intervals)]
     func_logger.info("bedtools_intervals %s" % (str(bedtools_intervals)))
     if not bedtools_intervals:
         return []
 
-    interval_pairs = []
-    breakpoints_intervals = set()
-
-    potential_breakpoints = sorted(
-        [interval.start for interval in bedtools_intervals] + [interval.end for interval in bedtools_intervals])
+    potential_breakpoints = sorted(list(set(
+        [interval.start for interval in bedtools_intervals] + [interval.end for interval in bedtools_intervals])))
 
     breakpoints = []
     for breakpoint in potential_breakpoints[1:-1]:
+        # Check if the breakpoint is within window distance of a validated breakpoint
+        if min([window + 1] + [abs(b[0] - breakpoint) for b in breakpoints]) <= window:
+            continue
+        func_logger.info("\tExamining potential breakpoint %d for support" % breakpoint)
         left_support = [interval[0] for interval in intervals if abs(interval[0] - breakpoint) <= window]
         right_support = [interval[1] for interval in intervals if abs(interval[1] - breakpoint) <= window]
         counter_examples = [age_record for age_record in age_records if age_record.has_long_ref_flanks() and (
@@ -71,18 +72,25 @@ def get_insertion_breakpoints(age_records, intervals, window=20, sv_type="INS", 
                                                                             max_diff=49)) and age_record.breakpoint_match(
             breakpoint, window)]
         if counter_examples:
+            counter_example_ends = [age_record.start1_end1s for age_record in counter_examples]
+            func_logger.info("\t\tSkipping breakpoint %d due to %s" % (breakpoint, str(counter_example_ends)))
             continue
+
+        if left_support:
+            func_logger.info("\t\tLeft support %s" % (str(left_support)))
+        if right_support:
+            func_logger.info("\t\tRight support %s" % (str(right_support)))
 
         if (left_support and right_support) and min(
                         [window + 1] + [abs(b[0] - breakpoint) for b in breakpoints]) > window:
             both_support = [age_record for age_record in age_records if
                             age_record.has_insertion(min_diff=50, max_diff=1000000000) and age_record.breakpoint_match(
                                 breakpoint, window)]
-            func_logger.info("both_support = %s" % (str(both_support)))
-            func_logger.info(
-                "insertion lengths = %s" % (str([age_record.insertion_length() for age_record in both_support])))
+            if both_support:
+                func_logger.info("\t\tboth_support = %s" % (str(both_support)))
+                func_logger.info("\t\tinsertion lengths = %s" % (str([age_record.insertion_length() for age_record in both_support])))
             insertion_length = max([0] + [age_record.insertion_length() for age_record in both_support])
-            func_logger.info("Insertion length = %d" % insertion_length)
+            func_logger.info("\t\tInsertion length = %d" % insertion_length)
             breakpoints.append((breakpoint, insertion_length))
 
     func_logger.info("Gathered breakpoints as %s" % (str(breakpoints)))
@@ -115,20 +123,6 @@ def overlap(s1, e1, s2, e2):
     return min(e1, e2) - max(s1, s2) + 1
 
 
-def select_best_assembly(assemblies):
-    if not assemblies:
-        return age.AgeRecord()  # return dummy assembly, Marghoob this is not defined?
-
-    best_assembly = assemblies[0]
-
-    for assembly in assemblies[1:]:
-        if assembly.tigra_contig.sequence_len > best_assembly.tigra_contig.sequence_len:
-            best_assembly = assembly
-        elif assembly.tigra_contig.covs > best_assembly.tigra_contig.covs:
-            best_assembly = assembly
-    return best_assembly
-
-
 def are_positions_consistent(assemblies):
     if not assemblies:
         return 0
@@ -136,18 +130,6 @@ def are_positions_consistent(assemblies):
     high = max([assembly.end for assembly in assemblies])
 
     return (len(assemblies) > 1) and (high - low) <= 20
-
-
-def generate_assembly_features(assemblies):
-    best_assembly = select_best_assembly(assemblies)
-    is_consistent = int(are_positions_consistent(assemblies))
-
-    unique_assemblies = set([(assembly.start, assembly.end) for assembly in assemblies])
-    logger.info("Unique assemblies = " + str(unique_assemblies) + " is_consistent = %d" % is_consistent)
-
-    return map(str, [len(assemblies), len(unique_assemblies), int(len(assemblies) > 0), is_consistent,
-                     best_assembly.insertion_length, best_assembly.start, best_assembly.end,
-                     best_assembly.excised_lengths[0], best_assembly.excised_lengths[1]])
 
 
 def are_overlap_intervals_close(overlaps):
@@ -315,21 +297,21 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
 
     # Add some features to an info dict
     info = defaultdict(float)
-    info["BA_NUM_GOOD_REC"] = len(good_age_records) if good_age_records else 0
+    info["BA_NUM_GOOD_REC"] = len(good_age_records)
+    if not good_age_records:
+        func_logger.warning("No good records found for getting breakpoints")
+        return [], dict(info)
+
     for rec in good_age_records:
         info["BA_FLANK_PERCENT"] = max(info["BA_FLANK_PERCENT"], rec.flank_percent)
         info["BA_NFRAGS"] = max(info["BA_NFRAGS"], rec.nfrags)
         info["BA_NUM_ALT"] = max(info["BA_NUM_ALT"], rec.n_alt)
         info["BA_PERCENT_MATCH"] = max(info["BA_PERCENT_MATCH"], rec.percent)
 
-    if not good_age_records:
-        func_logger.warning("No good records found for getting breakpoints")
-        return [], dict(info)
-    else:
-        func_logger.info("Found %d good records for getting breakpoints" % (len(good_age_records)))
-        func_logger.info("Good records")
-        for age_record in good_age_records:
-            func_logger.info(str(age_record))
+    func_logger.info("Found %d good records for getting breakpoints" % (len(good_age_records)))
+    func_logger.info("Good records")
+    for age_record in good_age_records:
+        func_logger.info(str(age_record))
 
     sv_region = good_age_records[0].contig.sv_region
     if sv_type == "DEL":
