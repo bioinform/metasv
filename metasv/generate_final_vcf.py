@@ -14,6 +14,7 @@ import pysam
 import vcf
 
 import fasta_utils
+from genotype import genotype_interval
 
 
 mydir = os.path.dirname(os.path.realpath(__file__))
@@ -93,7 +94,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         info.update({"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
         sv_format = "GT"
         sample_indexes = [0]
-        samples = [vcf.model._Call(None, sample, ["1/1"])]
+        samples = [vcf.model._Call(None, sample, [genotype_interval(interval, sv_type, svlen)])]
         vcf_record = vcf.model._Record(chrom, pos, sv_id, ref, alt, qual, sv_filter, info, sv_format, sample_indexes,
                                        samples)
         vcf_records.append(vcf_record)
