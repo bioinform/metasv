@@ -55,7 +55,7 @@ def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname, reference, sort=
             vcf_writer.write_record(vcf_record)
     vcf_writer.close()
     if out_vcf and index:
-        pysam.tabix_index(out_vcf, force=True)
+        pysam.tabix_index(out_vcf, force=True, preset='vcf')
 
 
 if __name__ == "__main__":
