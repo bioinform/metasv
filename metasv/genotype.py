@@ -19,11 +19,13 @@ GT_REF = "0/0"
 GT_UNK = "./."
 
 
-def count_reads_supporting_ref(chrom, start, end, bam_handle, isize_min, isize_max):
+def count_reads_supporting_ref(chrom, start, end, bam_handle, isize_min, isize_max, window):
     total_normal_reads = 0
     total_read_bases = 0
     total_reads = 0
-    for aln in bam_handle.fetch(chrom, start, end):
+    window_start = max(0, start - window)
+    window_end = end + window
+    for aln in bam_handle.fetch(chrom, window_start, window_end):
         if aln.is_duplicate or not aln.is_paired:
             continue
         total_reads += 1
@@ -34,13 +36,13 @@ def count_reads_supporting_ref(chrom, start, end, bam_handle, isize_min, isize_m
             if not (aln.pnext < aln.pos and not aln.mate_is_reverse): continue
         else:
             if not (aln.pnext > aln.pos and aln.mate_is_reverse): continue
+        if not (((aln.aend - end) >= 20 and (end - aln.pos) >= 20) or ((start - aln.pos) >= 20 and (aln.aend - start) >= 20)):
+            continue
         tlen = abs(aln.tlen)
         if isize_min <= tlen <= isize_max:
             total_normal_reads += 1
             total_read_bases = total_read_bases + aln.qlen
     return total_normal_reads, total_read_bases, total_reads
-
-    return total
 
 
 def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handle, isize_min, isize_max, window=DEFAULT_GT_WINDOW, normal_frac_threshold=DEFAULT_GT_NORMAL_FRAC):
@@ -51,7 +53,7 @@ def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handle, isize_m
     for location in locations:
         window_start = max(0, location - window)
         window_end = location + window
-        total_normal_, total_bases_, total_ = count_reads_supporting_ref(chrom, window_start, window_end, bam_handle, isize_min, isize_max)
+        total_normal_, total_bases_, total_ = count_reads_supporting_ref(chrom, location, location, bam_handle, isize_min, isize_max, window)
         total_normal += total_normal_
         total += total_
 

@@ -45,6 +45,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         chrom = interval.chrom
         pos = interval.start
         end = interval.end
+        genotype = "./." if len(interval.fields) < 11 else interval.fields[10]
 
         sub_names = interval.name.split(":")
         sub_lengths = map(lambda x: int(x.split(",")[2]), sub_names)
@@ -94,7 +95,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         info.update({"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
         sv_format = "GT"
         sample_indexes = [0]
-        samples = [vcf.model._Call(None, sample, [genotype_interval(interval, sv_type, svlen)])]
+        samples = [vcf.model._Call(None, sample, [genotype])]
         vcf_record = vcf.model._Record(chrom, pos, sv_id, ref, alt, qual, sv_filter, info, sv_format, sample_indexes,
                                        samples)
         vcf_records.append(vcf_record)
