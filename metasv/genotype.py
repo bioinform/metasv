@@ -46,12 +46,17 @@ def count_reads_supporting_ref(chrom, start, end, bam_handle, isize_min, isize_m
 def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handle, isize_min, isize_max, window=DEFAULT_GT_WINDOW, normal_frac_threshold=DEFAULT_GT_NORMAL_FRAC):
     func_logger = logging.getLogger("%s-%s" % (genotype_interval.__name__, multiprocessing.current_process()))
 
-    window_start = max(0, start - window)
-    window_end = end + window
-    total_normal, total_bases, total = count_reads_supporting_ref(chrom, window_start, window_end, bam_handle, isize_min, isize_max)
+    locations = [start, end] if sv_type != "INS" else [start]
+    total_normal, total = 0, 0
+    for location in locations:
+        window_start = max(0, location - window)
+        window_end = location + window
+        total_normal_, total_bases_, total_ = count_reads_supporting_ref(chrom, window_start, window_end, bam_handle, isize_min, isize_max)
+        total_normal += total_normal_
+        total += total_
 
     normal_frac = float(total_normal) / float(max(1, total))
-    func_logger.info("For interval %s:%d-%d counts are %d, %d, %d and normal_frac is %g" % (chrom, start, end, total_normal, total_bases, total, normal_frac))
+    func_logger.info("For interval %s:%d-%d counts are %d, %d and normal_frac is %g" % (chrom, start, end, total_normal, total, normal_frac))
     gt = GT_REF
     if normal_frac < 1 - normal_frac_threshold:
         gt = GT_HET if normal_frac >= normal_frac_threshold else GT_HOM
