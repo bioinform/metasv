@@ -59,8 +59,8 @@ def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handle, isize_m
     gt = GT_REF
     if normal_frac < 1 - normal_frac_threshold:
         gt = GT_HET if normal_frac >= normal_frac_threshold else GT_HOM
-        
-    func_logger.info("For interval %s:%d-%d counts are %d, %d and normal_frac is %g gt is %s" % (chrom, start, end, total_normal, total, normal_frac, gt))
+
+    func_logger.info("For interval %s:%d-%d %s counts are %d, %d and normal_frac is %g gt is %s" % (chrom, start, end, sv_type, total_normal, total, normal_frac, gt))
     return gt
 
 def parse_interval(interval):
