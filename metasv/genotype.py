@@ -5,6 +5,7 @@ import traceback
 import argparse
 import sys
 import time
+import json
 from functools import partial
 import pybedtools
 import pysam
