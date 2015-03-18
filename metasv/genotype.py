@@ -190,8 +190,8 @@ if __name__ == "__main__":
     parser.add_argument("--nthreads", help="Number of threads to use", default=1, type=int)
     parser.add_argument("--intervals_file", help="Final BED output from MetaSV assembly", required=True, type=file)
     parser.add_argument("--window", help="Window to use for genotyping", default=DEFAULT_GT_WINDOW, type=int)
-    parser.add_argument("--isize_mean", help="Insert size mean", required=True, type=float)
-    parser.add_argument("--isize_sd", help="Insert size standard deviation", required=True, type=float)
+    parser.add_argument("--isize_mean", help="Insert size mean", default=DEFAULT_GT_ISIZE_MEAN, type=float)
+    parser.add_argument("--isize_sd", help="Insert size standard deviation", default=DEFAULT_GT_ISIZE_SD, type=float)
     parser.add_argument("--normal_frac", help="Minimum fraction of normal reads to call heterozygous", default=DEFAULT_GT_NORMAL_FRAC, type=float)
 
     args = parser.parse_args()
