@@ -252,7 +252,7 @@ class PindelRecord:
     def to_vcf_record(self, sample):
         alt = ["<%s>" % (PINDEL_TO_SV_TYPE[self.sv_type])]
         info = {"SVLEN": self.sv_len,
-                "SVTYPE": self.sv_type
+                "SVTYPE": PINDEL_TO_SV_TYPE[self.sv_type]
         }
 
         info.update(self.info)
