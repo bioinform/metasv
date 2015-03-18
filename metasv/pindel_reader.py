@@ -174,7 +174,7 @@ class PindelRecord:
             self.chromosome = fields[3]
             self.start_pos = min(int(fields[4]), int(fields[7]))
             self.up_read_supp = int(fields[6])  # upstream
-            self.end_pos = self.start_pos + 1
+            self.end_pos = self.start_pos
             self.down_read_supp = int(fields[9])  # downstream
             self.bp_range = (self.start_pos, self.end_pos)
             self.homlen = 0
@@ -252,7 +252,7 @@ class PindelRecord:
     def to_vcf_record(self, sample):
         alt = ["<%s>" % (PINDEL_TO_SV_TYPE[self.sv_type])]
         info = {"SVLEN": self.sv_len,
-                "SVTYPE": self.sv_type
+                "SVTYPE": PINDEL_TO_SV_TYPE[self.sv_type]
         }
 
         info.update(self.info)
