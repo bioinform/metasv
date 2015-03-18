@@ -6,6 +6,7 @@ import argparse
 import sys
 import time
 import json
+import base64
 from functools import partial
 import pybedtools
 import pysam
