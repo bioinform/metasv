@@ -184,7 +184,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Genotype final BED output from MetaSV assembly",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--bam", nargs="+", help="BAM", required=True, type=file)
+    parser.add_argument("--bam", help="BAM", required=True, type=file)
     parser.add_argument("--chromosomes", nargs="+", help="Chromosomes to process. Leave unspecified to process all intervals.", default=[])
     parser.add_argument("--workdir", help="Working directory", default="work")
     parser.add_argument("--nthreads", help="Number of threads to use", default=1, type=int)
