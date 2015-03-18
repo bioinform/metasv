@@ -128,7 +128,7 @@ def genotype_intervals(intervals_file=None, bam=None, workdir=None, window=DEFAU
             genotype = genotype_interval(chrom, start, end, sv_type, svlen, bam_handle, isize_min, isize_max, window, normal_frac_threshold)
             fields = interval.fields + [genotype]
             genotyped_intervals.append(pybedtools.create_interval_from_list(fields))
-        bedtool = pybedtools.BedTool(genotyped_intervals).saveas(os.path.join(workdir, "genotyped.bed"))
+        bedtool = pybedtools.BedTool(genotyped_intervals).moveto(os.path.join(workdir, "genotyped.bed"))
     except Exception as e:
         func_logger.error('Caught exception in worker thread')
 
@@ -180,8 +180,7 @@ def parallel_genotype_intervals(intervals_file=None, bam=None, workdir=None, nth
 
     for bed_file in genotyped_beds[1:]:
         bedtool = bedtool.cat(pybedtools.BedTool(bed_file), postmerge=False)
-    bedtool.sort()
-    bedtool.moveto(os.path.join(workdir, "genotyped.bed"))
+    bedtool = bedtool.sort().moveto(os.path.join(workdir, "genotyped.bed"))
 
     func_logger.info("Finished parallel genotyping of %d intervals in %g minutes" % (len(selected_intervals), (time.time() - start_time)/60.0))
 
