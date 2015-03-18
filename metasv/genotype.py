@@ -15,6 +15,7 @@ from defaults import DEFAULT_GT_WINDOW, DEFAULT_GT_ISIZE_MEAN, DEFAULT_GT_ISIZE_
 
 GT_HET = "0/1"
 GT_HOM = "1/1"
+GT_REF = "0/0"
 GT_UNK = "./."
 
 
@@ -44,7 +45,6 @@ def count_reads_supporting_ref(chrom, start, end, bam_handle, isize_min, isize_m
 
 def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handle, isize_min, isize_max, window=DEFAULT_GT_WINDOW, normal_frac_threshold=DEFAULT_GT_NORMAL_FRAC):
     func_logger = logging.getLogger("%s-%s" % (genotype_interval.__name__, multiprocessing.current_process()))
-    gt = GT_UNK
 
     window_start = max(0, start - window)
     window_end = end + window
@@ -52,7 +52,9 @@ def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handle, isize_m
 
     normal_frac = float(total_normal) / float(max(1, total))
     func_logger.info("For interval %s:%d-%d counts are %d, %d, %d and normal_frac is %g" % (chrom, start, end, total_normal, total_bases, total, normal_frac))
-    gt = GT_HET if normal_frac >= normal_frac_threshold else GT_HOM
+    gt = GT_REF
+    if normal_frac < 1 - normal_frac_threshold:
+        gt = GT_HET if normal_frac >= normal_frac_threshold else GT_HOM
     return gt
 
 def parse_interval(interval):
