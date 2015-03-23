@@ -104,7 +104,7 @@ GT_REF = "0/0"
 GT_HET = "0/1"
 GT_HOM = "1/1"
 
-PINDEL_TO_SV_TYPE = {"I": "INS", "D": "DEL", "LI": "INS", "TD": "DUP:TANDEM", "INV": "INV"}
+PINDEL_TO_SV_TYPE = {"I": "INS", "D": "DEL", "LI": "INS", "TD": "DUP", "INV": "INV"}
 
 
 class PindelRecord:
