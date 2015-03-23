@@ -15,7 +15,6 @@ import vcf
 
 import fasta_utils
 
-
 mydir = os.path.dirname(os.path.realpath(__file__))
 vcf_template = os.path.join(mydir, "resources/template.vcf")
 
@@ -44,6 +43,11 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         chrom = interval.chrom
         pos = interval.start
         end = interval.end
+        genotype = "./." if len(interval.fields) < 11 else interval.fields[10]
+
+        if genotype == "0/0":
+            func_logger.info("Skipping homozygous reference %s" % str(interval))
+            continue
 
         sub_names = interval.name.split(":")
         sub_lengths = map(lambda x: int(x.split(",")[2]), sub_names)
@@ -93,9 +97,8 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         info.update({"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
         sv_format = "GT"
         sample_indexes = [0]
-        samples = [vcf.model._Call(None, sample, ["1/1"])]
-        vcf_record = vcf.model._Record(chrom, pos, sv_id, ref, alt, qual, sv_filter, info, sv_format, sample_indexes,
-                                       samples)
+        vcf_record = vcf.model._Record(chrom, pos, sv_id, ref, alt, qual, sv_filter, info, sv_format, sample_indexes)
+        vcf_record.samples = vcf_template_reader._parse_samples([genotype], "GT", vcf_record)
         vcf_records.append(vcf_record)
 
     if contigs:
@@ -112,20 +115,21 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
 
 
 if __name__ == "__main__":
+    FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
+    logging.basicConfig(level=logging.INFO, format=FORMAT)
+    logger = logging.getLogger(__name__)
+
     parser = argparse.ArgumentParser(description="Convert MetaSV final BED to VCF",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("--sample", help="Sample name", required=True)
     parser.add_argument("--bed", help="MetaSV final BED", required=True)
     parser.add_argument("--vcf", help="Final VCF to output", required=True)
-    parser.add_argument("--vcf_template", help="VCF template", required=True)
+    parser.add_argument("--vcf_template", help="VCF template", default=vcf_template)
     parser.add_argument("--reference", help="Reference FASTA", required=False)
     parser.add_argument("--pass_only", action="store_true", help="Output only PASS calls")
 
     args = parser.parse_args()
-
-    FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
-    logging.basicConfig(level=logging.INFO, format=FORMAT)
 
     convert_metasv_bed_to_vcf(bedfile=args.bed, vcf_out=args.vcf, vcf_template_file=args.vcf_template, sample=args.sample,
                               reference=args.reference, pass_calls=args.pass_only)
