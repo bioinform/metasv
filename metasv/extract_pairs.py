@@ -3,7 +3,7 @@ import argparse
 import logging
 import multiprocessing
 import time
-from functools import partial
+from functools import partial, update_wrapper
 from defaults import EXTRACTION_MAX_READ_PAIRS
 
 import pysam
