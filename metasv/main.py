@@ -15,6 +15,7 @@ from run_spades import run_spades_parallel
 from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
 from fasta_utils import get_contigs
+from genotype import parallel_genotype_intervals
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -35,7 +36,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                wiggle=WIGGLE, overlap_ratio=OVERLAP_RATIO, workdir="work", outdir="out", boost_ins=False, bam=None, chromosomes=[],
                num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=MIN_SV_LENGTH, inswiggle=INS_WIGGLE,
                enable_per_tool_output=False, min_support=MIN_SUPPORT,
-               min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS, disable_deletion_assembly=False, stop_spades_on_fail=False):
+               min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS, disable_deletion_assembly=False, stop_spades_on_fail=False,
+               gt_window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, gt_normal_frac=GT_NORMAL_FRAC):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -342,9 +344,11 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         else:
             pybedtools.BedTool(breakpoints_bed).saveas(final_bed)
 
+        genotyped_bed = parallel_genotype_intervals(final_bed, bam.name, workdir=os.path.join(workdir, "genotyping"), nthreads=num_threads, chromosomes=list(contig_whitelist), window=gt_window, isize_mean=isize_mean, isize_sd=isize_sd, normal_frac_threshold=gt_normal_frac)
+
         logger.info("Output final VCF file")
 
-        convert_metasv_bed_to_vcf(bedfile=final_bed, vcf_out=final_vcf, sample=sample, pass_calls=False)
+        convert_metasv_bed_to_vcf(bedfile=genotyped_bed, vcf_out=final_vcf, sample=sample, pass_calls=False)
     else:
         shutil.copy(preasm_vcf, final_vcf)
         pysam.tabix_index(final_vcf, force=True, preset="vcf")

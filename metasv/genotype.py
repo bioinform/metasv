@@ -11,7 +11,7 @@ from functools import partial
 import pybedtools
 import pysam
 
-from defaults import DEFAULT_GT_WINDOW, DEFAULT_GT_ISIZE_MEAN, DEFAULT_GT_ISIZE_SD, DEFAULT_GT_NORMAL_FRAC
+from defaults import ISIZE_MEAN, ISIZE_SD, GT_WINDOW, GT_NORMAL_FRAC
 
 GT_HET = "0/1"
 GT_HOM = "1/1"
@@ -45,14 +45,12 @@ def count_reads_supporting_ref(chrom, start, end, bam_handle, isize_min, isize_m
     return total_normal_reads, total_read_bases, total_reads
 
 
-def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handle, isize_min, isize_max, window=DEFAULT_GT_WINDOW, normal_frac_threshold=DEFAULT_GT_NORMAL_FRAC):
+def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handle, isize_min, isize_max, window=GT_WINDOW, normal_frac_threshold=GT_NORMAL_FRAC):
     func_logger = logging.getLogger("%s-%s" % (genotype_interval.__name__, multiprocessing.current_process()))
 
     locations = [start, end] if sv_type != "INS" else [start]
     total_normal, total = 0, 0
     for location in locations:
-        window_start = max(0, location - window)
-        window_end = location + window
         total_normal_, total_bases_, total_ = count_reads_supporting_ref(chrom, location, location, bam_handle, isize_min, isize_max, window)
         total_normal += total_normal_
         total += total_
@@ -107,7 +105,7 @@ def genotype_intervals_callback(result, result_list):
         result_list.append(result)
 
 
-def genotype_intervals(intervals_file=None, bam=None, workdir=None, window=DEFAULT_GT_WINDOW, isize_mean=DEFAULT_GT_ISIZE_MEAN, isize_sd=DEFAULT_GT_ISIZE_SD, normal_frac_threshold=DEFAULT_GT_NORMAL_FRAC):
+def genotype_intervals(intervals_file=None, bam=None, workdir=None, window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, normal_frac_threshold=GT_NORMAL_FRAC):
     func_logger = logging.getLogger("%s-%s" % (genotype_intervals.__name__, multiprocessing.current_process()))
 
     if workdir and not os.path.isdir(workdir):
@@ -142,7 +140,7 @@ def genotype_intervals(intervals_file=None, bam=None, workdir=None, window=DEFAU
 
     return bedtool.fn
 
-def parallel_genotype_intervals(intervals_file=None, bam=None, workdir=None, nthreads=1, chromosomes=[], window=DEFAULT_GT_WINDOW, isize_mean=DEFAULT_GT_ISIZE_MEAN, isize_sd=DEFAULT_GT_ISIZE_SD, normal_frac_threshold=DEFAULT_GT_NORMAL_FRAC):
+def parallel_genotype_intervals(intervals_file=None, bam=None, workdir=None, nthreads=1, chromosomes=[], window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, normal_frac_threshold=GT_NORMAL_FRAC):
     func_logger = logging.getLogger("%s-%s" % (parallel_genotype_intervals.__name__, multiprocessing.current_process()))
     if workdir and not os.path.isdir(workdir):
         os.makedirs(workdir)
@@ -200,10 +198,10 @@ if __name__ == "__main__":
     parser.add_argument("--workdir", help="Working directory", default="work")
     parser.add_argument("--nthreads", help="Number of threads to use", default=1, type=int)
     parser.add_argument("--intervals_file", help="Final BED output from MetaSV assembly", required=True, type=file)
-    parser.add_argument("--window", help="Window to use for genotyping", default=DEFAULT_GT_WINDOW, type=int)
-    parser.add_argument("--isize_mean", help="Insert size mean", default=DEFAULT_GT_ISIZE_MEAN, type=float)
-    parser.add_argument("--isize_sd", help="Insert size standard deviation", default=DEFAULT_GT_ISIZE_SD, type=float)
-    parser.add_argument("--normal_frac", help="Minimum fraction of normal reads to call heterozygous", default=DEFAULT_GT_NORMAL_FRAC, type=float)
+    parser.add_argument("--window", help="Window to use for genotyping", default=GT_WINDOW, type=int)
+    parser.add_argument("--isize_mean", help="Insert size mean", default=ISIZE_MEAN, type=float)
+    parser.add_argument("--isize_sd", help="Insert size standard deviation", default=ISIZE_SD, type=float)
+    parser.add_argument("--normal_frac", help="Minimum fraction of normal reads to call heterozygous", default=GT_NORMAL_FRAC, type=float)
 
     args = parser.parse_args()
 

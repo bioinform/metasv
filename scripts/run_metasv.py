@@ -64,6 +64,10 @@ if __name__ == "__main__":
                         help="Enable output of merged SVs for individual tools")
     parser.add_argument("--disable_deletion_assembly", action="store_true", help="Disable assembly for deletions")
     parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
+    parser.add_argument("--gt_window", type=int, default=GT_WINDOW, help="Window for genotyping")
+    parser.add_argument("--gt_normal_frac", type=float, default=GT_NORMAL_FRAC, help="Min. fraction of reads supporting reference for genotyping")
+    parser.add_argument("--isize_mean", type=float, default=ISIZE_MEAN, help="Insert size mean")
+    parser.add_argument("--isize_sd", type=float, default=ISIZE_SD, help="Insert size standard deviation")
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     args = parser.parse_args()
@@ -81,5 +85,5 @@ if __name__ == "__main__":
                         enable_per_tool_output=args.enable_per_tool_output, min_support=args.min_ins_support,
                         min_support_frac=args.min_ins_support_frac, max_intervals=args.max_ins_intervals,
                         disable_deletion_assembly=args.disable_deletion_assembly,
-                        stop_spades_on_fail=args.stop_spades_on_fail))
+                        stop_spades_on_fail=args.stop_spades_on_fail, gt_window=args.gt_window, gt_normal_frac=args.gt_normal_frac, isize_mean=args.isize_mean, isize_sd=args.isize_sd))
 
