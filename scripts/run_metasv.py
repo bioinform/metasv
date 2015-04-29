@@ -64,12 +64,14 @@ if __name__ == "__main__":
                         help="Enable output of merged SVs for individual tools")
     parser.add_argument("--disable_deletion_assembly", action="store_true", help="Disable assembly for deletions")
     parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
-    parser.add_argument("--gt_window", type=int, default=GT_WINDOW, help="Window for genotyping")
-    parser.add_argument("--gt_normal_frac", type=float, default=GT_NORMAL_FRAC, help="Min. fraction of reads supporting reference for genotyping")
     parser.add_argument("--isize_mean", type=float, default=ISIZE_MEAN, help="Insert size mean")
     parser.add_argument("--isize_sd", type=float, default=ISIZE_SD, help="Insert size standard deviation")
     parser.add_argument("--extraction_max_read_pairs", type=int, default=EXTRACTION_MAX_READ_PAIRS, help="Maximum number of pairs to extract for assembly")
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
+
+    gt_parser = parser.add_argument_group("Genotyping options")
+    gt_parser.add_argument("--gt_window", type=int, default=GT_WINDOW, help="Window for genotyping")
+    gt_parser.add_argument("--gt_normal_frac", type=float, default=GT_NORMAL_FRAC, help="Min. fraction of reads supporting reference for genotyping")
 
     args = parser.parse_args()
 
