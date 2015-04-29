@@ -47,7 +47,7 @@ def append_contigs(src, interval, dst_fd, fn_id=0, sv_type="INS"):
 
 
 def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES_PAD, timeout=SPADES_TIMEOUT, isize_min=ISIZE_MIN,
-                      isize_max=ISIZE_MAX, stop_on_fail=False):
+                      isize_max=ISIZE_MAX, stop_on_fail=False, max_read_pairs=EXTRACTION_MAX_READ_PAIRS):
     thread_logger = logging.getLogger("%s-%s" % (run_spades_single.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(work):
@@ -67,7 +67,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
             sv_type = interval.name.split(",")[1]
 
             for fn_id, ((end1, end2), extracted_count) in enumerate(
-                    extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad)):
+                    extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad, max_read_pairs=max_read_pairs)):
                 extract_fn_name = extract_fns[fn_id].__name__
                 if extracted_count >= 5:
                     extra_opt = "--sc" if not fn_id == 0 else ""
@@ -133,7 +133,7 @@ def add_breakpoints(interval):
 
 
 def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_PAD, nthreads=1, chrs=[], max_interval_size=50000,
-                        timeout=SPADES_TIMEOUT, isize_min=ISIZE_MIN, isize_max=ISIZE_MAX, disable_deletion_assembly=False, stop_on_fail=False):
+                        timeout=SPADES_TIMEOUT, isize_min=ISIZE_MIN, isize_max=ISIZE_MAX, disable_deletion_assembly=False, stop_on_fail=False, max_read_pairs=EXTRACTION_MAX_READ_PAIRS):
     pybedtools.set_tempdir(work)
 
     bedtool = pybedtools.BedTool(bed)
@@ -150,7 +150,7 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
     for i in xrange(nthreads):
         intervals = [interval for (j, interval) in enumerate(selected_intervals) if (j % nthreads) == i]
         kwargs_dict = {"intervals": intervals, "bam": bam, "spades": spades, "work": "%s/%d" % (work, i), "pad": pad,
-                       "timeout": timeout, "isize_min": isize_min, "isize_max": isize_max, "stop_on_fail": stop_on_fail}
+                       "timeout": timeout, "isize_min": isize_min, "isize_max": isize_max, "stop_on_fail": stop_on_fail, "max_read_pairs": max_read_pairs}
         pool.apply_async(run_spades_single, kwds=kwargs_dict,
                          callback=partial(run_spades_single_callback, result_list=assembly_fastas))
 
@@ -189,6 +189,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_interval_size", help="Maximum size of interval to process", type=int, default=SPADES_MAX_INTERVAL_SIZE)
     parser.add_argument("--isize_min", help="Minimum insert size for normal pair", type=int, default=ISIZE_MIN)
     parser.add_argument("--isize_max", help="Maximum insert size for normal pair", type=int, default=ISIZE_MAX)
+    parser.add_argument("--max_read_pairs", help="Maximum read pairs to use for assembly", type=int, default=EXTRACTION_MAX_READ_PAIRS)
 
     args = parser.parse_args()
 
@@ -198,4 +199,4 @@ if __name__ == "__main__":
 
     run_spades_parallel(bam=args.bam, spades=args.spades, bed=args.bed, work=args.work, pad=args.pad,
                         nthreads=args.nthreads, chrs=args.chrs, max_interval_size=args.max_interval_size,
-                        isize_min=args.isize_min, isize_max=args.isize_max)
+                        isize_min=args.isize_min, isize_max=args.isize_max, max_read_pairs=args.max_read_pairs)

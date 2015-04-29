@@ -68,6 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("--gt_normal_frac", type=float, default=GT_NORMAL_FRAC, help="Min. fraction of reads supporting reference for genotyping")
     parser.add_argument("--isize_mean", type=float, default=ISIZE_MEAN, help="Insert size mean")
     parser.add_argument("--isize_sd", type=float, default=ISIZE_SD, help="Insert size standard deviation")
+    parser.add_argument("--extraction_max_read_pairs", type=int, default=EXTRACTION_MAX_READ_PAIRS, help="Maximum number of pairs to extract for assembly")
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     args = parser.parse_args()
@@ -85,5 +86,5 @@ if __name__ == "__main__":
                         enable_per_tool_output=args.enable_per_tool_output, min_support=args.min_ins_support,
                         min_support_frac=args.min_ins_support_frac, max_intervals=args.max_ins_intervals,
                         disable_deletion_assembly=args.disable_deletion_assembly,
-                        stop_spades_on_fail=args.stop_spades_on_fail, gt_window=args.gt_window, gt_normal_frac=args.gt_normal_frac, isize_mean=args.isize_mean, isize_sd=args.isize_sd))
+                        stop_spades_on_fail=args.stop_spades_on_fail, gt_window=args.gt_window, gt_normal_frac=args.gt_normal_frac, isize_mean=args.isize_mean, isize_sd=args.isize_sd, extraction_max_read_pairs=args.extraction_max_read_pairs))
 
