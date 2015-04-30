@@ -37,7 +37,8 @@ if __name__ == "__main__":
     reference_parser.add_argument("--reference", metavar="reference", help="Reference file", required=True)
     reference_parser.add_argument("--chromosomes",
                         help="Chromosome list to process. If unspecified, then all chromosomes will be considered.",
-                        nargs="+", default=[])    reference_parser.add_argument("--gaps", metavar="gaps", help="Gap bed file", required=False, default=None)
+                        nargs="+", default=[])
+    reference_parser.add_argument("--gaps", metavar="gaps", help="Gap bed file", required=False, default=None)
     reference_parser.add_argument("--filter_gaps", help="Filter out gaps", action="store_true", required=False)
     reference_parser.add_argument("--keep_standard_contigs", action="store_true", help="Keep only the major contigs + MT")
 
