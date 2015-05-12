@@ -3,7 +3,7 @@ import argparse
 import logging
 import multiprocessing
 import time
-from functools import partial
+from functools import partial, update_wrapper
 from defaults import EXTRACTION_MAX_READ_PAIRS
 
 import pysam
@@ -87,88 +87,68 @@ def discordant_with_normal_orientation(aln, mate, isize_min=300, isize_max=400):
 def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pairs=EXTRACTION_MAX_READ_PAIRS):
     logger = logging.getLogger("%s-%s" % (extract_read_pairs.__name__, multiprocessing.current_process()))
 
-    readnames = set()
-    examine_count = 0
-
     extract_fn_names = [extract_fn.__name__ for extract_fn in extract_fns]
     logger.info("Extracting reads from %s for region %s with padding %d using functions %s" % (
         bamname, region, pad, extract_fn_names))
-
-    bam = pysam.Samfile(bamname, "rb")
-    bammate = pysam.Samfile(bamname, "rb")
 
     chr_name = region.split(':')[0]
     chr_start = int(region.split(':')[1].split("-")[0]) - pad
     chr_end = int(region.split(':')[1].split('-')[1]) + pad
 
-    ends = [(open("%s_%s_1.fq" % (prefix, name), "w"), open("%s_%s_2.fq" % (prefix, name), "w")) for name in
-            extract_fn_names]
     selected_pair_counts = [0] * len(extract_fn_names)
+    aln_list = []
 
     start_time = time.time()
-    if chr_start >= 0:
+
+    bam = pysam.Samfile(bamname, "rb")
+    if chr_start < 0:
+        logger.error("Skipping read extraction since interval too close to chromosome beginning")
+    else:
         # Read alignments from the interval in memory and build a dictionary to get mate instead of calling bammate.mate() function
         aln_list = [aln for aln in bam.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
-        aln_dict = {}
-        for aln in aln_list:
-            if aln.qname not in aln_dict:
-                aln_dict[aln.qname] = [None, None]
-            if aln.is_read1:
-                aln_dict[aln.qname][0] = aln
-            if aln.is_read2:
-                aln_dict[aln.qname][1] = aln
 
+    aln_dict = {}
+    for aln in aln_list:
+        if aln.qname not in aln_dict:
+            aln_dict[aln.qname] = [None, None]
+        aln_dict[aln.qname][0 if aln.is_read1 else 1] = aln
+
+    aln_pairs = []
+    if len(aln_dict) <= max_read_pairs:
         logger.info("Building mate dictionary from %d reads" % len(aln_list))
-        for readname in aln_dict:
-            pairs = aln_dict[readname]
-            missing_index = 0 if pairs[0] is None else (1 if pairs[1] is None else 2)
+        for aln_pair in aln_dict.values():
+            missing_index = 0 if aln_pair[0] is None else (1 if aln_pair[1] is None else 2)
             if missing_index < 2:
                 mate = None
                 try:
-                    mate = bammate.mate(pairs[1-missing_index])
+                    mate = bam.mate(aln_pair[1-missing_index])
                 except ValueError:
                     pass
                 if mate is not None:
-                    pairs[missing_index] = mate
-
-        for aln in aln_list:
-            readname = aln.qname
-            if readname not in readnames:
-                mate = aln_dict[readname][1 if aln.is_read1 else 0]
-
-                if mate is None:
-                    continue
-
-                examine_count += 1
-                if examine_count > max_read_pairs:
-                    logger.error("Too many reads encountered. Skipping assembly")
-                    selected_pair_counts = [0] * len(extract_fn_names)
-                    break
-
-                for fn_index, extract_fn in enumerate(extract_fns):
-                    if extract_fn(aln, mate):
-                        first = aln if aln.is_read1 else mate
-                        second = mate if aln.is_read1 else aln
-
-                        end1 = ends[fn_index][0]
-                        end2 = ends[fn_index][1]
-
-                        write_read(end1, first)
-                        write_read(end2, second)
-
-                        selected_pair_counts[fn_index] += 1
-                readnames.add(readname)
+                    aln_pair[missing_index] = mate
+                    aln_pairs.append(aln_pair)
+            else:
+                aln_pairs.append(aln_pair)
     else:
-        logger.error("Skipping read extraction since interval too close to chromosome beginning")
+        logger.info("Too many reads encountered. Skipping read extraction.")
 
     bam.close()
-    bammate.close()
+
+    ends = [(open("%s_%s_1.fq" % (prefix, name), "w"), open("%s_%s_2.fq" % (prefix, name), "w")) for name in
+            extract_fn_names]
+    for first, second in aln_pairs:
+        for fn_index, extract_fn in enumerate(extract_fns):
+            if extract_fn(first, second):
+                write_read(ends[fn_index][0], first)
+                write_read(ends[fn_index][1], second)
+
+                selected_pair_counts[fn_index] += 1
 
     for end1, end2 in ends:
         end1.close()
         end2.close()
 
-    logger.info("Examined %d pairs in %g seconds" % (examine_count, time.time() - start_time))
+    logger.info("Examined %d pairs in %g seconds" % (len(aln_pairs), time.time() - start_time))
     logger.info("Extraction counts %s" % (zip(extract_fn_names, selected_pair_counts)))
 
     return zip([(end[0].name, end[1].name) for end in ends], selected_pair_counts)
