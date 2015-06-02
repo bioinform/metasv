@@ -117,6 +117,10 @@ class BreakDancerRecord:
         if self.sv_type not in valid_breakdancer_svs:
             return None
 
+        if self.chr1 != self.chr2:
+            logger.error("Bad entry: " + repr(self))
+            return None
+
         if self.sv_type == "DEL" or self.sv_type == "INV":
             return SVInterval(self.chr1,
                               self.pos1 + 1,
@@ -142,7 +146,12 @@ class BreakDancerRecord:
         else:
             logger.error("Bad SV type: " + repr(self))
 
+        return None
+
     def to_vcf_record(self, sample):
+        if self.chr1 != self.chr2:
+            return None
+
         alt = ["<%s>" % self.sv_type]
         sv_len = -self.sv_len if self.sv_type == "DEL" else self.sv_len
         info = {"SVLEN": sv_len,
