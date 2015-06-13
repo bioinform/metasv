@@ -1,5 +1,5 @@
 from svregion import *
-
+import re
 
 class SpadesContig:
     def __init__(self, name="", sequence=None):
