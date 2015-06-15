@@ -1,6 +1,6 @@
 from svregion import *
 import re
-
+pattern = re.compile(r'^(.+)_(\d+)_(\d+)_(INS|DEL)_\d+_NODE_\d+_length_(\d+)_cov_(\d*\.\d+|\d+)')
 class SpadesContig:
     def __init__(self, name="", sequence=None):
         if sequence is not None:
@@ -8,7 +8,7 @@ class SpadesContig:
         self.parse_name(name)
 
     def parse_name(self, name):
-        name_match = re.search(r'^(.+)_(\d+)_(\d+)_(INS|DEL)_\d+_NODE_\d+_length_(\d+)_cov_(\d+)',name)
+        name_match = pattern.search(name)
 
         self.sv_region = SVRegion(name_match.group(1), int(name_match.group(2)), name_match.group(1), int(name_match.group(3)))
         self.sv_type = name_match.group(4)
