@@ -66,9 +66,16 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
 
             sv_type = interval.name.split(",")[1]
 
-            for fn_id, ((end1, end2), extracted_count) in enumerate(
-                    extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad, max_read_pairs=max_read_pairs)):
+            extraction_counts = extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad, max_read_pairs=max_read_pairs)
+            all_pair_count = extraction_counts[0][1]
+
+            for fn_id, ((end1, end2), extracted_count) in enumerate(extraction_counts):
                 extract_fn_name = extract_fns[fn_id].__name__
+
+                if fn_id > 0 and extracted_count == all_pair_count:
+                    thread_logger.info("Skipping assembly from %s since read count same as all_pairs" % extract_fn_name)
+                    continue
+
                 if extracted_count >= 5:
                     extra_opt = "--sc" if not fn_id == 0 else ""
                     spades_log_fd.write("Running spades for interval %s with extraction function %s\n" % (str(interval).strip(), extract_fn_name))
