@@ -321,7 +321,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         assembly_bed = merged_bed
 
         # this does the improved assembly location finder with softclipped reads
-        if boost_ins:
+        if boost_ins and "INS" in svs_to_report:
             logger.info("Generating intervals for insertions")
             assembly_bed = parallel_generate_sc_intervals([bam.name], list(contig_whitelist), merged_bed, workdir,
                                                           num_threads=num_threads, min_support=min_support,
