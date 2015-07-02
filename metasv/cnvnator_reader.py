@@ -64,6 +64,9 @@ class CNVnatorRecord:
         return str(self.__dict__)
 
     def to_sv_interval(self):
+        if self.sv_type not in CNVnatorReader.svs_supported:
+            return None
+
         return SVInterval(self.chromosome,
                           self.start,
                           self.end,
@@ -101,10 +104,15 @@ class CNVnatorRecord:
 
 
 class CNVnatorReader:
-    def __init__(self, file_name, reference_handle=None):
+    svs_supported = set(["DEL", "DUP"])
+
+    def __init__(self, file_name, reference_handle=None, svs_to_report=None):
         logger.info("File is " + file_name)
         self.file_fd = open(file_name)
         self.reference_handle = reference_handle
+        self.svs_supported = CNVnatorReader.svs_supported
+        if svs_to_report is not None:
+            self.svs_supported &= set(svs_to_report)
 
     def __iter__(self):
         return self
@@ -113,4 +121,6 @@ class CNVnatorReader:
         while True:
             line = self.file_fd.next()
             if line[0] != "#":
-                return CNVnatorRecord(line.strip())
+                record = CNVnatorRecord(line.strip())
+                if record.sv_type in self.svs_supported:
+                    return record

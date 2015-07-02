@@ -226,6 +226,9 @@ class PindelRecord:
 
     def to_sv_interval(self):
         sv_type = PINDEL_TO_SV_TYPE[self.sv_type]
+        if sv_type not in PindelReader.svs_supported:
+            return None
+
         if sv_type != "INS":
             return SVInterval(self.chromosome,
                               self.start_pos,
@@ -275,10 +278,15 @@ class PindelRecord:
 
 
 class PindelReader:
-    def __init__(self, file_name, reference_handle=None):
+    svs_supported = set(["DEL", "INS", "DUP", "INV"])
+
+    def __init__(self, file_name, reference_handle=None, svs_to_report=None):
         logger.info("File is " + str(file_name))
         self.file_fd = open(file_name) if file_name is not None else sys.stdin
         self.reference_handle = reference_handle
+        self.svs_supported = PindelReader.svs_supported
+        if svs_to_report is not None:
+            self.svs_supported &= set(svs_to_report)
 
     def __iter__(self):
         return self
@@ -287,5 +295,6 @@ class PindelReader:
         while True:
             line = self.file_fd.next()
             if line.find("ChrID") >= 1:
-                return PindelRecord(line.strip(), self.reference_handle)
-
+                record = PindelRecord(line.strip(), self.reference_handle)
+                if PINDEL_TO_SV_TYPE[record.sv_type] in self.svs_supported:
+                    return record
