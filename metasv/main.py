@@ -37,7 +37,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=MIN_SV_LENGTH, inswiggle=INS_WIGGLE,
                enable_per_tool_output=False, min_support=MIN_SUPPORT,
                min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS, disable_deletion_assembly=False, stop_spades_on_fail=False,
-               gt_window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, gt_normal_frac=GT_NORMAL_FRAC, extraction_max_read_pairs=EXTRACTION_MAX_READ_PAIRS):
+               gt_window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, gt_normal_frac=GT_NORMAL_FRAC, extraction_max_read_pairs=EXTRACTION_MAX_READ_PAIRS,
+               svs_to_report=SVS_SUPPORTED):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -127,7 +128,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         intervals[toolname] = defaultdict(list)
 
         for native_file in nativename:
-            for record in svReader(native_file):
+            for record in svReader(native_file, svs_to_report=svs_to_report):
                 interval = record.to_sv_interval()
 
                 if not interval:
@@ -170,7 +171,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
         for vcffile in vcf_list:
             load_intervals(vcffile, intervals[toolname], gap_intervals, include_intervals, toolname, contig_whitelist,
-                           minsvlen=minsvlen, wiggle=wiggle, inswiggle=inswiggle)
+                           minsvlen=minsvlen, wiggle=wiggle, inswiggle=inswiggle, svs_to_report=svs_to_report)
         sv_types |= set(intervals[toolname].keys())
 
     logger.info("SV types are %s" % (str(sv_types)))

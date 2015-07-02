@@ -79,6 +79,7 @@ if __name__ == "__main__":
     gt_parser.add_argument("--gt_normal_frac", type=float, default=GT_NORMAL_FRAC, help="Min. fraction of reads supporting reference for genotyping")
 
     out_parser = parser.add_argument_group("Output options")
+    out_parser.add_argument("--svs_to_report", nargs="+", help="SV types to report", default=SVS_SUPPORTED)
     out_parser.add_argument("--enable_per_tool_output", action="store_true",
                         help="Enable output of merged SVs for individual tools")
 
@@ -105,5 +106,5 @@ if __name__ == "__main__":
                         enable_per_tool_output=args.enable_per_tool_output, min_support=args.min_ins_support,
                         min_support_frac=args.min_ins_support_frac, max_intervals=args.max_ins_intervals,
                         disable_deletion_assembly=args.disable_deletion_assembly,
-                        stop_spades_on_fail=args.stop_spades_on_fail, gt_window=args.gt_window, gt_normal_frac=args.gt_normal_frac, isize_mean=args.isize_mean, isize_sd=args.isize_sd, extraction_max_read_pairs=args.extraction_max_read_pairs))
+                        stop_spades_on_fail=args.stop_spades_on_fail, gt_window=args.gt_window, gt_normal_frac=args.gt_normal_frac, isize_mean=args.isize_mean, isize_sd=args.isize_sd, extraction_max_read_pairs=args.extraction_max_read_pairs, svs_to_report=args.svs_to_report))
 
