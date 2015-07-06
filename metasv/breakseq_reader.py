@@ -8,7 +8,6 @@ from sv_interval import SVInterval
 
 logger = logging.getLogger(__name__)
 
-valid_svs = set(["DEL", "INS"])
 tool_name = "BreakSeq"
 source = set([tool_name])
 sv_name_dict = {"Deletion": "DEL", "Insertion": "INS", "Inversion": "INV"}
@@ -45,7 +44,7 @@ class BreakSeqRecord:
         return "<" + self.__class__.__name__ + " " + str(self.__dict__) + ">"
 
     def to_sv_interval(self):
-        if self.sv_type not in valid_svs:
+        if self.sv_type not in BreakSeqReader.svs_supported:
             return None
 
         return SVInterval(self.chromosome,
@@ -80,18 +79,26 @@ class BreakSeqRecord:
 
 
 class BreakSeqReader:
-    def __init__(self, file_name, reference_handle=None):
+    svs_supported = set(["DEL", "INS"])
+
+    def __init__(self, file_name, reference_handle=None, svs_to_report=None):
         logger.info("File is " + str(file_name))
         self.file_fd = open(file_name) if file_name is not None else sys.stdin
         self.reference_handle = reference_handle
+        self.svs_supported = BreakSeqReader.svs_supported
+        if svs_to_report is not None:
+            self.svs_supported &= set(svs_to_report)
 
     def __iter__(self):
         return self
 
     def next(self):
         while True:
-            line = self.file_fd.next()
-            if line[0] != "#":
-                return BreakSeqRecord(line.strip())
-            else:
-                continue
+            line = self.file_fd.next().strip()
+            if line:
+                if line[0] != "#":
+                    record = BreakSeqRecord(line)
+                    if record.sv_type in self.svs_supported:
+                        return record
+                else:
+                    continue

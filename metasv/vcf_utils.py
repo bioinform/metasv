@@ -3,6 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from sv_interval import *
+from defaults import SVS_SUPPORTED
 import pysam
 
 
@@ -59,7 +60,7 @@ def get_gt(gt, fmt):
 
 
 def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[], source=None, contig_whitelist=[],
-                   minsvlen=50, wiggle=100, inswiggle=100):
+                   minsvlen=50, wiggle=100, inswiggle=100, svs_to_report=SVS_SUPPORTED):
     if not os.path.isfile(in_vcf): return intervals
     logger.info("Loading SV intervals from %s" % in_vcf)
 
@@ -134,6 +135,8 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                 vcf_record.POS += 1
             interval = SVInterval(vcf_record.CHROM, vcf_record.POS, int(vcf_record.INFO["END"]), source, sv_type, svlen,
                                   sources=set([source]), wiggle=wiggle, gt=gt)
+        if interval.sv_type not in svs_to_report:
+            continue
         if interval_overlaps_interval_list(interval, gap_intervals):
             logger.warn("Skipping " + str(interval) + " due to overlap with gaps")
             continue

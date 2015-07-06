@@ -33,11 +33,16 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                breakseq_vcf=[], breakseq_native=[], cnvnator_vcf=[], cnvnator_native=[], gatk_vcf=[], gaps=None,
                filter_gaps=False,
                keep_standard_contigs=False,
-               wiggle=WIGGLE, overlap_ratio=OVERLAP_RATIO, workdir="work", outdir="out", boost_ins=False, bam=None, chromosomes=[],
-               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=MIN_SV_LENGTH, inswiggle=INS_WIGGLE,
+               wiggle=WIGGLE, overlap_ratio=OVERLAP_RATIO, workdir="work", outdir="out", boost_ins=False, bam=None,
+               chromosomes=[],
+               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=MIN_SV_LENGTH,
+               inswiggle=INS_WIGGLE,
                enable_per_tool_output=False, min_support=MIN_SUPPORT,
-               min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS, disable_deletion_assembly=False, stop_spades_on_fail=False,
-               gt_window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, gt_normal_frac=GT_NORMAL_FRAC, extraction_max_read_pairs=EXTRACTION_MAX_READ_PAIRS):
+               min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS, disable_deletion_assembly=False,
+               stop_spades_on_fail=False,
+               gt_window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, gt_normal_frac=GT_NORMAL_FRAC,
+               extraction_max_read_pairs=EXTRACTION_MAX_READ_PAIRS,
+               svs_to_report=SVS_SUPPORTED):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -127,7 +132,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         intervals[toolname] = defaultdict(list)
 
         for native_file in nativename:
-            for record in svReader(native_file):
+            for record in svReader(native_file, svs_to_report=svs_to_report):
                 interval = record.to_sv_interval()
 
                 if not interval:
@@ -170,7 +175,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
         for vcffile in vcf_list:
             load_intervals(vcffile, intervals[toolname], gap_intervals, include_intervals, toolname, contig_whitelist,
-                           minsvlen=minsvlen, wiggle=wiggle, inswiggle=inswiggle)
+                           minsvlen=minsvlen, wiggle=wiggle, inswiggle=inswiggle, svs_to_report=svs_to_report)
         sv_types |= set(intervals[toolname].keys())
 
     logger.info("SV types are %s" % (str(sv_types)))
@@ -320,18 +325,22 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         assembly_bed = merged_bed
 
         # this does the improved assembly location finder with softclipped reads
-        if boost_ins:
+        if boost_ins and "INS" in svs_to_report:
             logger.info("Generating intervals for insertions")
             assembly_bed = parallel_generate_sc_intervals([bam.name], list(contig_whitelist), merged_bed, workdir,
                                                           num_threads=num_threads, min_support=min_support,
-                                                          min_support_frac=min_support_frac, max_intervals=max_intervals)
+                                                          min_support_frac=min_support_frac,
+                                                          max_intervals=max_intervals)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
         logger.info("Will run assembly now")
 
         assembled_fasta, ignored_bed = run_spades_parallel(bam=bam.name, spades=spades, bed=assembly_bed,
                                                            work=spades_tmpdir, pad=SPADES_PAD, nthreads=num_threads,
-                                                           chrs=list(contig_whitelist), disable_deletion_assembly=disable_deletion_assembly, stop_on_fail=stop_spades_on_fail, max_read_pairs=extraction_max_read_pairs)
+                                                           chrs=list(contig_whitelist),
+                                                           disable_deletion_assembly=disable_deletion_assembly,
+                                                           stop_on_fail=stop_spades_on_fail,
+                                                           max_read_pairs=extraction_max_read_pairs)
         breakpoints_bed = run_age_parallel(intervals_bed=assembly_bed, reference=reference, assembly=assembled_fasta,
                                            pad=AGE_PAD, age=age, chrs=list(contig_whitelist), nthreads=num_threads,
                                            min_contig_len=AGE_MIN_CONTIG_LENGTH, age_workdir=age_tmpdir)
@@ -344,7 +353,10 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         else:
             pybedtools.BedTool(breakpoints_bed).saveas(final_bed)
 
-        genotyped_bed = parallel_genotype_intervals(final_bed, bam.name, workdir=os.path.join(workdir, "genotyping"), nthreads=num_threads, chromosomes=list(contig_whitelist), window=gt_window, isize_mean=isize_mean, isize_sd=isize_sd, normal_frac_threshold=gt_normal_frac)
+        genotyped_bed = parallel_genotype_intervals(final_bed, bam.name, workdir=os.path.join(workdir, "genotyping"),
+                                                    nthreads=num_threads, chromosomes=list(contig_whitelist),
+                                                    window=gt_window, isize_mean=isize_mean, isize_sd=isize_sd,
+                                                    normal_frac_threshold=gt_normal_frac)
 
         logger.info("Output final VCF file")
 

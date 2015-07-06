@@ -57,7 +57,6 @@ Real SV breakpoints are expected to reside within the predicted boundaries with 
 
 '''
 
-valid_breakdancer_svs = set(["DEL", "INS", "INV"])
 breakdancer_name = "BreakDancer"
 breakdancer_source = set(["BreakDancer"])
 
@@ -114,7 +113,7 @@ class BreakDancerRecord:
         return "<" + self.__class__.__name__ + " " + str(self.__dict__) + ">"
 
     def to_sv_interval(self):
-        if self.sv_type not in valid_breakdancer_svs:
+        if self.sv_type not in BreakDancerReader.svs_supported:
             return None
 
         if self.chr1 != self.chr2:
@@ -180,22 +179,29 @@ class BreakDancerRecord:
 
 
 class BreakDancerReader:
-    def __init__(self, file_name, reference_handle=None):
+    svs_supported = set(["DEL", "INS", "INV"])
+    def __init__(self, file_name, reference_handle=None, svs_to_report=None):
         logger.info("File is " + str(file_name))
         self.file_fd = open(file_name) if file_name is not None else sys.stdin
         self.header = BreakDancerHeader()
         self.reference_handle = reference_handle
+        self.svs_supported = BreakDancerReader.svs_supported
+        if svs_to_report is not None:
+            self.svs_supported &= set(svs_to_report)
 
     def __iter__(self):
         return self
 
     def next(self):
         while True:
-            line = self.file_fd.next()
-            if line[0] != "#":
-                return BreakDancerRecord(line.strip())
-            else:
-                self.header.parse_header_line(line.strip())
+            line = self.file_fd.next().strip()
+            if line:
+                if line[0] != "#":
+                    record = BreakDancerRecord(line)
+                    if record.sv_type in self.svs_supported:
+                        return record
+                else:
+                    self.header.parse_header_line(line)
 
     def get_header(self):
         return self.header
