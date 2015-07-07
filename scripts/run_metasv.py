@@ -67,6 +67,11 @@ if __name__ == "__main__":
     insertion_parser = parser.add_argument_group("Insertion detection options")
     insertion_parser.add_argument("--boost_ins", help="Use soft-clips for improving insertion detection",
                                   action="store_true")
+    insertion_parser.add_argument("--min_avg_base_qual", help="Minimum average base quality",
+                                  default=SC_MIN_AVG_BASE_QUAL, type=int)
+    insertion_parser.add_argument("--min_mapq", help="Minimum MAPQ", default=SC_MIN_MAPQ, type=int)
+    insertion_parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=SC_MIN_SOFT_CLIP, type=int)
+    insertion_parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=SC_MAX_SOFT_CLIP, type=int)
     insertion_parser.add_argument("--min_ins_support",
                                   help="Minimum read support for calling insertions using soft-clips",
                                   type=int, default=MIN_SUPPORT)
