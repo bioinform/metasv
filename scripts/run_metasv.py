@@ -126,4 +126,6 @@ if __name__ == "__main__":
                         disable_deletion_assembly=args.disable_deletion_assembly,
                         stop_spades_on_fail=args.stop_spades_on_fail, gt_window=args.gt_window,
                         gt_normal_frac=args.gt_normal_frac, isize_mean=args.isize_mean, isize_sd=args.isize_sd,
-                        extraction_max_read_pairs=args.extraction_max_read_pairs, svs_to_report=args.svs_to_report))
+                        extraction_max_read_pairs=args.extraction_max_read_pairs, svs_to_report=args.svs_to_report,
+                        min_mapq=args.min_mapq, min_avg_base_qual=args.min_avg_base_qual,
+                        min_soft_clip=args.min_soft_clip, max_soft_clip=args.max_soft_clip))
