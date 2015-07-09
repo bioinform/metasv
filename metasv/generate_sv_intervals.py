@@ -42,7 +42,7 @@ def is_discordant(aln):
     return 200 > abs(aln.tlen) > 0
 
 
-def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_soft_clip=50):
+def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_soft_clip=50, max_nm=10, min_matches=50):
     if aln.is_duplicate:
         return False
     if aln.is_unmapped:
@@ -53,6 +53,12 @@ def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, m
         return False
 
     soft_clips = [length for (op, length) in aln.cigar if op == 4]
+    ins_lengths = sum([0] + [length for (op, length) in aln.cigar if op == 1])
+    mismatches = int(aln.opt("XM")) if "XM" in aln.tags else 0
+    matches = aln.alen - ins_lengths - mismatches
+    nm = int(aln.opt("NM"))
+    if nm > max_nm or matches < min_matches:
+        return False
     if len(soft_clips) != 1:
         return False
     soft_clip = soft_clips[0]
@@ -104,7 +110,7 @@ def generate_sc_intervals_callback(result, result_list):
 
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP,
                           max_soft_clip=SC_MAX_SOFT_CLIP, pad=SC_PAD, min_support=MIN_SUPPORT, max_isize=1000000000,
-                          min_support_frac=MIN_SUPPORT_FRAC):
+                          min_support_frac=MIN_SUPPORT_FRAC, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
@@ -122,7 +128,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             if abs(aln.tlen) > max_isize:
                 continue
             if not is_good_candidate(aln, min_avg_base_qual=min_avg_base_qual, min_mapq=min_mapq,
-                                     min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip): continue
+                                     min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip, max_nm=max_nm, min_matches=min_matches): continue
             interval = get_interval(aln, pad=pad)
             soft_clip_location = sum(interval) / 2
             strand = "-" if aln.is_reverse else "+"
@@ -172,7 +178,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
 def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_threads=1, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL,
                                    min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP, pad=SC_PAD,
-                                   min_support=MIN_SUPPORT, min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS):
+                                   min_support=MIN_SUPPORT, min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
     func_logger = logging.getLogger(
         "%s-%s" % (parallel_generate_sc_intervals.__name__, multiprocessing.current_process()))
 
@@ -204,7 +210,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         args_list = [bam, chromosome, process_workdir]
         kwargs_dict = {"min_avg_base_qual": min_avg_base_qual, "min_mapq": min_mapq, "min_soft_clip": min_soft_clip,
                        "max_soft_clip": max_soft_clip, "pad": pad, "min_support": min_support,
-                       "min_support_frac": min_support_frac}
+                       "min_support_frac": min_support_frac, "max_nm": max_nm, "min_matches": min_matches}
         pool.apply_async(generate_sc_intervals, args=args_list, kwds=kwargs_dict,
                          callback=partial(generate_sc_intervals_callback, result_list=bed_files))
 
@@ -223,7 +229,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     for bed_file in bed_files[1:]:
         bedtool = bedtool.cat(pybedtools.BedTool(bed_file), postmerge=False)
 
-    bedtool = bedtool.moveto(os.path.join(workdir, "all_intervals.bed"))
+    bedtool = bedtool.sort().moveto(os.path.join(workdir, "all_intervals.bed"))
 
     func_logger.info("Selecting the top %d intervals based on normalized read support" % max_intervals)
     top_intervals_all_cols_file = os.path.join(workdir, "top_intervals_all_cols.bed")
@@ -267,6 +273,8 @@ if __name__ == "__main__":
     parser.add_argument("--min_mapq", help="Minimum MAPQ", default=SC_MIN_MAPQ, type=int)
     parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=SC_MIN_SOFT_CLIP, type=int)
     parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=SC_MAX_SOFT_CLIP, type=int)
+    parser.add_argument("--max_nm", help="Maximum number of edits", default=SC_MAX_NM, type=int)
+    parser.add_argument("--min_matches", help="Minimum number of matches", default=SC_MIN_MATCHES, type=int)
     parser.add_argument("--pad", help="Padding on both sides of the candidate locations", default=SC_PAD, type=int)
     parser.add_argument("--min_support", help="Minimum supporting reads", default=MIN_SUPPORT, type=int)
     parser.add_argument("--min_support_frac", help="Minimum fraction of total reads for interval",
@@ -282,4 +290,4 @@ if __name__ == "__main__":
                                    num_threads=args.num_threads, min_avg_base_qual=args.min_avg_base_qual,
                                    min_mapq=args.min_mapq, min_soft_clip=args.min_soft_clip,
                                    max_soft_clip=args.max_soft_clip, pad=args.pad, min_support=args.min_support,
-                                   min_support_frac=args.min_support_frac, max_intervals=args.max_intervals)
+                                   min_support_frac=args.min_support_frac, max_intervals=args.max_intervals, max_nm=args.max_nm, min_matches=args.min_matches)
