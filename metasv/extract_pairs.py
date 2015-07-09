@@ -8,7 +8,6 @@ from defaults import EXTRACTION_MAX_READ_PAIRS
 
 import pysam
 
-
 compl_table = [chr(i) for i in xrange(256)]
 compl_table[ord('A')] = 'T'
 compl_table[ord('C')] = 'G'
@@ -32,37 +31,6 @@ def write_read(fd, aln):
 
     sequence, quality = get_sequence_quality(aln)
     fd.write("@%s/%d\n%s\n+\n%s\n" % (aln.qname, end_id, sequence, quality))
-
-
-# Returns true if the alignment is soft of hard clipped
-# on both sides or if it is unmapped
-def is_clipped_both(aln):
-    if aln.cigar is None:
-        return True
-    clipped_left = aln.cigar[0][0] == 4 or aln.cigar[0][0] == 5
-    clipped_right = aln.cigar[-1][0] == 4 or aln.cigar[-1][0] == 5
-    return clipped_left and clipped_right
-
-
-# this is the criteria to keep a read
-def keep_read(aln, aln_chr, chromosome, start, end):
-    return aln_chr == chromosome and (
-        not is_clipped_both(aln)) and aln.mapq >= 40 and start <= aln.pos < end
-
-
-# this function will determine whether the pair is kept
-# at all (all or some)
-def keep_pair(aln, mate, aln_chr, mate_chr, chromosome, start, end):
-    if keep_read(aln, aln_chr, chromosome, start, end):
-        return True
-    if keep_read(mate, mate_chr, chromosome, start, end):
-        return True
-    return False
-
-
-def is_all(aln, mate):
-    return (
-        (aln.cigarstring == '100M' and mate.cigarstring == '100M') and ( aln.is_proper_pair and mate.is_proper_pair))
 
 
 def all_pair(aln, mate):
@@ -121,7 +89,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
             if missing_index < 2:
                 mate = None
                 try:
-                    mate = bam.mate(aln_pair[1-missing_index])
+                    mate = bam.mate(aln_pair[1 - missing_index])
                 except ValueError:
                     pass
                 if mate is not None:
@@ -168,7 +136,8 @@ if __name__ == "__main__":
     parser.add_argument("--pad", help="Padding to apply on both sides of the interval", type=int, default=0)
     parser.add_argument("--isize_min", help="Minimum insert size", default=200, type=int)
     parser.add_argument("--isize_max", help="Maximum insert size", default=500, type=int)
-    parser.add_argument("--max_read_pairs", help="Maximum read pairs to extract for an interval", default=EXTRACTION_MAX_READ_PAIRS, type=int)
+    parser.add_argument("--max_read_pairs", help="Maximum read pairs to extract for an interval",
+                        default=EXTRACTION_MAX_READ_PAIRS, type=int)
 
     args = parser.parse_args()
 
@@ -180,4 +149,5 @@ if __name__ == "__main__":
         extract_fn = partial(discordant, isize_min=args.isize_min, isize_max=args.isize_max)
         update_wrapper(extract_fn, discordant)
 
-    extract_read_pairs(args.bam, args.region, args.prefix, [extract_fn], pad=args.pad, max_read_pairs=args.max_read_pairs)
+    extract_read_pairs(args.bam, args.region, args.prefix, [extract_fn], pad=args.pad,
+                       max_read_pairs=args.max_read_pairs)

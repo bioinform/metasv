@@ -43,7 +43,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                gt_window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, gt_normal_frac=GT_NORMAL_FRAC,
                extraction_max_read_pairs=EXTRACTION_MAX_READ_PAIRS,
                svs_to_report=SVS_SUPPORTED, min_mapq=SC_MIN_MAPQ, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL,
-               min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
+               min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP, max_nm=SC_MAX_NM,
+               min_matches=SC_MIN_MATCHES):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -183,22 +184,11 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     tool_merged_intervals = {}
     final_intervals = []
 
-    bd_out = os.path.join(outdir, "breakdancer.vcf")
-    pindel_out = os.path.join(outdir, "pindel.vcf")
-    cnvnator_out = os.path.join(outdir, "cnvnator.vcf")
-    breakseq_out = os.path.join(outdir, "breakseq.vcf")
-
-    vcf_out_list = [("BreakDancer", bd_out),
-                    ("Pindel", pindel_out),
-                    ("CNVnator", cnvnator_out),
-                    ("BreakSeq", breakseq_out)]
-
     # This will just output per-tool VCFs, no intra-tool merging is done yet
     if enable_per_tool_output:
         logger.info("Output per-tool VCFs")
-        for toolname, tool_out in vcf_out_list:
-            if tool_out is None or toolname not in intervals:
-                continue
+        for toolname in intervals:
+            tool_out = os.path.join(outdir, "%s.vcf" % (toolname.lower()))
 
             logger.info("Outputting single tool VCF for %s" % (str(toolname)))
             vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))

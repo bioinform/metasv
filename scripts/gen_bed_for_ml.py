@@ -145,7 +145,7 @@ details = [("CN_EVAL1", -1),
            ("AA_DISCORDANT_HIGH", -1),
            ("AA_DISCORDANT_LOW", -1),
            ("AA_END_PROP_ALIGNED", -1)
-]
+           ]
 
 outf.write("#" + "\t".join(features))
 
@@ -188,7 +188,7 @@ for line in all_vcf:
     # NUM_METHODS
     out_vec.append(str(len(method_ll)))
 
-    #RP,RD,SR,JT,AS
+    # RP,RD,SR,JT,AS
 
     for m in methods:
         if m in method_ll:
@@ -205,7 +205,3 @@ for line in all_vcf:
     outf.write('\t'.join(out_vec) + '\n')
 
 outf.close()
-
-
-
-

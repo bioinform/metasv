@@ -6,7 +6,6 @@ import vcf
 
 from sv_interval import SVInterval
 
-
 logger = logging.getLogger(__name__)
 
 mydir = os.path.dirname(os.path.realpath(__file__))
