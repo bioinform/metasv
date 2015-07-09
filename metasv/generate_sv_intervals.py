@@ -229,7 +229,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     for bed_file in bed_files[1:]:
         bedtool = bedtool.cat(pybedtools.BedTool(bed_file), postmerge=False)
 
-    bedtool = bedtool.moveto(os.path.join(workdir, "all_intervals.bed"))
+    bedtool = bedtool.sort().moveto(os.path.join(workdir, "all_intervals.bed"))
 
     func_logger.info("Selecting the top %d intervals based on normalized read support" % max_intervals)
     top_intervals_all_cols_file = os.path.join(workdir, "top_intervals_all_cols.bed")
