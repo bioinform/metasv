@@ -33,37 +33,6 @@ def write_read(fd, aln):
     fd.write("@%s/%d\n%s\n+\n%s\n" % (aln.qname, end_id, sequence, quality))
 
 
-# Returns true if the alignment is soft of hard clipped
-# on both sides or if it is unmapped
-def is_clipped_both(aln):
-    if aln.cigar is None:
-        return True
-    clipped_left = aln.cigar[0][0] == 4 or aln.cigar[0][0] == 5
-    clipped_right = aln.cigar[-1][0] == 4 or aln.cigar[-1][0] == 5
-    return clipped_left and clipped_right
-
-
-# this is the criteria to keep a read
-def keep_read(aln, aln_chr, chromosome, start, end):
-    return aln_chr == chromosome and (
-        not is_clipped_both(aln)) and aln.mapq >= 40 and start <= aln.pos < end
-
-
-# this function will determine whether the pair is kept
-# at all (all or some)
-def keep_pair(aln, mate, aln_chr, mate_chr, chromosome, start, end):
-    if keep_read(aln, aln_chr, chromosome, start, end):
-        return True
-    if keep_read(mate, mate_chr, chromosome, start, end):
-        return True
-    return False
-
-
-def is_all(aln, mate):
-    return (
-        (aln.cigarstring == '100M' and mate.cigarstring == '100M') and (aln.is_proper_pair and mate.is_proper_pair))
-
-
 def all_pair(aln, mate):
     return True
 
