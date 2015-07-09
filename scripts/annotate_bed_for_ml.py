@@ -19,7 +19,6 @@ import vcf
 import pybedtools
 from pybedtools.parallel import parallel_apply
 
-
 FORMAT = '%(levelname)s %(asctime)-15s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 logger = logging.getLogger(__name__)

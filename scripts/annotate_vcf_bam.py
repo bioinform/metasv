@@ -8,6 +8,7 @@ import random
 import math
 import pysam
 
+
 def annotate_vcfs(bam, chromosomes, vcfs):
     func_logger = logging.getLogger("%s-%s" % (annotate_vcfs.__name__, multiprocessing.current_process()))
     random.seed(0)
@@ -37,7 +38,7 @@ def annotate_vcfs(bam, chromosomes, vcfs):
     first_chr = sam_file.getrname(0)
     for i in xrange(0, read_limit):
         loc = random.randint(0, 30000000)
-        alignments = sam_file.fetch(first_chr, loc, loc+1)
+        alignments = sam_file.fetch(first_chr, loc, loc + 1)
 
         curr_num = 0
         for aln in alignments:
@@ -52,8 +53,8 @@ def annotate_vcfs(bam, chromosomes, vcfs):
 
     template_list.sort()
     num_template = float(len(template_list))
-    low_bound = int(math.floor(num_template*0.05))
-    upp_bound = int(math.ceil(num_template*0.95))
+    low_bound = int(math.floor(num_template * 0.05))
+    upp_bound = int(math.ceil(num_template * 0.95))
 
     insert_count = 0
     insert_sum = 0.0
@@ -64,9 +65,9 @@ def annotate_vcfs(bam, chromosomes, vcfs):
         insert_sum += template_list[i]
         insert_sq_sum += template_list[i] * template_list[i]
 
-    mean_coverage = cover_sum/num_read
-    mean_insert_size = insert_sum/insert_count
-    sd_insert_size = math.sqrt((insert_sq_sum/insert_count) - (mean_insert_size * mean_insert_size))
+    mean_coverage = cover_sum / num_read
+    mean_insert_size = insert_sum / insert_count
+    sd_insert_size = math.sqrt((insert_sq_sum / insert_count) - (mean_insert_size * mean_insert_size))
     func_logger.info("Estimated coverage mean:      {0:.2f}".format(mean_coverage))
     func_logger.info("Estimated template size mean: {0:.2f}".format(mean_insert_size))
     func_logger.info("Estimated template size sd:   {0:.2f}".format(sd_insert_size))
@@ -81,14 +82,14 @@ def annotate_vcfs(bam, chromosomes, vcfs):
     for inVCF in vcfs:
         vcf_reader = vcf.Reader(open(inVCF.name))
         vcf_template_reader = vcf.Reader(open(inVCF.name))
-        vcf_writer = vcf.Writer(open("anno_"+inVCF.name, 'w'), vcf_template_reader)
+        vcf_writer = vcf.Writer(open("anno_" + inVCF.name, 'w'), vcf_template_reader)
         num_processed = 0
         for vcf_record in vcf_reader:
             if vcf_record.CHROM not in chromosomes:
                 continue
             num_processed += 1
             if num_processed % 100 == 0:
-                func_logger.info("{0} read from {1}".format(num_processed,inVCF.name))
+                func_logger.info("{0} read from {1}".format(num_processed, inVCF.name))
 
             # get the interval that corresponds to the SV
             if vcf_record.INFO['SVTYPE'] == 'INS':
@@ -147,22 +148,22 @@ def annotate_vcfs(bam, chromosomes, vcfs):
                             end_bases_aligned += rec.qlen
 
                 # get coverage between the breakpoints
-                vcf_record.INFO["AA_UNIQ_COV"] = (unique_coverage/num_repeat)/mean_coverage
-                vcf_record.INFO["AA_TOTAL_COV"] = (total_coverage/num_repeat)/mean_coverage
+                vcf_record.INFO["AA_UNIQ_COV"] = (unique_coverage / num_repeat) / mean_coverage
+                vcf_record.INFO["AA_TOTAL_COV"] = (total_coverage / num_repeat) / mean_coverage
 
                 # get strand bias
                 if unique_coverage > 0.0:
-                    vcf_record.INFO["AA_TOTAL_STRAND"] = (num_forward/unique_coverage - 0.5) ** 2
+                    vcf_record.INFO["AA_TOTAL_STRAND"] = (num_forward / unique_coverage - 0.5) ** 2
 
                 # get mapping quality stats
                 if total_coverage > 0.0:
-                    vcf_record.INFO["AA_PROP_REPEAT"] = unique_coverage/total_coverage
+                    vcf_record.INFO["AA_PROP_REPEAT"] = unique_coverage / total_coverage
 
                 # get clipped reads stats
                 if total_bases > 0.0:
-                    vcf_record.INFO["AA_PROP_ALIGNED"] = bases_aligned/total_bases
+                    vcf_record.INFO["AA_PROP_ALIGNED"] = bases_aligned / total_bases
                 if end_total_bases > 0.0:
-                    vcf_record.INFO["AA_END_PROP_ALIGNED"] = end_bases_aligned/end_total_bases
+                    vcf_record.INFO["AA_END_PROP_ALIGNED"] = end_bases_aligned / end_total_bases
 
                 # get discordant reads stats
                 vcf_record.INFO["AA_DISCORDANT_HIGH"] = num_discordant_high
@@ -174,8 +175,6 @@ def annotate_vcfs(bam, chromosomes, vcfs):
             vcf_writer.write_record(vcf_record)
 
         vcf_writer.close()
-
-
 
 
 if __name__ == "__main__":

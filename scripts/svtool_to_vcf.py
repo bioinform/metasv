@@ -16,7 +16,8 @@ from metasv.fasta_utils import get_contigs
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 
-tool_to_reader = {"BreakDancer": BreakDancerReader, "Pindel": PindelReader, "CNVnator": CNVnatorReader, "BreakSeq": BreakSeqReader}
+tool_to_reader = {"BreakDancer": BreakDancerReader, "Pindel": PindelReader, "CNVnator": CNVnatorReader,
+                  "BreakSeq": BreakSeqReader}
 
 
 def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname, reference, sort=False, index=False):
@@ -35,7 +36,7 @@ def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname, reference, sort=
             logger.info("Chromosomes will be sorted by the reference order")
 
     vcf_records = []
-    for tool_record in tool_to_reader[toolname](file_name, reference_handle = reference_handle):
+    for tool_record in tool_to_reader[toolname](file_name, reference_handle=reference_handle):
         vcf_record = tool_record.to_vcf_record(sample)
         if vcf_record is None:
             continue
@@ -47,7 +48,8 @@ def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname, reference, sort=
     if sort:
         if reference_contigs:
             contigs_order_dict = {contig.name: index for (index, contig) in enumerate(reference_contigs)}
-            vcf_records.sort(cmp=lambda x, y: cmp((contigs_order_dict[x.CHROM], x.POS), (contigs_order_dict[y.CHROM], y.POS)))
+            vcf_records.sort(
+                cmp=lambda x, y: cmp((contigs_order_dict[x.CHROM], x.POS), (contigs_order_dict[y.CHROM], y.POS)))
         else:
             vcf_records.sort(cmp=lambda x, y: cmp((x.CHROM, x.POS), (y.CHROM, y.POS)))
 
@@ -66,9 +68,10 @@ if __name__ == "__main__":
     parser.add_argument("--tool", help="Tool name", required=False, default="BreakDancer",
                         choices=sorted(tool_to_reader.keys()))
     parser.add_argument("--sample", help="Sample name", required=True)
-    parser.add_argument("--reference", help = "Reference FASTA")
-    parser.add_argument("--sort", action = "store_true", help = "Sort the VCF records before writing")
+    parser.add_argument("--reference", help="Reference FASTA")
+    parser.add_argument("--sort", action="store_true", help="Sort the VCF records before writing")
     parser.add_argument("--index", action="store_true", help="Tabix compress and index the output VCF")
 
     args = parser.parse_args()
-    convert_svtool_to_vcf(args.input, args.sample, args.output, args.tool, args.reference, sort=args.sort, index=args.index)
+    convert_svtool_to_vcf(args.input, args.sample, args.output, args.tool, args.reference, sort=args.sort,
+                          index=args.index)
