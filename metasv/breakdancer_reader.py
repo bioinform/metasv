@@ -6,7 +6,6 @@ import vcf
 
 from sv_interval import SVInterval
 
-
 logger = logging.getLogger(__name__)
 
 mydir = os.path.dirname(os.path.realpath(__file__))
@@ -180,6 +179,7 @@ class BreakDancerRecord:
 
 class BreakDancerReader:
     svs_supported = set(["DEL", "INS", "INV"])
+
     def __init__(self, file_name, reference_handle=None, svs_to_report=None):
         logger.info("File is " + str(file_name))
         self.file_fd = open(file_name) if file_name is not None else sys.stdin

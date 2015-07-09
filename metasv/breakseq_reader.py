@@ -5,7 +5,6 @@ import vcf
 
 from sv_interval import SVInterval
 
-
 logger = logging.getLogger(__name__)
 
 tool_name = "BreakSeq"

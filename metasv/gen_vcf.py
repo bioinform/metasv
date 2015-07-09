@@ -5,7 +5,6 @@ import argparse
 
 import pysam
 
-
 parser = argparse.ArgumentParser("Convert genotyped BreakDancer output to VCF",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--sv_file", metavar="sv_file", help="SV file", required=False, default="-")

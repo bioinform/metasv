@@ -6,7 +6,6 @@ import vcf
 
 from sv_interval import SVInterval
 
-
 logger = logging.getLogger(__name__)
 
 mydir = os.path.dirname(os.path.realpath(__file__))
@@ -254,9 +253,7 @@ class PindelRecord:
 
     def to_vcf_record(self, sample):
         alt = ["<%s>" % (PINDEL_TO_SV_TYPE[self.sv_type])]
-        info = {"SVLEN": self.sv_len,
-                "SVTYPE": PINDEL_TO_SV_TYPE[self.sv_type]
-        }
+        info = {"SVLEN": self.sv_len, "SVTYPE": PINDEL_TO_SV_TYPE[self.sv_type]}
 
         info.update(self.info)
 

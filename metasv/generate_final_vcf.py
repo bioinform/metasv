@@ -19,7 +19,8 @@ mydir = os.path.dirname(os.path.realpath(__file__))
 vcf_template = os.path.join(mydir, "resources/template.vcf")
 
 
-def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_template, sample=None, reference=None, pass_calls=True):
+def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_template, sample=None, reference=None,
+                              pass_calls=True):
     func_logger = logging.getLogger("%s" % (convert_metasv_bed_to_vcf.__name__))
 
     vcf_template_reader = vcf.Reader(open(vcf_template_file, "r"))
@@ -94,7 +95,8 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
         alt = ["<%s>" % sv_type]
         qual = "."
         sv_filter = ["PASS" if is_pass else "LowQual"]
-        info.update({"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
+        info.update(
+            {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
         sv_format = "GT"
         sample_indexes = [0]
         vcf_record = vcf.model._Record(chrom, pos, sv_id, ref, alt, qual, sv_filter, info, sv_format, sample_indexes)
@@ -131,5 +133,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    convert_metasv_bed_to_vcf(bedfile=args.bed, vcf_out=args.vcf, vcf_template_file=args.vcf_template, sample=args.sample,
+    convert_metasv_bed_to_vcf(bedfile=args.bed, vcf_out=args.vcf, vcf_template_file=args.vcf_template,
+                              sample=args.sample,
                               reference=args.reference, pass_calls=args.pass_only)

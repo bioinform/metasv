@@ -5,7 +5,6 @@ from collections import defaultdict
 
 import pybedtools
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -88,7 +87,8 @@ def get_insertion_breakpoints(age_records, intervals, window=20, start=0):
                                 breakpoint, window)]
             if both_support:
                 func_logger.info("\t\tboth_support = %s" % (str(both_support)))
-                func_logger.info("\t\tinsertion lengths = %s" % (str([age_record.insertion_length() for age_record in both_support])))
+                func_logger.info("\t\tinsertion lengths = %s" % (
+                str([age_record.insertion_length() for age_record in both_support])))
             insertion_length = max([0] + [age_record.insertion_length() for age_record in both_support])
             func_logger.info("\t\tInsertion length = %d" % insertion_length)
             breakpoints.append((breakpoint, insertion_length))

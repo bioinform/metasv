@@ -20,7 +20,6 @@ from age_parser import *
 from process_age_alignment import process_age_records
 from defaults import *
 
-
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 logger = logging.getLogger(__name__)
@@ -38,7 +37,8 @@ def run_cmd(cmd, logger, out, err):
     return retcode
 
 
-def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference=None, assembly=None, pad=AGE_PAD, age=None,
+def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference=None, assembly=None, pad=AGE_PAD,
+                   age=None,
                    age_workdir=None, timeout=AGE_TIMEOUT, keep_temp=False, myid=0):
     thread_logger = logging.getLogger("%s-%s" % (run_age_single.__name__, multiprocessing.current_process()))
 
@@ -178,7 +178,8 @@ def run_age_single_callback(result, result_list):
 
 
 def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_PAD, age=None, age_workdir=None,
-                     timeout=AGE_TIMEOUT, keep_temp=False, assembly_tool="spades", chrs=[], nthreads=1, min_contig_len=AGE_MIN_CONTIG_LENGTH,
+                     timeout=AGE_TIMEOUT, keep_temp=False, assembly_tool="spades", chrs=[], nthreads=1,
+                     min_contig_len=AGE_MIN_CONTIG_LENGTH,
                      max_region_len=AGE_MAX_REGION_LENGTH, sv_types=[]):
     func_logger = logging.getLogger("%s-%s" % (run_age_parallel.__name__, multiprocessing.current_process()))
 
@@ -267,8 +268,10 @@ if __name__ == "__main__":
     parser.add_argument("--timeout", help="Max time for assembly processes to run", type=int, default=AGE_TIMEOUT)
     parser.add_argument("--keep_temp", help="Don't delete temporary files", action="store_true")
     parser.add_argument("--assembly_tool", help="Tool used for assembly", choices=["spades", "tigra"], default="spades")
-    parser.add_argument("--min_contig_len", help="Minimum length of contig to consider", type=int, default=AGE_MIN_CONTIG_LENGTH)
-    parser.add_argument("--max_region_len", help="Maximum length of an SV interval", type=int, default=AGE_MAX_REGION_LENGTH)
+    parser.add_argument("--min_contig_len", help="Minimum length of contig to consider", type=int,
+                        default=AGE_MIN_CONTIG_LENGTH)
+    parser.add_argument("--max_region_len", help="Maximum length of an SV interval", type=int,
+                        default=AGE_MAX_REGION_LENGTH)
     parser.add_argument("--intervals_bed", help="BED file for assembly", type=file, required=True)
 
     args = parser.parse_args()

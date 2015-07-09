@@ -5,7 +5,6 @@ import argparse
 
 import pysam
 
-
 parser = argparse.ArgumentParser("Compute zygosity for SV tools output",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--bams", metavar="bams", nargs="+", help="BAMs", required=True)

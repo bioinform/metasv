@@ -43,7 +43,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                gt_window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, gt_normal_frac=GT_NORMAL_FRAC,
                extraction_max_read_pairs=EXTRACTION_MAX_READ_PAIRS,
                svs_to_report=SVS_SUPPORTED, min_mapq=SC_MIN_MAPQ, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL,
-               min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
+               min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP, max_nm=SC_MAX_NM,
+               min_matches=SC_MIN_MATCHES):
     """Invoke the MetaSV workflow.
 
     Positional arguments:

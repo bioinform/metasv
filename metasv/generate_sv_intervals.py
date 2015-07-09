@@ -27,22 +27,8 @@ def concatenate_files(files, output):
                 outfile.write(infile.read())
 
 
-def get_max_soft_clip(aln):
-    if aln.cigar is None:
-        return 0
-    return max([length for (op, length) in aln.cigar if op == 4] + [0])
-
-
-def is_good_soft_clip(aln):
-    sc = get_max_soft_clip(aln)
-    return 20 <= sc <= 50
-
-
-def is_discordant(aln):
-    return 200 > abs(aln.tlen) > 0
-
-
-def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_soft_clip=50, max_nm=10, min_matches=50):
+def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_soft_clip=50, max_nm=10,
+                      min_matches=50):
     if aln.is_duplicate:
         return False
     if aln.is_unmapped:
@@ -92,10 +78,12 @@ def merged_interval_features(feature, bam_handle):
     minus_support = len(locations) - plus_support
     locations_span = max(locations) - min(locations)
     name = "%s,INS,0,SC,%d,%d,%d,%d,%s" % (
-    base64.b64encode(json.dumps(dict())), plus_support, minus_support, locations_span, num_unique_locations, count_str)
+        base64.b64encode(json.dumps(dict())), plus_support, minus_support, locations_span, num_unique_locations,
+        count_str)
     interval_readcount = bam_handle.count(reference=feature.chrom, start=feature.start, end=feature.end)
 
-    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score, otherfields=[str(interval_readcount)])
+    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
+                               otherfields=[str(interval_readcount)])
 
 
 def coverage_filter(feature, bam_handle, min_support_frac=MIN_SUPPORT_FRAC):
@@ -108,7 +96,8 @@ def generate_sc_intervals_callback(result, result_list):
         result_list.append(result)
 
 
-def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP,
+def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
+                          min_soft_clip=SC_MIN_SOFT_CLIP,
                           max_soft_clip=SC_MAX_SOFT_CLIP, pad=SC_PAD, min_support=MIN_SUPPORT, max_isize=1000000000,
                           min_support_frac=MIN_SUPPORT_FRAC, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
@@ -128,7 +117,8 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             if abs(aln.tlen) > max_isize:
                 continue
             if not is_good_candidate(aln, min_avg_base_qual=min_avg_base_qual, min_mapq=min_mapq,
-                                     min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip, max_nm=max_nm, min_matches=min_matches): continue
+                                     min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip, max_nm=max_nm,
+                                     min_matches=min_matches): continue
             interval = get_interval(aln, pad=pad)
             soft_clip_location = sum(interval) / 2
             strand = "-" if aln.is_reverse else "+"
@@ -150,13 +140,15 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         func_logger.info("%d merged intervals" % (bedtool.count()))
 
         filtered_bed = os.path.join(workdir, "filtered_merged.bed")
-        bedtool = bedtool.filter(lambda x: int(x.score) >= min_support).each(partial(merged_interval_features, bam_handle=sam_file)).moveto(
+        bedtool = bedtool.filter(lambda x: int(x.score) >= min_support).each(
+            partial(merged_interval_features, bam_handle=sam_file)).moveto(
             filtered_bed)
         func_logger.info("%d filtered intervals" % (bedtool.count()))
 
         # Now filter based on coverage
         coverage_filtered_bed = os.path.join(workdir, "coverage_filtered_merged.bed")
-        bedtool = bedtool.filter(lambda x: float(x.fields[6]) * min_support_frac <= float(x.score)).moveto(coverage_filtered_bed)
+        bedtool = bedtool.filter(lambda x: float(x.fields[6]) * min_support_frac <= float(x.score)).moveto(
+            coverage_filtered_bed)
         func_logger.info("%d coverage filtered intervals" % (bedtool.count()))
 
         sam_file.close()
@@ -176,9 +168,12 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
     return coverage_filtered_bed
 
 
-def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_threads=1, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL,
-                                   min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP, pad=SC_PAD,
-                                   min_support=MIN_SUPPORT, min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
+def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_threads=1,
+                                   min_avg_base_qual=SC_MIN_AVG_BASE_QUAL,
+                                   min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP,
+                                   pad=SC_PAD,
+                                   min_support=MIN_SUPPORT, min_support_frac=MIN_SUPPORT_FRAC,
+                                   max_intervals=MAX_INTERVALS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
     func_logger = logging.getLogger(
         "%s-%s" % (parallel_generate_sc_intervals.__name__, multiprocessing.current_process()))
 
@@ -237,8 +232,11 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         bedtool = bedtool.saveas(top_intervals_all_cols_file)
     else:
         # Sample the top intervals
-        top_fraction_cutoff = sorted([float(interval.score) / float(interval.fields[6]) for interval in bedtool], reverse=True)[max_intervals-1]
-        bedtool = bedtool.filter(lambda x: float(x.score) / float(x.fields[6]) >= top_fraction_cutoff).moveto(top_intervals_all_cols_file)
+        top_fraction_cutoff = \
+            sorted([float(interval.score) / float(interval.fields[6]) for interval in bedtool], reverse=True)[
+                max_intervals - 1]
+        bedtool = bedtool.filter(lambda x: float(x.score) / float(x.fields[6]) >= top_fraction_cutoff).moveto(
+            top_intervals_all_cols_file)
 
     # Filter out the extra column added to simplify life later on
     bedtool = bedtool.cut(xrange(6)).saveas(os.path.join(workdir, "top_intervals.bed"))
@@ -269,7 +267,8 @@ if __name__ == "__main__":
     parser.add_argument("--chromosomes", nargs="+", help="Chromosomes", default=[])
     parser.add_argument("--workdir", help="Working directory", default="work")
     parser.add_argument("--num_threads", help="Number of threads to use", default=1, type=int)
-    parser.add_argument("--min_avg_base_qual", help="Minimum average base quality", default=SC_MIN_AVG_BASE_QUAL, type=int)
+    parser.add_argument("--min_avg_base_qual", help="Minimum average base quality", default=SC_MIN_AVG_BASE_QUAL,
+                        type=int)
     parser.add_argument("--min_mapq", help="Minimum MAPQ", default=SC_MIN_MAPQ, type=int)
     parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=SC_MIN_SOFT_CLIP, type=int)
     parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=SC_MAX_SOFT_CLIP, type=int)
@@ -280,7 +279,9 @@ if __name__ == "__main__":
     parser.add_argument("--min_support_frac", help="Minimum fraction of total reads for interval",
                         default=MIN_SUPPORT_FRAC, type=float)
     parser.add_argument("--skip_bed", help="BED regions with which no overlap should happen", type=file)
-    parser.add_argument("--max_intervals", help="Maximum number of intervals to process. Intervals are ranked by normalized read-support", type=int, default=MAX_INTERVALS)
+    parser.add_argument("--max_intervals",
+                        help="Maximum number of intervals to process. Intervals are ranked by normalized read-support",
+                        type=int, default=MAX_INTERVALS)
 
     args = parser.parse_args()
 
@@ -290,4 +291,5 @@ if __name__ == "__main__":
                                    num_threads=args.num_threads, min_avg_base_qual=args.min_avg_base_qual,
                                    min_mapq=args.min_mapq, min_soft_clip=args.min_soft_clip,
                                    max_soft_clip=args.max_soft_clip, pad=args.pad, min_support=args.min_support,
-                                   min_support_frac=args.min_support_frac, max_intervals=args.max_intervals, max_nm=args.max_nm, min_matches=args.min_matches)
+                                   min_support_frac=args.min_support_frac, max_intervals=args.max_intervals,
+                                   max_nm=args.max_nm, min_matches=args.min_matches)
