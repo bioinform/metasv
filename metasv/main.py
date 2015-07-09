@@ -43,7 +43,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                gt_window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, gt_normal_frac=GT_NORMAL_FRAC,
                extraction_max_read_pairs=EXTRACTION_MAX_READ_PAIRS,
                svs_to_report=SVS_SUPPORTED, min_mapq=SC_MIN_MAPQ, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL,
-               min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP):
+               min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
     """Invoke the MetaSV workflow.
 
     Positional arguments:
@@ -333,7 +333,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                                                           min_support_frac=min_support_frac,
                                                           max_intervals=max_intervals, min_mapq=min_mapq,
                                                           min_avg_base_qual=min_avg_base_qual,
-                                                          min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip)
+                                                          min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip,
+                                                          max_nm=max_nm, min_matches=min_matches)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
         logger.info("Will run assembly now")

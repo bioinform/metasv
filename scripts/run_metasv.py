@@ -72,6 +72,8 @@ if __name__ == "__main__":
     insertion_parser.add_argument("--min_mapq", help="Minimum MAPQ", default=SC_MIN_MAPQ, type=int)
     insertion_parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=SC_MIN_SOFT_CLIP, type=int)
     insertion_parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=SC_MAX_SOFT_CLIP, type=int)
+    insertion_parser.add_argument("--max_nm", help="Maximum number of edits", default=SC_MAX_NM, type=int)
+    insertion_parser.add_argument("--min_matches", help="Mininum number of matches", default=SC_MIN_MATCHES, type=int)
     insertion_parser.add_argument("--min_ins_support",
                                   help="Minimum read support for calling insertions using soft-clips",
                                   type=int, default=MIN_SUPPORT)
@@ -128,4 +130,4 @@ if __name__ == "__main__":
                         gt_normal_frac=args.gt_normal_frac, isize_mean=args.isize_mean, isize_sd=args.isize_sd,
                         extraction_max_read_pairs=args.extraction_max_read_pairs, svs_to_report=args.svs_to_report,
                         min_mapq=args.min_mapq, min_avg_base_qual=args.min_avg_base_qual,
-                        min_soft_clip=args.min_soft_clip, max_soft_clip=args.max_soft_clip))
+                        min_soft_clip=args.min_soft_clip, max_soft_clip=args.max_soft_clip, max_nm=args.max_nm, min_matches=args.min_matches))
