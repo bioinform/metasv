@@ -95,11 +95,28 @@ def generate_sc_intervals_callback(result, result_list):
     if result is not None:
         result_list.append(result)
 
+def infer_svtype(aln, isize_mean, isize_sd, num_sd=2):
+    min_isize = isize_mean - num_sd * isize_sd
+    max_isize = isize_mean + num_sd * isize_sd
+    if aln.mate_is_unmapped:
+        return "INS"
+    if aln.tid != aln.rnext:
+        return "CTX"
+    if aln.is_reverse and aln.mate_is_reverse or not aln.is_reverse and not aln.mate_is_reverse:
+        return "INV"
+    if aln.pos < aln.pnext and aln.is_reverse or aln.pos > aln.pnext and not aln.is_reverse:
+        return "DUP,ITX"
+    if abs(aln.tlen) > max_isize:
+        return "DEL"
+    if abs(aln.tlen) < min_isize:
+        return "INS"
+    return "NONE"
+
 
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
                           min_soft_clip=SC_MIN_SOFT_CLIP,
                           max_soft_clip=SC_MAX_SOFT_CLIP, pad=SC_PAD, min_support=MIN_SUPPORT, max_isize=1000000000,
-                          min_support_frac=MIN_SUPPORT_FRAC, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
+                          min_support_frac=MIN_SUPPORT_FRAC, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
@@ -123,8 +140,9 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             soft_clip_location = sum(interval) / 2
             strand = "-" if aln.is_reverse else "+"
             name = "%d,%s" % (soft_clip_location, strand)
+            svtype = infer_svtype(aln, isize_mean, isize_sd)
             unmerged_intervals.append(
-                pybedtools.Interval(chromosome, interval[0], interval[1], name=name, score="1", strand=strand))
+                pybedtools.Interval(chromosome, interval[0], interval[1], name=name, score="1", strand=strand, otherfields=[svtype]))
 
         if not unmerged_intervals:
             sam_file.close()
@@ -136,7 +154,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         func_logger.info("%d candidate reads" % (bedtool.count()))
 
         merged_bed = os.path.join(workdir, "merged.bed")
-        bedtool = bedtool.merge(c="4,5", o="collapse,sum", d=-500).moveto(merged_bed)
+        bedtool = bedtool.merge(c="4,5,6", o="collapse,sum,collapse", d=-500).moveto(merged_bed)
         func_logger.info("%d merged intervals" % (bedtool.count()))
 
         filtered_bed = os.path.join(workdir, "filtered_merged.bed")
@@ -173,7 +191,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
                                    min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP,
                                    pad=SC_PAD,
                                    min_support=MIN_SUPPORT, min_support_frac=MIN_SUPPORT_FRAC,
-                                   max_intervals=MAX_INTERVALS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
+                                   max_intervals=MAX_INTERVALS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD):
     func_logger = logging.getLogger(
         "%s-%s" % (parallel_generate_sc_intervals.__name__, multiprocessing.current_process()))
 
@@ -205,7 +223,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         args_list = [bam, chromosome, process_workdir]
         kwargs_dict = {"min_avg_base_qual": min_avg_base_qual, "min_mapq": min_mapq, "min_soft_clip": min_soft_clip,
                        "max_soft_clip": max_soft_clip, "pad": pad, "min_support": min_support,
-                       "min_support_frac": min_support_frac, "max_nm": max_nm, "min_matches": min_matches}
+                       "min_support_frac": min_support_frac, "max_nm": max_nm, "min_matches": min_matches, "isize_mean": isize_mean, "isize_sd": ISIZE_SD}
         pool.apply_async(generate_sc_intervals, args=args_list, kwds=kwargs_dict,
                          callback=partial(generate_sc_intervals_callback, result_list=bed_files))
 
@@ -274,6 +292,8 @@ if __name__ == "__main__":
     parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=SC_MAX_SOFT_CLIP, type=int)
     parser.add_argument("--max_nm", help="Maximum number of edits", default=SC_MAX_NM, type=int)
     parser.add_argument("--min_matches", help="Minimum number of matches", default=SC_MIN_MATCHES, type=int)
+    parser.add_argument("--isize_mean", help="Insert-size mean", default=ISIZE_MEAN, type=float)
+    parser.add_argument("--isize_sd", help="Insert-size s.d.", default=ISIZE_SD, type=float)
     parser.add_argument("--pad", help="Padding on both sides of the candidate locations", default=SC_PAD, type=int)
     parser.add_argument("--min_support", help="Minimum supporting reads", default=MIN_SUPPORT, type=int)
     parser.add_argument("--min_support_frac", help="Minimum fraction of total reads for interval",
@@ -292,4 +312,4 @@ if __name__ == "__main__":
                                    min_mapq=args.min_mapq, min_soft_clip=args.min_soft_clip,
                                    max_soft_clip=args.max_soft_clip, pad=args.pad, min_support=args.min_support,
                                    min_support_frac=args.min_support_frac, max_intervals=args.max_intervals,
-                                   max_nm=args.max_nm, min_matches=args.min_matches)
+                                   max_nm=args.max_nm, min_matches=args.min_matches, isize_mean=args.isize_mean, isize_sd=args.isize_sd)
