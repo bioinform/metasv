@@ -181,7 +181,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         raise e
 
     pybedtools.cleanup(remove_all=True)
-    func_logger.info("Generated intervals in %g seconds" % (time.time() - start_time))
+    func_logger.info("Generated intervals in %g seconds for region %s" % ((time.time() - start_time), chromosome))
 
     return coverage_filtered_bed
 
