@@ -83,7 +83,7 @@ def merged_interval_features(feature, bam_handle):
     interval_readcount = bam_handle.count(reference=feature.chrom, start=feature.start, end=feature.end)
 
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
-                               otherfields=[str(interval_readcount)])
+                               otherfields=[str(interval_readcount), feature.fields[6]])
 
 
 def coverage_filter(feature, bam_handle, min_support_frac=MIN_SUPPORT_FRAC):
@@ -154,7 +154,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         func_logger.info("%d candidate reads" % (bedtool.count()))
 
         merged_bed = os.path.join(workdir, "merged.bed")
-        bedtool = bedtool.merge(c="4,5,6", o="collapse,sum,collapse", d=-500).moveto(merged_bed)
+        bedtool = bedtool.merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=-500).moveto(merged_bed)
         func_logger.info("%d merged intervals" % (bedtool.count()))
 
         filtered_bed = os.path.join(workdir, "filtered_merged.bed")
