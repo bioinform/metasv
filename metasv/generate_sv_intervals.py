@@ -128,6 +128,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
     unmerged_intervals = []
     start_time = time.time()
+    ignore_none = True
     try:
         sam_file = pysam.Samfile(bam, "rb")
         for aln in sam_file.fetch(reference=chromosome):
@@ -141,6 +142,8 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             strand = "-" if aln.is_reverse else "+"
             name = "%d,%s" % (soft_clip_location, strand)
             svtype = infer_svtype(aln, isize_mean, isize_sd)
+            if ignore_none and svtype == "NONE":
+                continue
             unmerged_intervals.append(
                 pybedtools.Interval(chromosome, interval[0], interval[1], name=name, score="1", strand=strand, otherfields=[svtype]))
 
@@ -223,7 +226,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         args_list = [bam, chromosome, process_workdir]
         kwargs_dict = {"min_avg_base_qual": min_avg_base_qual, "min_mapq": min_mapq, "min_soft_clip": min_soft_clip,
                        "max_soft_clip": max_soft_clip, "pad": pad, "min_support": min_support,
-                       "min_support_frac": min_support_frac, "max_nm": max_nm, "min_matches": min_matches, "isize_mean": isize_mean, "isize_sd": ISIZE_SD}
+                       "min_support_frac": min_support_frac, "max_nm": max_nm, "min_matches": min_matches, "isize_mean": isize_mean, "isize_sd": isize_sd}
         pool.apply_async(generate_sc_intervals, args=args_list, kwds=kwargs_dict,
                          callback=partial(generate_sc_intervals_callback, result_list=bed_files))
 
