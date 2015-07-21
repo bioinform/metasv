@@ -61,6 +61,9 @@ if __name__ == "__main__":
     merging_parser.add_argument("--minsvlen", help="Minimum length acceptable to be an SV", default=MIN_SV_LENGTH,
                                 type=int,
                                 required=False)
+    merging_parser.add_argument("--maxsvlen", help="Maximum length SV to report", default=MAX_SV_LENGTH,
+                                type=int,
+                                required=False)
     merging_parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=OVERLAP_RATIO, type=float,
                                 required=False)
 
@@ -122,7 +125,7 @@ if __name__ == "__main__":
                         wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
                         workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
                         chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
-                        disable_assembly=args.disable_assembly, minsvlen=args.minsvlen, inswiggle=args.inswiggle,
+                        disable_assembly=args.disable_assembly, minsvlen=args.minsvlen, maxsvlen=args.maxsvlen, inswiggle=args.inswiggle,
                         enable_per_tool_output=args.enable_per_tool_output, min_support=args.min_ins_support,
                         min_support_frac=args.min_ins_support_frac, max_intervals=args.max_ins_intervals,
                         disable_deletion_assembly=args.disable_deletion_assembly,

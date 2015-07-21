@@ -35,7 +35,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                keep_standard_contigs=False,
                wiggle=WIGGLE, overlap_ratio=OVERLAP_RATIO, workdir="work", outdir="out", boost_ins=False, bam=None,
                chromosomes=[],
-               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=MIN_SV_LENGTH,
+               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=MIN_SV_LENGTH, maxsvlen=MAX_SV_LENGTH,
                inswiggle=INS_WIGGLE,
                enable_per_tool_output=False, min_support=MIN_SUPPORT,
                min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS, disable_deletion_assembly=False,
@@ -256,9 +256,10 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
 
     final_chr_intervals = {contig.name: [] for contig in contigs}
     for interval in final_intervals:
-        interval.do_validation(overlap_ratio)
-        interval.fix_pos()
-        final_chr_intervals[interval.chrom].append(interval)
+        if minsvlen <= interval.length <= maxsvlen:
+            interval.do_validation(overlap_ratio)
+            interval.fix_pos()
+            final_chr_intervals[interval.chrom].append(interval)
 
     # This is the merged VCF without assembly, ok for deletions at this point
     logger.info("Output merged VCF without assembly ")
