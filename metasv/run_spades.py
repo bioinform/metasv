@@ -151,6 +151,11 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
                         disable_deletion_assembly=False, stop_on_fail=False, max_read_pairs=EXTRACTION_MAX_READ_PAIRS):
     pybedtools.set_tempdir(work)
 
+    logger.info("Running SPAdes on the intervals in %s" % bed)
+    if not bed:
+        logger.info("No BED file specified")
+        return None, None
+
     bedtool = pybedtools.BedTool(bed)
     total = bedtool.count()
 

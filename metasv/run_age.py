@@ -248,6 +248,7 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_
     for bed_file in breakpoints_beds[1:]:
         bedtool = bedtool.cat(pybedtools.BedTool(bed_file), postmerge=False)
 
+    bedtool = bedtool.moveto(os.path.join(age_workdir, "breakpoints_unsorted.bed"))
     merged_bed = os.path.join(age_workdir, "breakpoints.bed")
     bedtool.sort().saveas(merged_bed)
 
