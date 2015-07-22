@@ -90,9 +90,10 @@ if __name__ == "__main__":
     as_parser = parser.add_argument_group("Assembly options")
     as_parser.add_argument("--spades", help="Path to SPAdes executable", required=False)
     as_parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
-    as_parser.add_argument("--disable_deletion_assembly", action="store_true", help="Disable assembly for deletions")
+    as_parser.add_argument("--svs_to_assemble", nargs="+", help="SVs to assemble", default=SVS_ASSEMBLY_SUPPORTED, choices=SVS_ASSEMBLY_SUPPORTED)
     as_parser.add_argument("--extraction_max_read_pairs", type=int, default=EXTRACTION_MAX_READ_PAIRS,
                            help="Maximum number of pairs to extract for assembly")
+    as_parser.add_argument("--spades_max_interval_size", type=int, default=SPADES_MAX_INTERVAL_SIZE, help="Maximum SV length for assembly")
     as_parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
     as_parser.add_argument("--age", help="Path to AGE executable", required=False)
 
@@ -102,7 +103,7 @@ if __name__ == "__main__":
                            help="Min. fraction of reads supporting reference for genotyping")
 
     out_parser = parser.add_argument_group("Output options")
-    out_parser.add_argument("--svs_to_report", nargs="+", help="SV types to report", default=SVS_SUPPORTED)
+    out_parser.add_argument("--svs_to_report", nargs="+", help="SV types to report", default=SVS_SUPPORTED, choices=SVS_SUPPORTED)
     out_parser.add_argument("--enable_per_tool_output", action="store_true",
                             help="Enable output of merged SVs for individual tools")
 
@@ -125,10 +126,12 @@ if __name__ == "__main__":
                         wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
                         workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
                         chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
-                        disable_assembly=args.disable_assembly, minsvlen=args.minsvlen, maxsvlen=args.maxsvlen, inswiggle=args.inswiggle,
+                        disable_assembly=args.disable_assembly,
+                        svs_to_assemble=args.svs_to_assemble,
+                        asm_max_size=args.asm_max_size,
+                        minsvlen=args.minsvlen, maxsvlen=args.maxsvlen, inswiggle=args.inswiggle,
                         enable_per_tool_output=args.enable_per_tool_output, min_support=args.min_ins_support,
                         min_support_frac=args.min_ins_support_frac, max_intervals=args.max_ins_intervals,
-                        disable_deletion_assembly=args.disable_deletion_assembly,
                         stop_spades_on_fail=args.stop_spades_on_fail, gt_window=args.gt_window,
                         gt_normal_frac=args.gt_normal_frac, isize_mean=args.isize_mean, isize_sd=args.isize_sd,
                         extraction_max_read_pairs=args.extraction_max_read_pairs, svs_to_report=args.svs_to_report,

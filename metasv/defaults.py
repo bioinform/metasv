@@ -4,6 +4,7 @@ OVERLAP_RATIO = 0.5
 WIGGLE = 100
 INS_WIGGLE = 100
 SVS_SUPPORTED = set(["DEL", "DUP", "INS", "INV"])
+SVS_ASSEMBLY_SUPPORTED = set(["DEL", "INS"])
 
 # For generating candidate intervals for insertion assembly
 MIN_SUPPORT = 5

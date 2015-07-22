@@ -35,10 +35,13 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                keep_standard_contigs=False,
                wiggle=WIGGLE, overlap_ratio=OVERLAP_RATIO, workdir="work", outdir="out", boost_ins=False, bam=None,
                chromosomes=[],
-               num_threads=1, spades=None, age=None, disable_assembly=True, minsvlen=MIN_SV_LENGTH, maxsvlen=MAX_SV_LENGTH,
+               num_threads=1, spades=None, age=None, disable_assembly=True,
+               svs_to_assemble=SVS_ASSEMBLY_SUPPORTED,
+               asm_max_size=SPADES_MAX_INTERVAL_SIZE,
+               minsvlen=MIN_SV_LENGTH, maxsvlen=MAX_SV_LENGTH,
                inswiggle=INS_WIGGLE,
                enable_per_tool_output=False, min_support=MIN_SUPPORT,
-               min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS, disable_deletion_assembly=False,
+               min_support_frac=MIN_SUPPORT_FRAC, max_intervals=MAX_INTERVALS,
                stop_spades_on_fail=False,
                gt_window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, gt_normal_frac=GT_NORMAL_FRAC,
                extraction_max_read_pairs=EXTRACTION_MAX_READ_PAIRS,
@@ -317,7 +320,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         assembly_bed = merged_bed
 
         # this does the improved assembly location finder with softclipped reads
-        if boost_ins and "INS" in svs_to_report:
+        if boost_ins and "INS" in svs_to_assemble:
             logger.info("Generating intervals for insertions")
             assembly_bed = parallel_generate_sc_intervals([bam.name], list(contig_whitelist), merged_bed, workdir,
                                                           num_threads=num_threads, min_support=min_support,
@@ -333,7 +336,8 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
         assembled_fasta, ignored_bed = run_spades_parallel(bam=bam.name, spades=spades, bed=assembly_bed,
                                                            work=spades_tmpdir, pad=SPADES_PAD, nthreads=num_threads,
                                                            chrs=list(contig_whitelist),
-                                                           disable_deletion_assembly=disable_deletion_assembly,
+                                                           max_interval_size=asm_max_size,
+                                                           svs_to_assemble=svs_to_assemble,
                                                            stop_on_fail=stop_spades_on_fail,
                                                            max_read_pairs=extraction_max_read_pairs)
         breakpoints_bed = run_age_parallel(intervals_bed=assembly_bed, reference=reference, assembly=assembled_fasta,
