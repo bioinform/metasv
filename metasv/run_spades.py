@@ -190,8 +190,12 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
         for line in fileinput.input(assembly_fastas):
             assembled_fd.write("%s\n" % (line.strip()))
 
-    logger.info("Indexing the assemblies")
-    pysam.faidx(assembled_fasta)
+    if os.path.getsize(assembled_fasta) > 0:
+        logger.info("Indexing the assemblies")
+        pysam.faidx(assembled_fasta)
+    else:
+        logger.error("No assembly generated")
+        assembled_fasta = None
 
     ignored_bed = None
     if ignored_intervals:

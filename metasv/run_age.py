@@ -45,7 +45,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
     bedtools_intervals = []
     intervals_bedtool = pybedtools.BedTool(intervals_bed)
 
-    assembly_fasta = pysam.Fastafile(assembly)
+    assembly_fasta = pysam.Fastafile(assembly) if assembly else None
     reference_fasta = pysam.Fastafile(reference)
 
     breakpoints_bed = None
@@ -161,7 +161,8 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
         print()
         raise e
 
-    assembly_fasta.close()
+    if assembly_fasta:
+        assembly_fasta.close()
     reference_fasta.close()
 
     thread_logger.info("Writing %d intervals" % (len(bedtools_intervals)))
@@ -187,16 +188,19 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_
         func_logger.info("Creating %s" % age_workdir)
         os.makedirs(age_workdir)
 
-    if not os.path.isfile("%s.fai" % assembly):
-        func_logger.info("Assembly FASTA wasn't indexed. Will attempt to index now.")
-        pysam.faidx(assembly)
+    if assembly:
+        if not os.path.isfile("%s.fai" % assembly):
+            func_logger.info("Assembly FASTA wasn't indexed. Will attempt to index now.")
+            pysam.faidx(assembly)
 
-    func_logger.info("Loading assembly contigs from %s" % assembly)
-    with open(assembly) as assembly_fd:
-        if assembly_tool == "spades":
-            contigs = [SpadesContig(line[1:]) for line in assembly_fd if line[0] == '>']
-        elif assembly_tool == "tigra":
-            contigs = [TigraContig(line[1:]) for line in assembly_fd if line[0] == '>']
+        func_logger.info("Loading assembly contigs from %s" % assembly)
+        with open(assembly) as assembly_fd:
+            if assembly_tool == "spades":
+                contigs = [SpadesContig(line[1:]) for line in assembly_fd if line[0] == '>']
+            elif assembly_tool == "tigra":
+                contigs = [TigraContig(line[1:]) for line in assembly_fd if line[0] == '>']
+    else:
+        contigs = []
 
     chrs = set(chrs)
     sv_types = set(sv_types)
