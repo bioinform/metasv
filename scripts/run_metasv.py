@@ -90,10 +90,12 @@ if __name__ == "__main__":
     as_parser = parser.add_argument_group("Assembly options")
     as_parser.add_argument("--spades", help="Path to SPAdes executable", required=False)
     as_parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
-    as_parser.add_argument("--svs_to_assemble", nargs="+", help="SVs to assemble", default=SVS_ASSEMBLY_SUPPORTED, choices=SVS_ASSEMBLY_SUPPORTED)
+    as_parser.add_argument("--svs_to_assemble", nargs="+", help="SVs to assemble", default=SVS_ASSEMBLY_SUPPORTED,
+                           choices=SVS_ASSEMBLY_SUPPORTED)
     as_parser.add_argument("--extraction_max_read_pairs", type=int, default=EXTRACTION_MAX_READ_PAIRS,
                            help="Maximum number of pairs to extract for assembly")
-    as_parser.add_argument("--spades_max_interval_size", type=int, default=SPADES_MAX_INTERVAL_SIZE, help="Maximum SV length for assembly")
+    as_parser.add_argument("--spades_max_interval_size", type=int, default=SPADES_MAX_INTERVAL_SIZE,
+                           help="Maximum SV length for assembly")
     as_parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
     as_parser.add_argument("--age", help="Path to AGE executable", required=False)
 
@@ -103,7 +105,8 @@ if __name__ == "__main__":
                            help="Min. fraction of reads supporting reference for genotyping")
 
     out_parser = parser.add_argument_group("Output options")
-    out_parser.add_argument("--svs_to_report", nargs="+", help="SV types to report", default=SVS_SUPPORTED, choices=SVS_SUPPORTED)
+    out_parser.add_argument("--svs_to_report", nargs="+", help="SV types to report", default=SVS_SUPPORTED,
+                            choices=SVS_SUPPORTED)
     out_parser.add_argument("--enable_per_tool_output", action="store_true",
                             help="Enable output of merged SVs for individual tools")
 
