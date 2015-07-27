@@ -30,96 +30,48 @@ def create_dirs(dirlist):
 
 
 def run_metasv(args):
-    sample = args.sample
-    reference = args.reference
-    pindel_vcf=args.pindel_vcf
-    pindel_native=args.pindel_native
-    breakdancer_vcf=args.breakdancer_vcf
-    breakdancer_native=args.breakdancer_native
-    breakseq_vcf=args.breakseq_vcf
-    breakseq_native=args.breakseq_native
-    cnvnator_vcf=args.cnvnator_vcf
-    cnvnator_native=args.cnvnator_native
-    gatk_vcf=args.gatk_vcf
-    gaps=args.gaps
-    filter_gaps=args.filter_gaps
-    keep_standard_contigs=args.keep_standard_contigs
-    wiggle=args.wiggle
-    overlap_ratio=args.overlap_ratio
-    workdir=args.workdir
-    outdir=args.outdir
-    boost_ins=args.boost_ins
-    bam=args.bam
-    chromosomes=args.chromosomes
-    num_threads=args.num_threads
-    spades=args.spades
-    age=args.age
-    disable_assembly=args.disable_assembly
-    svs_to_assemble=args.svs_to_assemble
-    asm_max_size=args.spades_max_interval_size
-    minsvlen=args.minsvlen
-    maxsvlen=args.maxsvlen
-    inswiggle=args.inswiggle
-    enable_per_tool_output=args.enable_per_tool_output
-    min_support=args.min_ins_support
-    min_support_frac=args.min_ins_support_frac
-    max_intervals=args.max_ins_intervals
-    stop_spades_on_fail=args.stop_spades_on_fail
-    gt_window=args.gt_window
-    gt_normal_frac=args.gt_normal_frac
-    isize_mean=args.isize_mean
-    isize_sd=args.isize_sd
-    extraction_max_read_pairs=args.extraction_max_read_pairs
-    svs_to_report=args.svs_to_report
-    min_mapq=args.min_mapq
-    min_avg_base_qual=args.min_avg_base_qual
-    min_soft_clip=args.min_soft_clip
-    max_soft_clip=args.max_soft_clip
-    max_nm=args.max_nm
-    min_matches=args.min_matches
-
     # Check if there is work to do
     if not (
-                                        pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + breakseq_native + cnvnator_native):
+                                        args.pindel_vcf + args.breakdancer_vcf + args.breakseq_vcf + args.cnvnator_vcf + args.pindel_native + args.breakdancer_native + args.breakseq_native + args.cnvnator_native):
         logger.error("Nothing to merge since no SV file specified")
 
     # Create the directories for working
-    bedtools_tmpdir = os.path.join(workdir, "bedtools")
-    create_dirs([workdir, outdir, bedtools_tmpdir])
+    bedtools_tmpdir = os.path.join(args.workdir, "bedtools")
+    create_dirs([args.workdir, args.outdir, bedtools_tmpdir])
 
     # Reference handling
-    if not os.path.isfile(reference + ".fai"):
-        logger.error("Reference file %s is not indexed" % (reference))
+    if not os.path.isfile(args.reference + ".fai"):
+        logger.error("Reference file %s is not indexed" % (args.reference))
         return 1
 
-    fasta_handle = pysam.Fastafile(reference) if os.path.isfile(reference) else None
-    contigs = get_contigs(reference)
+    fasta_handle = pysam.Fastafile(args.reference) if os.path.isfile(args.reference) else None
+    contigs = get_contigs(args.reference)
     include_intervals = sorted(
         [SVInterval(contig.name, 0, contig.length, contig.name, "include", length=contig.length) for contig in contigs])
 
     # Generate the list of contigs to process
-    contig_whitelist = set(chromosomes) if chromosomes else set([contig.name for contig in contigs])
-    if keep_standard_contigs:
+    contig_whitelist = set(args.chromosomes) if args.chromosomes else set([contig.name for contig in contigs])
+    if args.keep_standard_contigs:
         contig_whitelist &= set(
             [str(i) for i in xrange(1, 23)] + ["chr%d" % (i) for i in xrange(1, 23)] + ["X", "Y", "MT", "chrX", "chrY",
                                                                                         "chrM"])
     logger.info("Only SVs on the following contigs will be reported: %s" % (sorted(list(contig_whitelist))))
 
     # Load the intervals from different files
-    vcf_name_list = [("CNVnator", cnvnator_vcf), ("Pindel", pindel_vcf), ("BreakDancer", breakdancer_vcf),
-                     ("BreakSeq", breakseq_vcf), ("HaplotypeCaller", gatk_vcf)]
-    native_name_list = [("CNVnator", cnvnator_native, CNVnatorReader),
-                        ("Pindel", pindel_native, PindelReader),
-                        ("BreakSeq", breakseq_native, BreakSeqReader),
-                        ("BreakDancer", breakdancer_native, BreakDancerReader)]
+    vcf_name_list = [("CNVnator", args.cnvnator_vcf), ("Pindel", args.pindel_vcf), ("BreakDancer", args.breakdancer_vcf),
+                     ("BreakSeq", args.breakseq_vcf), ("HaplotypeCaller", args.gatk_vcf)]
+    native_name_list = [("CNVnator", args.cnvnator_native, CNVnatorReader),
+                        ("Pindel", args.pindel_native, PindelReader),
+                        ("BreakSeq", args.breakseq_native, BreakSeqReader),
+                        ("BreakDancer", args.breakdancer_native, BreakDancerReader)]
 
     tools = []
     intervals = {}
     sv_types = set()
 
     gap_intervals = []
-    if filter_gaps:
-        if not gaps: gaps = get_gaps_file(contig_whitelist)
+    if args.filter_gaps:
+        gaps = args.gaps if args.gaps else get_gaps_file(contig_whitelist)
         gap_intervals = sorted(load_gap_intervals(gaps))
 
     # Handles native input
@@ -132,7 +84,7 @@ def run_metasv(args):
         intervals[toolname] = defaultdict(list)
 
         for native_file in nativename:
-            for record in svReader(native_file, svs_to_report=svs_to_report):
+            for record in svReader(native_file, svs_to_report=args.svs_to_report):
                 interval = record.to_sv_interval()
 
                 if not interval:
@@ -141,14 +93,11 @@ def run_metasv(args):
                 if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
 
                     # Check length
-                    if interval.length < minsvlen:
+                    if interval.length < args.minsvlen:
                         continue
 
                     # Set wiggle
-                    if interval.sv_type == "INS":
-                        interval.wiggle = max(inswiggle, wiggle)
-                    else:
-                        interval.wiggle = wiggle
+                    interval.wiggle = max(args.inswiggle if interval.sv_type == "INS" else 0, args.wiggle)
 
                     intervals[toolname][interval.sv_type].append(interval)
 
@@ -175,7 +124,7 @@ def run_metasv(args):
 
         for vcffile in vcf_list:
             load_intervals(vcffile, intervals[toolname], gap_intervals, include_intervals, toolname, contig_whitelist,
-                           minsvlen=minsvlen, wiggle=wiggle, inswiggle=inswiggle, svs_to_report=svs_to_report)
+                           minsvlen=args.minsvlen, wiggle=args.wiggle, inswiggle=args.inswiggle, svs_to_report=args.svs_to_report)
         sv_types |= set(intervals[toolname].keys())
 
     logger.info("SV types are %s" % (str(sv_types)))
@@ -183,14 +132,14 @@ def run_metasv(args):
     final_intervals = []
 
     # This will just output per-tool VCFs, no intra-tool merging is done yet
-    if enable_per_tool_output:
+    if args.enable_per_tool_output:
         logger.info("Output per-tool VCFs")
         for toolname in intervals:
-            tool_out = os.path.join(outdir, "%s.vcf" % (toolname.lower()))
+            tool_out = os.path.join(args.outdir, "%s.vcf" % (toolname.lower()))
 
             logger.info("Outputting single tool VCF for %s" % (str(toolname)))
             vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
-            vcf_template_reader.samples = [sample]
+            vcf_template_reader.samples = [args.sample]
 
             intervals_tool = []
             tool_out_fd = open(tool_out, "w")
@@ -201,7 +150,7 @@ def run_metasv(args):
                     intervals_tool.extend([copy.deepcopy(interval) for interval in intervals[toolname][sv_type]])
             for interval in intervals_tool:
                 # Marghoob says that this is just to fill-in some metadata
-                interval.do_validation(overlap_ratio)
+                interval.do_validation(args.overlap_ratio)
 
                 interval.fix_pos()
                 chr_intervals_tool[interval.chrom].append(interval)
@@ -209,7 +158,7 @@ def run_metasv(args):
             for contig in contigs:
                 chr_intervals_tool[contig.name].sort()
                 for interval in chr_intervals_tool[contig.name]:
-                    vcf_record = interval.to_vcf_record(fasta_handle, sample)
+                    vcf_record = interval.to_vcf_record(fasta_handle, args.sample)
                     if vcf_record is not None:
                         vcf_writer.write_record(vcf_record)
             tool_out_fd.close()
@@ -246,7 +195,7 @@ def run_metasv(args):
 
         logger.info("Checking overlaps SVs of type %s" % sv_type)
         for interval in tool_merged_intervals[sv_type]:
-            if interval_overlaps_interval_list(interval, merged_intervals, overlap_ratio, overlap_ratio):
+            if interval_overlaps_interval_list(interval, merged_intervals, args.overlap_ratio, args.overlap_ratio):
                 intervals2.append(interval)
             else:
                 intervals1.append(interval)
@@ -254,16 +203,16 @@ def run_metasv(args):
 
     final_chr_intervals = {contig.name: [] for contig in contigs}
     for interval in final_intervals:
-        if minsvlen <= interval.length <= maxsvlen:
-            interval.do_validation(overlap_ratio)
+        if args.minsvlen <= interval.length <= args.maxsvlen:
+            interval.do_validation(args.overlap_ratio)
             interval.fix_pos()
             final_chr_intervals[interval.chrom].append(interval)
 
     # This is the merged VCF without assembly, ok for deletions at this point
     logger.info("Output merged VCF without assembly ")
     vcf_template_reader = vcf.Reader(open(os.path.join(mydir, "resources/template.vcf"), "r"))
-    vcf_template_reader.samples = [sample]
-    preasm_vcf = os.path.join(workdir, "pre_asm.vcf")
+    vcf_template_reader.samples = [args.sample]
+    preasm_vcf = os.path.join(args.workdir, "pre_asm.vcf")
     vcf_fd = open(preasm_vcf, "w")
     vcf_writer = vcf.Writer(vcf_fd, vcf_template_reader)
 
@@ -281,7 +230,7 @@ def run_metasv(args):
                     final_stats[key] = 0
                 final_stats[key] += 1
                 vcf_writer.write_record(vcf_record)
-            bed_interval = interval.to_bed_interval(sample)
+            bed_interval = interval.to_bed_interval(args.sample)
             if bed_interval is not None:
                 bed_intervals.append(bed_interval)
     vcf_fd.close()
@@ -290,58 +239,58 @@ def run_metasv(args):
     # Also save a BED file representation of the merged variants without assembly
     merged_bed = None
     if bed_intervals:
-        merged_bed = os.path.join(workdir, "metasv.bed")
+        merged_bed = os.path.join(args.workdir, "metasv.bed")
         pybedtools.BedTool(bed_intervals).saveas(merged_bed)
 
     for key in sorted(final_stats.keys()):
         logger.info(str(key) + ":" + str(final_stats[key]))
 
-    final_vcf = os.path.join(outdir, "variants.vcf")
+    final_vcf = os.path.join(args.outdir, "variants.vcf")
 
     # Run assembly here
-    if not disable_assembly:
+    if not args.disable_assembly:
         logger.info("Running assembly")
-        if spades is None:
+        if not args.spades:
             logger.error("Spades executable not specified")
             return 1
 
-        if age is None:
+        if not args.age:
             logger.error("AGE executable not specified")
             return 1
 
-        spades_tmpdir = os.path.join(workdir, "spades")
-        age_tmpdir = os.path.join(workdir, "age")
+        spades_tmpdir = os.path.join(args.workdir, "spades")
+        age_tmpdir = os.path.join(args.workdir, "age")
 
         create_dirs([spades_tmpdir, age_tmpdir])
 
         assembly_bed = merged_bed
 
         # this does the improved assembly location finder with softclipped reads
-        if boost_ins and "INS" in svs_to_assemble:
+        if args.boost_ins and "INS" in args.svs_to_assemble:
             logger.info("Generating intervals for insertions")
-            assembly_bed = parallel_generate_sc_intervals([bam.name], list(contig_whitelist), merged_bed, workdir,
-                                                          num_threads=num_threads, min_support=min_support,
-                                                          min_support_frac=min_support_frac,
-                                                          max_intervals=max_intervals, min_mapq=min_mapq,
-                                                          min_avg_base_qual=min_avg_base_qual,
-                                                          min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip,
-                                                          max_nm=max_nm, min_matches=min_matches)
+            assembly_bed = parallel_generate_sc_intervals([args.bam.name], list(contig_whitelist), merged_bed, args.workdir,
+                                                          num_threads=args.num_threads, min_support=args.min_ins_support,
+                                                          min_support_frac=args.min_ins_support_frac,
+                                                          max_intervals=args.max_ins_intervals, min_mapq=args.min_mapq,
+                                                          min_avg_base_qual=args.min_avg_base_qual,
+                                                          min_soft_clip=args.min_soft_clip, max_soft_clip=args.max_soft_clip,
+                                                          max_nm=args.max_nm, min_matches=args.min_matches)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
         logger.info("Will run assembly now")
 
-        assembled_fasta, ignored_bed = run_spades_parallel(bam=bam.name, spades=spades, bed=assembly_bed,
-                                                           work=spades_tmpdir, pad=SPADES_PAD, nthreads=num_threads,
+        assembled_fasta, ignored_bed = run_spades_parallel(bam=args.bam.name, spades=args.spades, bed=assembly_bed,
+                                                           work=spades_tmpdir, pad=SPADES_PAD, nthreads=args.num_threads,
                                                            chrs=list(contig_whitelist),
-                                                           max_interval_size=asm_max_size,
-                                                           svs_to_assemble=svs_to_assemble,
-                                                           stop_on_fail=stop_spades_on_fail,
-                                                           max_read_pairs=extraction_max_read_pairs)
-        breakpoints_bed = run_age_parallel(intervals_bed=assembly_bed, reference=reference, assembly=assembled_fasta,
-                                           pad=AGE_PAD, age=age, chrs=list(contig_whitelist), nthreads=num_threads,
+                                                           max_interval_size=args.spades_max_interval_size,
+                                                           svs_to_assemble=args.svs_to_assemble,
+                                                           stop_on_fail=args.stop_spades_on_fail,
+                                                           max_read_pairs=args.extraction_max_read_pairs)
+        breakpoints_bed = run_age_parallel(intervals_bed=assembly_bed, reference=args.reference, assembly=assembled_fasta,
+                                           pad=AGE_PAD, age=args.age, chrs=list(contig_whitelist), nthreads=args.num_threads,
                                            min_contig_len=AGE_MIN_CONTIG_LENGTH, age_workdir=age_tmpdir)
 
-        final_bed = os.path.join(workdir, "final.bed")
+        final_bed = os.path.join(args.workdir, "final.bed")
         if breakpoints_bed:
             if ignored_bed:
                 pybedtools.BedTool(breakpoints_bed) \
@@ -354,14 +303,14 @@ def run_metasv(args):
         else:
             final_bed = None
 
-        genotyped_bed = parallel_genotype_intervals(final_bed, bam.name, workdir=os.path.join(workdir, "genotyping"),
-                                                    nthreads=num_threads, chromosomes=list(contig_whitelist),
-                                                    window=gt_window, isize_mean=isize_mean, isize_sd=isize_sd,
-                                                    normal_frac_threshold=gt_normal_frac)
+        genotyped_bed = parallel_genotype_intervals(final_bed, args.bam.name, workdir=os.path.join(args.workdir, "genotyping"),
+                                                    nthreads=args.num_threads, chromosomes=list(contig_whitelist),
+                                                    window=args.gt_window, isize_mean=args.isize_mean, isize_sd=args.isize_sd,
+                                                    normal_frac_threshold=args.gt_normal_frac)
 
         logger.info("Output final VCF file")
 
-        convert_metasv_bed_to_vcf(bedfile=genotyped_bed, vcf_out=final_vcf, sample=sample, pass_calls=False)
+        convert_metasv_bed_to_vcf(bedfile=genotyped_bed, vcf_out=final_vcf, sample=args.sample, pass_calls=False)
     else:
         shutil.copy(preasm_vcf, final_vcf)
         pysam.tabix_index(final_vcf, force=True, preset="vcf")
