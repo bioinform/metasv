@@ -128,7 +128,7 @@ if __name__ == "__main__":
                         chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
                         disable_assembly=args.disable_assembly,
                         svs_to_assemble=args.svs_to_assemble,
-                        asm_max_size=args.asm_max_size,
+                        asm_max_size=args.spades_max_interval_size,
                         minsvlen=args.minsvlen, maxsvlen=args.maxsvlen, inswiggle=args.inswiggle,
                         enable_per_tool_output=args.enable_per_tool_output, min_support=args.min_ins_support,
                         min_support_frac=args.min_ins_support_frac, max_intervals=args.max_ins_intervals,
