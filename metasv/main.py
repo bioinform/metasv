@@ -39,12 +39,11 @@ def run_metasv(args):
     if not args.disable_assembly:
         if not args.spades:
             logger.error("Spades executable not specified")
+            return os.EX_USAGE
 
         if not args.age:
             logger.error("AGE executable not specified")
-
-        logger.error("SPAdes and AGE executables must be specified when is enabled.")
-        return os.EX_USAGE
+            return os.EX_USAGE
 
     # Create the directories for working
     bedtools_tmpdir = os.path.join(args.workdir, "bedtools")
