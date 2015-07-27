@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import argparse
 import sys
 import datetime
@@ -63,7 +61,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
                 info = dict()
             if len(interval.fields) > 9:
                 info.update(json.loads(base64.b64decode(interval.fields[9])))
-    
+
             index_to_use = 0
             is_pass = False
             svlen = -1
