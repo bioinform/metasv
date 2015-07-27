@@ -221,6 +221,10 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_
     region_list = sorted(contig_dict.keys())
     nthreads = min(nthreads, len(region_list))
 
+    if nthreads == 0:
+        func_logger.warning("AGE not run since no contigs found")
+        return None
+
     func_logger.info("Will process %d regions with %d contigs (%d small contigs ignored) using %d threads" % (
         len(region_list), sum([len(value) for value in contig_dict.values()]), small_contigs_count, nthreads))
 
