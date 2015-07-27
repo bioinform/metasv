@@ -35,6 +35,17 @@ def run_metasv(args):
                                         args.pindel_vcf + args.breakdancer_vcf + args.breakseq_vcf + args.cnvnator_vcf + args.pindel_native + args.breakdancer_native + args.breakseq_native + args.cnvnator_native):
         logger.error("Nothing to merge since no SV file specified")
 
+    # Simple check for arguments
+    if not args.disable_assembly:
+        if not args.spades:
+            logger.error("Spades executable not specified")
+
+        if not args.age:
+            logger.error("AGE executable not specified")
+
+        logger.error("SPAdes and AGE executables must be specified when is enabled.")
+        return os.EX_USAGE
+
     # Create the directories for working
     bedtools_tmpdir = os.path.join(args.workdir, "bedtools")
     create_dirs([args.workdir, args.outdir, bedtools_tmpdir])
@@ -250,13 +261,6 @@ def run_metasv(args):
     # Run assembly here
     if not args.disable_assembly:
         logger.info("Running assembly")
-        if not args.spades:
-            logger.error("Spades executable not specified")
-            return 1
-
-        if not args.age:
-            logger.error("AGE executable not specified")
-            return 1
 
         spades_tmpdir = os.path.join(args.workdir, "spades")
         age_tmpdir = os.path.join(args.workdir, "age")
@@ -320,3 +324,5 @@ def run_metasv(args):
     pybedtools.cleanup(remove_all=True)
 
     logger.info("All Done!")
+
+    return os.EX_OK
