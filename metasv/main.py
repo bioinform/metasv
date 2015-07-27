@@ -86,7 +86,6 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     if not (
                                         pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + breakseq_native + cnvnator_native):
         logger.error("Nothing to do since no SV file specified")
-        return 1
 
     # Create the directories for working
     bedtools_tmpdir = os.path.join(workdir, "bedtools")
@@ -275,7 +274,6 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     final_stats = {}
 
     bed_intervals = []
-    merged_bed = os.path.join(workdir, "metasv.bed")
     for contig in contigs:
         final_chr_intervals[contig.name].sort()
         for interval in final_chr_intervals[contig.name]:
@@ -290,11 +288,14 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
             bed_interval = interval.to_bed_interval(sample)
             if bed_interval is not None:
                 bed_intervals.append(bed_interval)
-
-    # Also save a BED file representation of the merged variants without assembly
-    pybedtools.BedTool(bed_intervals).saveas(merged_bed)
     vcf_fd.close()
     vcf_writer.close()
+
+    # Also save a BED file representation of the merged variants without assembly
+    merged_bed = None
+    if bed_intervals:
+        merged_bed = os.path.join(workdir, "metasv.bed")
+        pybedtools.BedTool(bed_intervals).saveas(merged_bed)
 
     for key in sorted(final_stats.keys()):
         logger.info(str(key) + ":" + str(final_stats[key]))
