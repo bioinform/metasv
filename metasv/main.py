@@ -85,7 +85,7 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
     # Check if there is work to do
     if not (
                                         pindel_vcf + breakdancer_vcf + breakseq_vcf + cnvnator_vcf + pindel_native + breakdancer_native + breakseq_native + cnvnator_native):
-        logger.error("Nothing to do since no SV file specified")
+        logger.error("Nothing to merge since no SV file specified")
 
     # Create the directories for working
     bedtools_tmpdir = os.path.join(workdir, "bedtools")
