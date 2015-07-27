@@ -79,6 +79,10 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
                 end = int(interval.fields[7])
                 svlen = int(interval.fields[8])
 
+            if pos < 1:
+                func_logger.info("Variant with pos < 1 encountered. Skipping! %s" % str(interval))
+                continue
+
             if svlen < 0: svlen = sub_lengths[index_to_use]
             if sub_types[index_to_use] == "DEL":
                 svlen = -svlen
