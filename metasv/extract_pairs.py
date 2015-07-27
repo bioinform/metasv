@@ -37,8 +37,12 @@ def all_pair(aln, mate):
     return True
 
 
+def perfect_aln(aln):
+    return len(aln.cigar) == 1 and int(aln.opt("NM")) == 0 and aln.is_proper_pair
+
+
 def non_perfect(aln, mate):
-    return not (aln.cigarstring == "100M" and mate.cigarstring == "100M" and aln.is_proper_pair and mate.is_proper_pair)
+    return not (perfect_aln(aln) and perfect_aln(mate))
 
 
 def discordant(aln, mate, isize_min=300, isize_max=400):
