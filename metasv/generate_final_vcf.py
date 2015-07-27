@@ -40,68 +40,69 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
     vcf_writer = vcf.Writer(open(vcf_out, "w"), vcf_template_reader)
 
     vcf_records = []
-    for interval in pybedtools.BedTool(bedfile):
-        chrom = interval.chrom
-        pos = interval.start
-        end = interval.end
-        genotype = "./." if len(interval.fields) < 11 else interval.fields[10]
+    if bedfile:
+        for interval in pybedtools.BedTool(bedfile):
+            chrom = interval.chrom
+            pos = interval.start
+            end = interval.end
+            genotype = "./." if len(interval.fields) < 11 else interval.fields[10]
 
-        if genotype == "0/0":
-            func_logger.info("Skipping homozygous reference %s" % str(interval))
-            continue
-
-        sub_names = interval.name.split(":")
-        sub_lengths = map(lambda x: int(x.split(",")[2]), sub_names)
-
-        sub_types = map(lambda x: x.split(",")[1], sub_names)
-        sub_methods = [name.split(",")[3] for name in sub_names]
-        svmethods = (";".join([name.split(",")[3] for name in sub_names])).split(";")
-        try:
-            info = json.loads(base64.b64decode(name.split(",")[0]))
-        except TypeError:
-            info = dict()
-        if len(interval.fields) > 9:
-            info.update(json.loads(base64.b64decode(interval.fields[9])))
-
-        index_to_use = 0
-        is_pass = False
-        svlen = -1
-        if "DEL" in sub_types:
-            index_to_use = sub_types.index("DEL")
-            svmethods_s = set(svmethods) - {"SC"}
-            is_pass = len(svmethods_s) > 1
-        elif "INV" in sub_types:
-            index_to_use = sub_types.index("INV")
-            svmethods_s = set(svmethods) - {"SC"}
-            is_pass = len(svmethods_s) > 1
-        elif "INS" in sub_types and "SC" in sub_methods:
-            index_to_use = sub_methods.index("SC")
-            pos = int(interval.fields[6])
-            end = int(interval.fields[7])
-            svlen = int(interval.fields[8])
-
-        if svlen < 0: svlen = sub_lengths[index_to_use]
-        if sub_types[index_to_use] == "DEL":
-            svlen = -svlen
-
-        sv_type = sub_types[index_to_use]
-        if sv_type == "INS":
-            if pass_calls and end != pos + 1:
+            if genotype == "0/0":
+                func_logger.info("Skipping homozygous reference %s" % str(interval))
                 continue
-            end = pos
-            is_pass = (int(interval.fields[8]) != -1) and (svlen == 0 or svlen >= 100)
-        sv_id = "."
-        ref = "."
-        alt = ["<%s>" % sv_type]
-        qual = "."
-        sv_filter = ["PASS" if is_pass else "LowQual"]
-        info.update(
-            {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
-        sv_format = "GT"
-        sample_indexes = [0]
-        vcf_record = vcf.model._Record(chrom, pos, sv_id, ref, alt, qual, sv_filter, info, sv_format, sample_indexes)
-        vcf_record.samples = vcf_template_reader._parse_samples([genotype], "GT", vcf_record)
-        vcf_records.append(vcf_record)
+
+            sub_names = interval.name.split(":")
+            sub_lengths = map(lambda x: int(x.split(",")[2]), sub_names)
+
+            sub_types = map(lambda x: x.split(",")[1], sub_names)
+            sub_methods = [name.split(",")[3] for name in sub_names]
+            svmethods = (";".join([name.split(",")[3] for name in sub_names])).split(";")
+            try:
+                info = json.loads(base64.b64decode(name.split(",")[0]))
+            except TypeError:
+                info = dict()
+            if len(interval.fields) > 9:
+                info.update(json.loads(base64.b64decode(interval.fields[9])))
+    
+            index_to_use = 0
+            is_pass = False
+            svlen = -1
+            if "DEL" in sub_types:
+                index_to_use = sub_types.index("DEL")
+                svmethods_s = set(svmethods) - {"SC"}
+                is_pass = len(svmethods_s) > 1
+            elif "INV" in sub_types:
+                index_to_use = sub_types.index("INV")
+                svmethods_s = set(svmethods) - {"SC"}
+                is_pass = len(svmethods_s) > 1
+            elif "INS" in sub_types and "SC" in sub_methods:
+                index_to_use = sub_methods.index("SC")
+                pos = int(interval.fields[6])
+                end = int(interval.fields[7])
+                svlen = int(interval.fields[8])
+
+            if svlen < 0: svlen = sub_lengths[index_to_use]
+            if sub_types[index_to_use] == "DEL":
+                svlen = -svlen
+
+            sv_type = sub_types[index_to_use]
+            if sv_type == "INS":
+                if pass_calls and end != pos + 1:
+                    continue
+                end = pos
+                is_pass = (int(interval.fields[8]) != -1) and (svlen == 0 or svlen >= 100)
+            sv_id = "."
+            ref = "."
+            alt = ["<%s>" % sv_type]
+            qual = "."
+            sv_filter = ["PASS" if is_pass else "LowQual"]
+            info.update(
+                {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
+            sv_format = "GT"
+            sample_indexes = [0]
+            vcf_record = vcf.model._Record(chrom, pos, sv_id, ref, alt, qual, sv_filter, info, sv_format, sample_indexes)
+            vcf_record.samples = vcf_template_reader._parse_samples([genotype], "GT", vcf_record)
+            vcf_records.append(vcf_record)
 
     if contigs:
         vcf_records.sort(key=lambda x: (contigs_order_dict[x.CHROM], x.POS))
