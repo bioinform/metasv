@@ -346,12 +346,17 @@ def run_metasv(sample, reference, pindel_vcf=[], pindel_native=[], breakdancer_v
                                            min_contig_len=AGE_MIN_CONTIG_LENGTH, age_workdir=age_tmpdir)
 
         final_bed = os.path.join(workdir, "final.bed")
-        if ignored_bed:
-            pybedtools.BedTool(breakpoints_bed) \
-                .cat(pybedtools.BedTool(ignored_bed), postmerge=False) \
-                .sort().saveas(final_bed)
+        if breakpoints_bed:
+            if ignored_bed:
+                pybedtools.BedTool(breakpoints_bed) \
+                    .cat(pybedtools.BedTool(ignored_bed), postmerge=False) \
+                    .sort().saveas(final_bed)
+            else:
+                pybedtools.BedTool(breakpoints_bed).saveas(final_bed)
+        elif ignored_bed:
+            pybedtools.BedTool(ignored_bed).sort().saveas(final_bed)
         else:
-            pybedtools.BedTool(breakpoints_bed).saveas(final_bed)
+            final_bed = None
 
         genotyped_bed = parallel_genotype_intervals(final_bed, bam.name, workdir=os.path.join(workdir, "genotyping"),
                                                     nthreads=num_threads, chromosomes=list(contig_whitelist),

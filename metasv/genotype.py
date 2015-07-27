@@ -153,6 +153,11 @@ def parallel_genotype_intervals(intervals_file=None, bam=None, workdir=None, nth
                                 window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD,
                                 normal_frac_threshold=GT_NORMAL_FRAC):
     func_logger = logging.getLogger("%s-%s" % (parallel_genotype_intervals.__name__, multiprocessing.current_process()))
+    
+    if not intervals_file:
+        func_logger.warning("No intervals file specified. Perhaps no intervals to process")
+        return None
+
     if workdir and not os.path.isdir(workdir):
         os.makedirs(workdir)
 
