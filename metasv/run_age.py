@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import traceback
 import os
 import argparse
