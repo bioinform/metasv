@@ -25,6 +25,7 @@ ISIZE_SD = 50.0
 
 # For assembly read-extraction
 EXTRACTION_MAX_READ_PAIRS = 10000
+EXTRACTION_MAX_NM = 5
 
 # For running SPAdes
 SPADES_TIMEOUT = 300  # in seconds

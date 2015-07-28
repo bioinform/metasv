@@ -1,10 +1,9 @@
-#!/usr/bin/env python
 import argparse
 import logging
 import multiprocessing
 import time
 from functools import partial, update_wrapper
-from defaults import EXTRACTION_MAX_READ_PAIRS
+from defaults import EXTRACTION_MAX_READ_PAIRS, EXTRACTION_MAX_NM
 
 import pysam
 
@@ -38,7 +37,7 @@ def all_pair(aln, mate):
 
 
 def perfect_aln(aln):
-    return len(aln.cigar) == 1 and int(aln.opt("NM")) == 0 and aln.is_proper_pair
+    return len(aln.cigar) == 1 and int(aln.opt("NM")) <= EXTRACTION_MAX_NM and aln.is_proper_pair
 
 
 def non_perfect(aln, mate):
