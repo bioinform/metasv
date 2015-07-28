@@ -213,9 +213,9 @@ def run_metasv(args):
 
     final_chr_intervals = {contig.name: [] for contig in contigs}
     for interval in final_intervals:
+        interval.do_validation(args.overlap_ratio)
+        interval.fix_pos()
         if args.minsvlen <= interval.length <= args.maxsvlen:
-            interval.do_validation(args.overlap_ratio)
-            interval.fix_pos()
             final_chr_intervals[interval.chrom].append(interval)
 
     # This is the merged VCF without assembly, ok for deletions at this point
