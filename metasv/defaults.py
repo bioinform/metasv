@@ -1,8 +1,10 @@
 MIN_SV_LENGTH = 50
+MAX_SV_LENGTH = 1000000
 OVERLAP_RATIO = 0.5
 WIGGLE = 100
 INS_WIGGLE = 100
 SVS_SUPPORTED = set(["DEL", "DUP", "INS", "INV"])
+SVS_ASSEMBLY_SUPPORTED = set(["DEL", "INS"])
 
 # For generating candidate intervals for insertion assembly
 MIN_SUPPORT = 5
@@ -23,6 +25,7 @@ ISIZE_SD = 50.0
 
 # For assembly read-extraction
 EXTRACTION_MAX_READ_PAIRS = 10000
+EXTRACTION_MAX_NM = 5
 
 # For running SPAdes
 SPADES_TIMEOUT = 300  # in seconds

@@ -61,6 +61,9 @@ if __name__ == "__main__":
     merging_parser.add_argument("--minsvlen", help="Minimum length acceptable to be an SV", default=MIN_SV_LENGTH,
                                 type=int,
                                 required=False)
+    merging_parser.add_argument("--maxsvlen", help="Maximum length SV to report", default=MAX_SV_LENGTH,
+                                type=int,
+                                required=False)
     merging_parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=OVERLAP_RATIO, type=float,
                                 required=False)
 
@@ -87,9 +90,12 @@ if __name__ == "__main__":
     as_parser = parser.add_argument_group("Assembly options")
     as_parser.add_argument("--spades", help="Path to SPAdes executable", required=False)
     as_parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
-    as_parser.add_argument("--disable_deletion_assembly", action="store_true", help="Disable assembly for deletions")
+    as_parser.add_argument("--svs_to_assemble", nargs="+", help="SVs to assemble", default=SVS_ASSEMBLY_SUPPORTED,
+                           choices=SVS_ASSEMBLY_SUPPORTED)
     as_parser.add_argument("--extraction_max_read_pairs", type=int, default=EXTRACTION_MAX_READ_PAIRS,
                            help="Maximum number of pairs to extract for assembly")
+    as_parser.add_argument("--spades_max_interval_size", type=int, default=SPADES_MAX_INTERVAL_SIZE,
+                           help="Maximum SV length for assembly")
     as_parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
     as_parser.add_argument("--age", help="Path to AGE executable", required=False)
 
@@ -99,7 +105,8 @@ if __name__ == "__main__":
                            help="Min. fraction of reads supporting reference for genotyping")
 
     out_parser = parser.add_argument_group("Output options")
-    out_parser.add_argument("--svs_to_report", nargs="+", help="SV types to report", default=SVS_SUPPORTED)
+    out_parser.add_argument("--svs_to_report", nargs="+", help="SV types to report", default=SVS_SUPPORTED,
+                            choices=SVS_SUPPORTED)
     out_parser.add_argument("--enable_per_tool_output", action="store_true",
                             help="Enable output of merged SVs for individual tools")
 
@@ -113,22 +120,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    sys.exit(run_metasv(args.sample, args.reference, pindel_vcf=args.pindel_vcf, pindel_native=args.pindel_native,
-                        breakdancer_vcf=args.breakdancer_vcf, breakdancer_native=args.breakdancer_native,
-                        breakseq_vcf=args.breakseq_vcf, breakseq_native=args.breakseq_native,
-                        cnvnator_vcf=args.cnvnator_vcf,
-                        cnvnator_native=args.cnvnator_native, gatk_vcf=args.gatk_vcf,
-                        gaps=args.gaps, filter_gaps=args.filter_gaps, keep_standard_contigs=args.keep_standard_contigs,
-                        wiggle=args.wiggle, overlap_ratio=args.overlap_ratio,
-                        workdir=args.workdir, outdir=args.outdir, boost_ins=args.boost_ins, bam=args.bam,
-                        chromosomes=args.chromosomes, num_threads=args.num_threads, spades=args.spades, age=args.age,
-                        disable_assembly=args.disable_assembly, minsvlen=args.minsvlen, inswiggle=args.inswiggle,
-                        enable_per_tool_output=args.enable_per_tool_output, min_support=args.min_ins_support,
-                        min_support_frac=args.min_ins_support_frac, max_intervals=args.max_ins_intervals,
-                        disable_deletion_assembly=args.disable_deletion_assembly,
-                        stop_spades_on_fail=args.stop_spades_on_fail, gt_window=args.gt_window,
-                        gt_normal_frac=args.gt_normal_frac, isize_mean=args.isize_mean, isize_sd=args.isize_sd,
-                        extraction_max_read_pairs=args.extraction_max_read_pairs, svs_to_report=args.svs_to_report,
-                        min_mapq=args.min_mapq, min_avg_base_qual=args.min_avg_base_qual,
-                        min_soft_clip=args.min_soft_clip, max_soft_clip=args.max_soft_clip, max_nm=args.max_nm,
-                        min_matches=args.min_matches))
+    sys.exit(run_metasv(args))
