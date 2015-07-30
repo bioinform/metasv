@@ -41,7 +41,7 @@ def get_nm(aln):
     return int(nm_str) if nm_str else 0
 
 def perfect_aln(aln):
-    return len(aln.cigar) == 1 and get_nm(aln) <= EXTRACTION_MAX_NM and aln.is_proper_pair
+    return not aln.is_unmapped and aln.is_proper_pair and len(aln.cigar) == 1 and get_nm(aln) <= EXTRACTION_MAX_NM
 
 
 def non_perfect(aln, mate):
