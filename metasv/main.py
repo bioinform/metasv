@@ -28,6 +28,8 @@ def create_dirs(dirlist):
 
 
 def run_metasv(args):
+    logger.info("Arguments are " + str(args))
+    
     # Check if there is work to do
     if not (
                                 args.pindel_vcf + args.breakdancer_vcf + args.breakseq_vcf + args.cnvnator_vcf + args.pindel_native + args.breakdancer_native + args.breakseq_native + args.cnvnator_native):
