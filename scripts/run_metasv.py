@@ -36,6 +36,12 @@ if __name__ == "__main__":
     input_parser.add_argument("--gatk_vcf", nargs="+", metavar="file", help="VCF file or dir for gatk VCFs",
                               required=False,
                               default=[])
+    input_parser.add_argument("--manta_vcf", nargs="+", help="VCF file or dir for Manta VCFs",
+                              required=False, default=[])
+    input_parser.add_argument("--lumpy_vcf", nargs="+", help="VCF file or dir for Lumpy VCFs",
+                              required=False, default=[])
+    input_parser.add_argument("--cnvkit_vcf", nargs="+", help="VCF file or dir for CNVkit VCFs",
+                              required=False, default=[])
 
     reference_parser = parser.add_argument_group("Reference options")
     reference_parser.add_argument("--reference", metavar="reference", help="Reference file", required=True)

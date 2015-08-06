@@ -29,8 +29,9 @@ def create_dirs(dirlist):
 
 def run_metasv(args):
     # Check if there is work to do
-    if not (
-                                args.pindel_vcf + args.breakdancer_vcf + args.breakseq_vcf + args.cnvnator_vcf + args.pindel_native + args.breakdancer_native + args.breakseq_native + args.cnvnator_native):
+    if not (args.pindel_vcf + args.breakdancer_vcf + args.breakseq_vcf + args.cnvnator_vcf +
+            args.pindel_native + args.breakdancer_native + args.breakseq_native + args.cnvnator_native +
+            args.manta_vcf + args.lumpy_vcf + args.cnvkit_vcf):
         logger.warning("Nothing to merge since no SV file specified")
 
     # Simple check for arguments
@@ -68,7 +69,8 @@ def run_metasv(args):
     # Load the intervals from different files
     vcf_name_list = [("CNVnator", args.cnvnator_vcf), ("Pindel", args.pindel_vcf),
                      ("BreakDancer", args.breakdancer_vcf),
-                     ("BreakSeq", args.breakseq_vcf), ("HaplotypeCaller", args.gatk_vcf)]
+                     ("BreakSeq", args.breakseq_vcf), ("HaplotypeCaller", args.gatk_vcf),
+                     ("Lumpy", args.lumpy_vcf), ("Manta", args.manta_vcf), ("CNVkit", args.cnvkit_vcf)]
     native_name_list = [("CNVnator", args.cnvnator_native, CNVnatorReader),
                         ("Pindel", args.pindel_native, PindelReader),
                         ("BreakSeq", args.breakseq_native, BreakSeqReader),
