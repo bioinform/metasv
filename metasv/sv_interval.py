@@ -237,7 +237,7 @@ class SVInterval:
                                        ".",
                                        fasta_handle.fetch(self.chrom, max(0, self.start - 2),
                                                           max(1, self.start - 1)) if fasta_handle else "N",
-                                       ["<%s>" % self.sv_type],
+                                       [vcf.model._SV(self.sv_type)],
                                        ".",
                                        "PASS" if self.is_validated else "LowQual",
                                        info,
