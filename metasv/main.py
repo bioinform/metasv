@@ -136,7 +136,7 @@ def run_metasv(args):
         for vcffile in vcf_list:
             load_intervals(vcffile, intervals[toolname], gap_intervals, include_intervals, toolname, contig_whitelist,
                            minsvlen=args.minsvlen, wiggle=args.wiggle, inswiggle=args.inswiggle,
-                           svs_to_report=args.svs_to_report)
+                           svs_to_report=args.svs_to_report, maxsvlen=args.maxsvlen)
         sv_types |= set(intervals[toolname].keys())
 
     logger.info("SV types are %s" % (str(sv_types)))
