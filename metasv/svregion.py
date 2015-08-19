@@ -12,7 +12,7 @@ class SVRegion:
         return str(self)
 
     def to_tuple(self):
-        return (self.chrom1, self.pos1, self.chrom2, self.pos2)
+        return self.chrom1, self.pos1, self.chrom2, self.pos2
 
     def length(self):
         return self.pos2 - self.pos1

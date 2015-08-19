@@ -52,5 +52,3 @@ class TigraContig:
             return cmp(self.covs, other.covs)
 
         return cmp(self.raw_name, other.raw_name)
-
-

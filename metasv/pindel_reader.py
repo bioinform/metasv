@@ -1,12 +1,10 @@
 import logging
 import sys
-import argparse
 import os
 
-import pysam
 import vcf
-from sv_interval import SVInterval
 
+from sv_interval import SVInterval
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +103,7 @@ GT_REF = "0/0"
 GT_HET = "0/1"
 GT_HOM = "1/1"
 
-PINDEL_TO_SV_TYPE = {"I": "INS", "D": "DEL", "LI": "INS", "TD": "DUP:TANDEM", "INV": "INV"}
+PINDEL_TO_SV_TYPE = {"I": "INS", "D": "DEL", "LI": "INS", "TD": "DUP", "INV": "INV"}
 
 
 class PindelRecord:
@@ -136,7 +134,6 @@ class PindelRecord:
         self.homseq = None
         self.samples = None
 
-
         if self.sv_type != "LI":
             self.sv_len = int(fields[2])
             self.num_nt_added = map(int, fields[4].split(":"))
@@ -160,15 +157,23 @@ class PindelRecord:
             self.homlen = self.bp_range[1] - self.end_pos
             self.homseq = reference_handle.fetch(self.chromosome, self.end_pos - 1,
                                                  self.bp_range[1] - 1) if reference_handle else ""
-            self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i + 1]),
-                             "ref_support_at_end": int(fields[i + 2]), "plus_support": int(fields[i + 3]),
-                             "minus_support": int(fields[i + 4])} for i in xrange(31, len(fields), 5)]
+            pindel024u_or_later = len(fields) > 31 + 5 * self.num_sample
+            if pindel024u_or_later:
+                self.samples = self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i + 1]),
+                                                "ref_support_at_end": int(fields[i + 2]),
+                                                "plus_support": sum(map(int, fields[i + 3:i + 5])),
+                                                "minus_support": sum(map(int, fields[i + 5:i + 7]))} for i in
+                                               xrange(31, len(fields), 7)]
+            else:
+                self.samples = [{"name": fields[i], "ref_support_at_start": int(fields[i + 1]),
+                                 "ref_support_at_end": int(fields[i + 2]), "plus_support": int(fields[i + 3]),
+                                 "minus_support": int(fields[i + 4])} for i in xrange(31, len(fields), 5)]
         else:
             self.sv_len = 0
             self.chromosome = fields[3]
             self.start_pos = min(int(fields[4]), int(fields[7]))
             self.up_read_supp = int(fields[6])  # upstream
-            self.end_pos = self.start_pos + 1
+            self.end_pos = self.start_pos
             self.down_read_supp = int(fields[9])  # downstream
             self.bp_range = (self.start_pos, self.end_pos)
             self.homlen = 0
@@ -220,6 +225,9 @@ class PindelRecord:
 
     def to_sv_interval(self):
         sv_type = PINDEL_TO_SV_TYPE[self.sv_type]
+        if sv_type not in PindelReader.svs_supported:
+            return None
+
         if sv_type != "INS":
             return SVInterval(self.chromosome,
                               self.start_pos,
@@ -245,9 +253,7 @@ class PindelRecord:
 
     def to_vcf_record(self, sample):
         alt = ["<%s>" % (PINDEL_TO_SV_TYPE[self.sv_type])]
-        info = {"SVLEN": self.sv_len,
-                "SVTYPE": self.sv_type
-        }
+        info = {"SVLEN": self.sv_len, "SVTYPE": PINDEL_TO_SV_TYPE[self.sv_type]}
 
         info.update(self.info)
 
@@ -269,10 +275,15 @@ class PindelRecord:
 
 
 class PindelReader:
-    def __init__(self, file_name, reference_handle=None):
+    svs_supported = set(["DEL", "INS", "DUP", "INV"])
+
+    def __init__(self, file_name, reference_handle=None, svs_to_report=None):
         logger.info("File is " + str(file_name))
         self.file_fd = open(file_name) if file_name is not None else sys.stdin
         self.reference_handle = reference_handle
+        self.svs_supported = PindelReader.svs_supported
+        if svs_to_report is not None:
+            self.svs_supported &= set(svs_to_report)
 
     def __iter__(self):
         return self
@@ -281,5 +292,6 @@ class PindelReader:
         while True:
             line = self.file_fd.next()
             if line.find("ChrID") >= 1:
-                return PindelRecord(line.strip(), self.reference_handle)
-
+                record = PindelRecord(line.strip(), self.reference_handle)
+                if PINDEL_TO_SV_TYPE[record.sv_type] in self.svs_supported:
+                    return record

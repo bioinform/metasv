@@ -1,12 +1,10 @@
 import logging
 import re
-import sys
-import argparse
 import os
 
 import vcf
-from sv_interval import SVInterval
 
+from sv_interval import SVInterval
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +63,9 @@ class CNVnatorRecord:
         return str(self.__dict__)
 
     def to_sv_interval(self):
+        if self.sv_type not in CNVnatorReader.svs_supported:
+            return None
+
         return SVInterval(self.chromosome,
                           self.start,
                           self.end,
@@ -76,19 +77,19 @@ class CNVnatorRecord:
                           native_sv=self)
 
     def to_vcf_record(self, sample):
-        alt = ["<%s>" % (self.sv_type)]
+        alt = ["<%s>" % self.sv_type]
         sv_len = -self.sv_len if self.sv_type == "DEL" else self.sv_len
         info = {"SVLEN": sv_len,
                 "SVTYPE": self.sv_type}
         if self.sv_type == "DEL" or self.sv_type == "DUP":
-            info["END"] = self.pos1 + self.sv_len
+            info["END"] = self.start + self.sv_len
         else:
             return None
 
         info.update(self.info)
 
-        vcf_record = vcf.model._Record(self.chr1,
-                                       self.pos1 - 1,
+        vcf_record = vcf.model._Record(self.chromosome,
+                                       self.start - 1,
                                        ".",
                                        "N",
                                        alt,
@@ -102,10 +103,15 @@ class CNVnatorRecord:
 
 
 class CNVnatorReader:
-    def __init__(self, file_name, reference_handle = None):
+    svs_supported = set(["DEL", "DUP"])
+
+    def __init__(self, file_name, reference_handle=None, svs_to_report=None):
         logger.info("File is " + file_name)
         self.file_fd = open(file_name)
         self.reference_handle = reference_handle
+        self.svs_supported = CNVnatorReader.svs_supported
+        if svs_to_report is not None:
+            self.svs_supported &= set(svs_to_report)
 
     def __iter__(self):
         return self
@@ -114,4 +120,6 @@ class CNVnatorReader:
         while True:
             line = self.file_fd.next()
             if line[0] != "#":
-                return CNVnatorRecord(line.strip())
+                record = CNVnatorRecord(line.strip())
+                if record.sv_type in self.svs_supported:
+                    return record
