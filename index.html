@@ -138,7 +138,7 @@ onclick="trackOutboundLink('https://github.com/bioinform/metasv/releases'); retu
    In addition, paths to the following tools must be provided as MetaSV arguments:
    <ul>
       <li><a href="http://bioinf.spbau.ru/spades">SPAdes</a>: Used for assembly around the SV breakpoints</li>
-      <li><a href="https://github.com/abyzovlab/AGE">AGE</a>: Used for determining the SV breakpoints using assembled contigs. Please use AGE code from the following <a href="https://github.com/marghoob/AGE/archive/simple-parseable-output.zip">fork</a> of the main repository-the code was modified to make AGE output simpler to parse. This dependency on the fork will be fixed in the next release.</li>
+      <li><a href="https://github.com/abyzovlab/AGE">AGE</a>: Used for determining the SV breakpoints using assembled contigs. Please use AGE code from the following <a href="https://github.com/marghoob/AGE/archive/simple-parseable-output.zip">fork</a> of the main repository-the code was modified to make AGE output simpler to parse. This dependency on the fork will be fixed in the next release. Please compile AGE without <code>OpenMP</code> support using <code>make OMP=no</code>.</li>
    </ul>
 </p>
 
