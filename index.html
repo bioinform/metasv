@@ -152,6 +152,19 @@ of MetaSV is 0.3. In general, the install source would be https://github.com/bio
 
 <p>Type <code>run_metasv.py -h</code> for help.</p>
 
+
+<h2>Testing MetaSV</h2>
+
+<p><code>cd test</code></p>
+<p><code>./test_run.sh</code></p>
+
+<h2>Example</h2>
+
+<p><code>run_metasv.py --reference reference.fasta --boost_ins --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D pindel_LI pindel_SI pindel_TD pindel_INV --sample HG005 --filter_gaps --keep_standard_contigs --bam alignments.bam --num_threads 15 --workdir work --outdir out --min_ins_support 2 --max_ins_intervals 500000 </code></p>
+
+
+
+
 <h2>References/Tools</h2>
 
 <ul style="font-family:monospace;">
