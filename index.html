@@ -158,10 +158,221 @@ of MetaSV is 0.3. In general, the install source would be https://github.com/bio
 <p><code>cd test</code></p>
 <p><code>./test_run.sh</code></p>
 
-<h2>Example</h2>
+<h2>Examples</h2>
 
-<p><code>run_metasv.py --reference reference.fasta --boost_ins --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D pindel_LI pindel_SI pindel_TD pindel_INV --sample HG005 --filter_gaps --keep_standard_contigs --bam alignments.bam --num_threads 15 --workdir work --outdir out --min_ins_support 2 --max_ins_intervals 500000 </code></p>
+	EX1: Full run (Use 4 SV detectors and run assembly):
 
+	<p><code>run_metasv.py --reference reference.fasta --boost_ins --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D pindel_LI pindel_SI pindel_TD pindel_INV --sample HG005 --bam alignments.bam --spades SPAdes/spades.py --age AGE/age_align --num_threads 15 --workdir work --outdir out --min_ins_support 2 --max_ins_intervals 500000 --isize_mean 500 --isize_sd 150 </code></p>
+
+	EX2: Only merging output of 4 SV detectors:
+	
+	<p><code>run_metasv.py --reference reference.fasta --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D pindel_LI pindel_SI pindel_TD pindel_INV --outdir out --sample NA12878 --disable_assembly --filter_gaps --keep_standard_contigs </code></p>
+
+	EX3: Only run assembly (Not use other SV detectors):
+
+	<p><code>run_metasv.py --reference reference.fasta --boost_ins --sample HG005 --bam alignments.bam --spades SPAdes/spades.py --age AGE/age_align --num_threads 15 --workdir work --outdir out --min_ins_support 2 --max_ins_intervals 500000 --isize_mean 500 --isize_sd 150 </code></p>
+
+	EX4: Only detect insertions:
+
+	<p><code>run_metasv.py --reference reference.fasta --boost_ins --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D pindel_LI pindel_SI pindel_TD pindel_INV --sample HG005 --bam alignments.bam --spades SPAdes/spades.py --age AGE/age_align --num_threads 15 --workdir work --outdir out --min_ins_support 2 --max_ins_intervals 500000 --isize_mean 500 --isize_sd 150 --svs_to_assemble INS</code></p>
+
+
+
+<h2>Balance the sensitivity/specificity trade-off</h2>
+	
+	<p>There are different factors that contribute in balancing sensitivity/specificity trade-off:
+
+	<p>NOTE: In the following tables:</p>
+	<p style="text-indent: 5em;">INC:	Increasing/Enabling will increase sensitivity (and thus decrease specificity)</p>
+	<p style="text-indent: 5em;">DEC:	Decreasing/Disabling will increase sensitivity (and thus decrease specificity)</p>
+			
+	<h4>Reference options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--filter_gaps</code></td>
+			<td>Filter out gaps (default: False)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--keep_standard_contigs</code></td>
+			<td>Keep only the major contigs + MT (default: False)</td> 
+			<td>DEC</td>
+		  </tr>
+		</table>
+		
+	<h4>Input BAM options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--isize_mean NUM</code></td>
+			<td>Insert size mean (default: 350.0)</td> 
+			<td>INC for large insertions</td>
+		  </tr>
+		  <tr>
+			<td><code>--isize_sd NUM</code></td>
+			<td>Insert size standard deviation (default: 50.0)</td> 
+			<td>INC</td>
+		  </tr>
+		</table>
+
+
+	<h4>Tool output merging options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--wiggle INT</code></td>
+			<td>Wiggle for interval overlap (default: 100)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--inswiggle INT</code></td>
+			<td>Wiggle for insertions, overides wiggle (default: 100)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--minsvlen INT</code></td>
+			<td>Minimum length acceptable to be an SV (default: 50)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--maxsvlen INT</code></td>
+			<td>Maximum length SV to report (default: 1000000)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--overlap_ratio NUM</code></td>
+			<td>Reciprocal overlap ratio (default: 0.5)</td> 
+			<td>DEC</td>
+		  </tr>
+		</table>
+
+
+
+         
+  	<h4>Insertion detection options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--min_avg_base_qual NUM</code></td>
+			<td>Minimum average base quality (default: 20)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_mapq NUM</code></td>
+			<td>Minimum MAPQ (default: 5)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_soft_clip INT</code></td>
+			<td>Minimum soft-clip (default: 20)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--max_soft_clip INT</code></td>
+			<td>Maximum soft-clip (default: 50)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--max_nm INT</code></td>
+			<td>Maximum number of edits (default: 10)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_matches INT</code></td>
+			<td>Mininum number of matches (default: 50)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_ins_support INT</code></td>
+			<td>Minimum read support for calling insertions using
+                        soft-clips (default: 5)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_ins_support_frac NUM</code></td>
+			<td>Minimum fraction of reads supporting insertion using
+                        soft-clips (default: 0.1)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--max_ins_intervals INT</code></td>
+			<td>Maximum number of insertion intervals to generate
+                        (default: 10000)</td> 
+			<td>INC</td>
+		  </tr>
+		</table>
+
+                        
+     
+  
+  	<h4>Assembly options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--extraction_max_read_pairs INT</code></td>
+			<td>Maximum number of pairs to extract for assembly
+                        (default: 10000)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--spades_max_interval_size INT</code></td>
+			<td>Maximum SV length for assembly (default: 50000)</td> 
+			<td>INC</td>
+		  </tr>
+		</table>
+     
+
+  
+  	<h4>Genotyping options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--gt_window INT</code></td>
+			<td>Window for genotyping (default: 100)</td> 
+			<td>???</td>
+		  </tr>
+		  <tr>
+			<td><code>--gt_normal_frac NUM</code></td>
+			<td>Min. fraction of reads supporting reference for
+                        genotyping (default: 0.05)</td> 
+			<td>???</td>
+		  </tr>
+		</table>
+   
+                        
+  
+                        
 
 
 
