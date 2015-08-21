@@ -281,7 +281,6 @@ def run_metasv(args):
                                                           max_intervals=args.max_ins_intervals, min_mapq=args.min_mapq,
                                                           min_avg_base_qual=args.min_avg_base_qual,
                                                           min_soft_clip=args.min_soft_clip,
-                                                          max_soft_clip=args.max_soft_clip,
                                                           max_nm=args.max_nm, min_matches=args.min_matches)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 

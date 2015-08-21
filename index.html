@@ -176,9 +176,64 @@ of MetaSV is 0.3. In general, the install source would be https://github.com/bio
 
 	<p><code>run_metasv.py --reference reference.fasta --boost_ins --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D pindel_LI pindel_SI pindel_TD pindel_INV --sample HG005 --bam alignments.bam --spades SPAdes/spades.py --age AGE/age_align --num_threads 15 --workdir work --outdir out --min_ins_support 2 --max_ins_intervals 500000 --isize_mean 500 --isize_sd 150 --svs_to_assemble INS</code></p>
 
+<h2>Important options</h2>
+ 
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Use</th> 
+		  </tr>
+		  <tr>
+			<td><code>--sample STRING</code></td>
+			<td>Sample name (default: None)</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--reference STRING</code></td>
+			<td>Reference file</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--gaps STRING</code></td>
+			<td>Gap bed file (default: None)</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--boost_ins</code></td>
+			<td>Use soft-clips for improving insertion detection
+                        (default: False)</td> 
+			<td>Enable for soft-clip analysis</td>
+		  </tr>	  
+		  <tr>
+			<td><code>--disable_assembly</code></td>
+			<td>Disable assembly
+                        (default: False)</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--bam STRING</code></td>
+			<td>BAM file (default: None)</td> 
+			<td>Include for assembly and genotyping</td>
+		  </tr>
+		  <tr>
+			<td><code>--svs_to_assemble {DEL,INS} [{DEL,INS} ...]</code></td>
+			<td>SVs to assemble (default: set(['DEL', 'INS']))</td> 
+			<td>Include for assembly</td>
+		  </tr>
+		  <tr>
+			<td><code>--spades STRING</code></td>
+			<td>Path to SPAdes executable (default: None)</td> 
+			<td>Include for assembly</td>
+		  </tr>
+			<td><code>--age STRING</code></td>
+			<td>Path to AGE executable (default: None)</td> 
+			<td>Include for assembly</td>
+		  </tr>
+		</table>
 
 
-<h2>Balance the sensitivity/specificity trade-off</h2>
+<h2>Advanced Options for balancing the sensitivity/specificity trade-off</h2>
 	
 	<p>There are different factors that contribute in balancing sensitivity/specificity trade-off:
 
@@ -217,12 +272,12 @@ of MetaSV is 0.3. In general, the install source would be https://github.com/bio
 		  <tr>
 			<td><code>--isize_mean NUM</code></td>
 			<td>Insert size mean (default: 350.0)</td> 
-			<td>INC for large insertions</td>
+			<td> - </td>
 		  </tr>
 		  <tr>
 			<td><code>--isize_sd NUM</code></td>
 			<td>Insert size standard deviation (default: 50.0)</td> 
-			<td>INC</td>
+			<td> - </td>
 		  </tr>
 		</table>
 
@@ -238,12 +293,12 @@ of MetaSV is 0.3. In general, the install source would be https://github.com/bio
 		  <tr>
 			<td><code>--wiggle INT</code></td>
 			<td>Wiggle for interval overlap (default: 100)</td> 
-			<td>INC</td>
+			<td>-</td>
 		  </tr>
 		  <tr>
 			<td><code>--inswiggle INT</code></td>
 			<td>Wiggle for insertions, overides wiggle (default: 100)</td> 
-			<td>INC</td>
+			<td>-</td>
 		  </tr>
 		  <tr>
 			<td><code>--minsvlen INT</code></td>
@@ -258,7 +313,7 @@ of MetaSV is 0.3. In general, the install source would be https://github.com/bio
 		  <tr>
 			<td><code>--overlap_ratio NUM</code></td>
 			<td>Reciprocal overlap ratio (default: 0.5)</td> 
-			<td>DEC</td>
+			<td>-</td>
 		  </tr>
 		</table>
 
@@ -289,11 +344,6 @@ of MetaSV is 0.3. In general, the install source would be https://github.com/bio
 			<td>DEC</td>
 		  </tr>
 		  <tr>
-			<td><code>--max_soft_clip INT</code></td>
-			<td>Maximum soft-clip (default: 50)</td> 
-			<td>INC</td>
-		  </tr>
-		  <tr>
 			<td><code>--max_nm INT</code></td>
 			<td>Maximum number of edits (default: 10)</td> 
 			<td>INC</td>
@@ -312,7 +362,7 @@ of MetaSV is 0.3. In general, the install source would be https://github.com/bio
 		  <tr>
 			<td><code>--min_ins_support_frac NUM</code></td>
 			<td>Minimum fraction of reads supporting insertion using
-                        soft-clips (default: 0.1)</td> 
+                        soft-clips (default: 0)</td> 
 			<td>DEC</td>
 		  </tr>
 		  <tr>
@@ -360,21 +410,17 @@ of MetaSV is 0.3. In general, the install source would be https://github.com/bio
 		  <tr>
 			<td><code>--gt_window INT</code></td>
 			<td>Window for genotyping (default: 100)</td> 
-			<td>???</td>
+			<td>-</td>
 		  </tr>
 		  <tr>
 			<td><code>--gt_normal_frac NUM</code></td>
 			<td>Min. fraction of reads supporting reference for
                         genotyping (default: 0.05)</td> 
-			<td>???</td>
+			<td>-</td>
 		  </tr>
 		</table>
    
                         
-  
-                        
-
-
 
 <h2>References/Tools</h2>
 

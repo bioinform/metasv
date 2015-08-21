@@ -74,7 +74,6 @@ if __name__ == "__main__":
                                   default=SC_MIN_AVG_BASE_QUAL, type=int)
     insertion_parser.add_argument("--min_mapq", help="Minimum MAPQ", default=SC_MIN_MAPQ, type=int)
     insertion_parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=SC_MIN_SOFT_CLIP, type=int)
-    insertion_parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=SC_MAX_SOFT_CLIP, type=int)
     insertion_parser.add_argument("--max_nm", help="Maximum number of edits", default=SC_MAX_NM, type=int)
     insertion_parser.add_argument("--min_matches", help="Mininum number of matches", default=SC_MIN_MATCHES, type=int)
     insertion_parser.add_argument("--min_ins_support",
