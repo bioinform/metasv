@@ -138,7 +138,7 @@ onclick="trackOutboundLink('https://github.com/bioinform/metasv/releases'); retu
    In addition, paths to the following tools must be provided as MetaSV arguments:
    <ul>
       <li><a href="http://bioinf.spbau.ru/spades">SPAdes</a>: Used for assembly around the SV breakpoints</li>
-      <li><a href="https://github.com/abyzovlab/AGE">AGE</a>: Used for determining the SV breakpoints using assembled contigs. Please use AGE code from the following <a href="https://github.com/marghoob/AGE/archive/simple-parseable-output.zip">fork</a> of the main repository-the code was modified to make AGE output simpler to parse. This dependency on the fork will be fixed in the next release.</li>
+      <li><a href="https://github.com/abyzovlab/AGE">AGE</a>: Used for determining the SV breakpoints using assembled contigs. Please use AGE code from the following <a href="https://github.com/marghoob/AGE/archive/simple-parseable-output.zip">fork</a> of the main repository-the code was modified to make AGE output simpler to parse. This dependency on the fork will be fixed in the next release. Please compile AGE without <code>OpenMP</code> support using <code>make OMP=no</code>.</li>
    </ul>
 </p>
 
@@ -152,15 +152,313 @@ of MetaSV is 0.3. In general, the install source would be https://github.com/bio
 
 <p>Type <code>run_metasv.py -h</code> for help.</p>
 
+
+<h2>Testing MetaSV</h2>
+
+<p><code>cd test</code></p>
+<p><code>./test_run.sh</code></p>
+
+<h2>Examples</h2>
+
+	<h4>Example 1:</h4> Complete run of MetaSV using all 4 SV detectors, soft-clips based analysis to enhance insertion detection, and local assembly to improve breakpoint resolution.
+
+	<p><code>run_metasv.py --reference reference.fasta --boost_ins --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D pindel_LI pindel_SI pindel_TD pindel_INV --sample HG005 --bam alignments.bam --spades SPAdes/spades.py --age AGE/age_align --num_threads 15 --workdir work --outdir out --min_ins_support 2 --max_ins_intervals 500000 --isize_mean 500 --isize_sd 150 </code></p>
+
+	<h4>Example 2:</h4> Only merging output of 4 SV detectors without further sof-clips based analysis or local assembly.
+	
+	<p><code>run_metasv.py --reference reference.fasta --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D pindel_LI pindel_SI pindel_TD pindel_INV --outdir out --sample NA12878 --disable_assembly --filter_gaps --keep_standard_contigs </code></p>
+
+	<h4>Example 3:</h4> Only perform analysis of soft-clipped reads to enhance insertions detection along with the assembly (without using other SV detectors).
+
+	<p><code>run_metasv.py --reference reference.fasta --boost_ins --sample HG005 --bam alignments.bam --spades SPAdes/spades.py --age AGE/age_align --num_threads 15 --workdir work --outdir out --min_ins_support 2 --max_ins_intervals 500000 --isize_mean 500 --isize_sd 150 </code></p>
+
+	<h4>Example 4:</h4> Restrict the analysis to detection of deletion SVs.
+
+	<p><code>run_metasv.py --reference reference.fasta --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D --sample HG005 --bam alignments.bam --spades SPAdes/spades.py --age AGE/age_align --num_threads 15 --workdir work --outdir out --isize_mean 500 --isize_sd 150 --svs_to_assemble DEL --svs_to_report DEL</code></p>
+
+<h2>Important options</h2>
+ 
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Use</th> 
+		  </tr>
+		  <tr>
+			<td><code>--sample STRING</code></td>
+			<td>Sample name (default: None)</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--reference STRING</code></td>
+			<td>Reference file</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--gaps STRING</code></td>
+			<td>Gap bed file (default: None)</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--boost_ins</code></td>
+			<td>Use soft-clips for improving insertion detection
+                        (default: False)</td> 
+			<td>Enable for soft-clip analysis</td>
+		  </tr>	  
+		  <tr>
+			<td><code>--disable_assembly</code></td>
+			<td>Disable assembly
+                        (default: False)</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--bam STRING</code></td>
+			<td>BAM file (default: None)</td> 
+			<td>Include for assembly and genotyping</td>
+		  </tr>
+		  <tr>
+			<td><code>--svs_to_assemble {DEL,INS} [{DEL,INS} ...]</code></td>
+			<td>SVs to assemble (default: set(['DEL', 'INS']))</td> 
+			<td>Include for assembly</td>
+		  </tr>
+		  <tr>
+			<td><code>--spades STRING</code></td>
+			<td>Path to SPAdes executable (default: None)</td> 
+			<td>Include for assembly</td>
+		  </tr>
+			<td><code>--age STRING</code></td>
+			<td>Path to AGE executable (default: None)</td> 
+			<td>Include for assembly</td>
+		  </tr>
+		  </tr>
+			<td><code>--num_threads INT</code></td>
+			<td>Number of threads to use (default: 1)</td> 
+			<td>--</td>
+		  </tr>
+		</table>
+                        
+
+
+<h2>Advanced Options for balancing the sensitivity/specificity trade-off</h2>
+	
+	<p>There are different factors that contribute in balancing sensitivity/specificity trade-off:
+
+	<p>NOTE: In the following tables:</p>
+	<p style="text-indent: 5em;">INC:	Increasing/Enabling will increase sensitivity (and thus decrease specificity)</p>
+	<p style="text-indent: 5em;">DEC:	Decreasing/Disabling will increase sensitivity (and thus decrease specificity)</p>
+			
+	<h4>Reference options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--filter_gaps</code></td>
+			<td>Filter out gaps (default: False)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--keep_standard_contigs</code></td>
+			<td>Keep only the major contigs + MT (default: False)</td> 
+			<td>DEC</td>
+		  </tr>
+		</table>
+		
+	<h4>Input BAM options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--isize_mean NUM</code></td>
+			<td>Insert size mean (default: 350.0)</td> 
+			<td> - </td>
+		  </tr>
+		  <tr>
+			<td><code>--isize_sd NUM</code></td>
+			<td>Insert size standard deviation (default: 50.0)</td> 
+			<td> - </td>
+		  </tr>
+		</table>
+
+
+	<h4>Tool output merging options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--wiggle INT</code></td>
+			<td>Wiggle for interval overlap (default: 100)</td> 
+			<td>-</td>
+		  </tr>
+		  <tr>
+			<td><code>--inswiggle INT</code></td>
+			<td>Wiggle for insertions, overides wiggle (default: 100)</td> 
+			<td>-</td>
+		  </tr>
+		  <tr>
+			<td><code>--minsvlen INT</code></td>
+			<td>Minimum length acceptable to be an SV (default: 50)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--maxsvlen INT</code></td>
+			<td>Maximum length SV to report (default: 1000000)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--overlap_ratio NUM</code></td>
+			<td>Reciprocal overlap ratio (default: 0.5)</td> 
+			<td>-</td>
+		  </tr>
+		</table>
+
+
+
+         
+  	<h4>Insertion detection options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--min_avg_base_qual NUM</code></td>
+			<td>Minimum average base quality (default: 20)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_mapq NUM</code></td>
+			<td>Minimum MAPQ (default: 5)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_soft_clip INT</code></td>
+			<td>Minimum soft-clip (default: 20)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--max_nm INT</code></td>
+			<td>Maximum number of edits (default: 10)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_matches INT</code></td>
+			<td>Mininum number of matches (default: 50)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_ins_support INT</code></td>
+			<td>Minimum read support for calling insertions using
+                        soft-clips (default: 5)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_ins_support_frac NUM</code></td>
+			<td>Minimum fraction of reads supporting insertion using
+                        soft-clips (default: 0)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--max_ins_intervals INT</code></td>
+			<td>Maximum number of insertion intervals to generate
+                        (default: 10000)</td> 
+			<td>INC</td>
+		  </tr>
+		</table>
+
+                        
+     
+  
+  	<h4>Assembly options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--extraction_max_read_pairs INT</code></td>
+			<td>Maximum number of pairs to extract for assembly
+                        (default: 10000)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--spades_max_interval_size INT</code></td>
+			<td>Maximum SV length for assembly (default: 50000)</td> 
+			<td>INC</td>
+		  </tr>
+		</table>
+     
+
+  
+  	<h4>Genotyping options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--gt_window INT</code></td>
+			<td>Window for genotyping (default: 100)</td> 
+			<td>-</td>
+		  </tr>
+		  <tr>
+			<td><code>--gt_normal_frac NUM</code></td>
+			<td>Min. fraction of reads supporting reference for
+                        genotyping (default: 0.05)</td> 
+			<td>-</td>
+		  </tr>
+		</table>
+   
+                        
+
 <h2>References/Tools</h2>
 
-<ul style="font-family:monospace;">
-   <li>AGE</li>
-   <li>BreakDancer</li>
-   <li>BreakSeq2</li>
-   <li>CNVnator</li>
-   <li>Pindel</li>
-   <li>SPAdes</li>
+<ul >
+   <li><a href="https://github.com/abyzovlab/AGE" style="font-family:monospace;">[AGE]</a> Abyzov,A. and Gerstein,M. (2011) <a href="http://bioinformatics.oxfordjournals.org/content/27/5/595">AGE: defining breakpoints of genomic
+structural variants at single-nucleotide resolution, through optimal alignments
+with gap excision.</a> Bioinformatics, 27, 595–603.</li>
+
+   <li><a href="https://github.com/genome/breakdancer/" style="font-family:monospace;">[BreakDancer]</a> 
+   Chen,K. et al. (2009) <a href="http://www.nature.com/nmeth/journal/v6/n9/abs/nmeth.1363.html">BreakDancer: an algorithm for high-resolution mapping
+of genomic structural variation.</a> Nat. Methods, 6, 677–681.</li>
+
+   <li><a href="https://github.com/bioinform/breakseq2/" style="font-family:monospace;">[BreakSeq2]</a> 
+   <p>Abyzov,A. et al. (2015) <a href="http://www.nature.com/ncomms/2015/150601/ncomms8256/abs/ncomms8256.html">Analysis of deletion breakpoints from 1,092
+humans reveals details of mutation mechanisms.</a> Nat. Commun., 6, 7256.</p>
+   <p>Lam,H.Y. et al. (2010) <a href="http://www.nature.com/nbt/journal/v28/n1/abs/nbt.1600.html">Nucleotide-resolution analysis of structural variants
+using BreakSeq and a breakpoint library.</a>  Nat. Biotechnol., 28, 47–55.<p></li>
+
+   <li><a href="https://github.com/abyzovlab/CNVnator" style="font-family:monospace;">[CNVnator]</a> 
+   Abyzov,A. et al. (2011) <a href="http://genome.cshlp.org/content/21/6/974">CNVnator: an approach to discover, genotype, and
+characterize typical and atypical CNVs from family and population genome
+sequencing.</a> Genome Res., 21, 974–984.</li>
+
+   <li><a href="https://github.com/genome/pindel/" style="font-family:monospace;">[Pindel]</a> 
+   Ye,K. et al. (2009) <a href="http://bioinformatics.oxfordjournals.org/content/25/21/2865">Pindel: a pattern growth approach to detect break points of
+large deletions and medium sized insertions from paired-end short reads.</a> Bioinformatics, 25, 2865–2871.</li>
+
+   <li><a href="http://bioinf.spbau.ru/spades" style="font-family:monospace;">[SPAdes]</a> 
+   Ye,K. et al. (2009) <a href="http://online.liebertpub.com/doi/abs/10.1089/cmb.2012.0021">Bankevich,A. et al. (2012) SPAdes: a new genome assembly algorithm
+and its applications to single-cell sequencing.</a> J. Comput. Biol., 19,
+455–477.</li>
+
 </ul>
 
 
