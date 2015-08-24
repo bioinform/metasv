@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="MetaSV">
+    <meta name="author" content="Marghoob Mohiyuddin">
+
+    <title>MetaSV</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+    .container {
+  margin-right: auto;
+  margin-left: auto;
+  max-width: 760px;
+}
+    </style>
+   
+    
+    <script>
+      
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-58409498-3', 'auto');
+  ga('send', 'pageview');
+  
+
+  
+  /**
+* Function that tracks a click on an outbound link in Google Analytics.
+* This function takes a valid URL string as an argument, and uses that URL string
+* as the event label.
+*/
+var trackOutboundLink = function(url) {
+   ga('send', 'event', 'outbound', 'click', url, {'hitCallback':
+     function () {
+     document.location = url;
+     }
+   });
+}
+
+
+function _gaLt(event){
+    var el = event.srcElement || event.target;
+
+    /* Loop up the DOM tree through parent elements if clicked element is not a link (eg: an image inside a link) */
+    while(el && (typeof el.tagName == 'undefined' || el.tagName.toLowerCase() != 'a' || !el.href)){
+        el = el.parentNode;
+    }
+
+    if(el && el.href){
+        if(el.href.indexOf(location.host) == -1){ /* external link */
+            /* HitCallback function to either open link in either same or new window */
+            var hitBack = function(link, target){
+                target ? window.open(link, target) : window.location.href = link;
+            };
+            /* link */
+            var link = el.href;
+            /* Is target set and not _(self|parent|top)? */
+            var target = (el.target && !el.target.match(/^_(self|parent|top)$/i)) ? el.target : false;
+            /* send event with callback */
+            ga(
+                "send", "event", "Outgoing Links", link,
+                document.location.pathname + document.location.search,
+                {"hitCallback": hitBack(link, target)}
+            );
+
+            /* Prevent standard click */
+            event.preventDefault ? event.preventDefault() : event.returnValue = !1;
+        }
+
+    }
+}
+
+/* Attach the event to all clicks in the document after page has loaded */
+var w = window;
+w.addEventListener ? w.addEventListener("load",function(){document.body.addEventListener("click",_gaLt,!1)},!1)
+ : w.attachEvent && w.attachEvent("onload",function(){document.body.attachEvent("onclick",_gaLt)});
+
+</script>
+
+</head>
+
+<body>
+
+	
+
+    <div class="container" style="padding-bottom: 400px;">
+    	<div class="page-header">
+  		<h1>MetaSV</h1>
+  		<h2>An accurate and integrative structural-variant caller for next generation sequencing</h2>
+	</div>
+    
+        <div class="jumbotron">
+            <p>
+                <i>For more information contact us at <a href="mailto:rd@bina.com">rd@bina.com</a></i>
+            </p>
+            
+        </div>
+        
+    <h2>Publication [Open access]</h2>
+
+    <div class="panel panel-default" style="font-family:monospace;">
+        <div class="panel-body">
+            <i>If you use MetaSV in your work, please cite the following:</i><br>
+            Marghoob Mohiyuddin, John C. Mu, Jian Li, Narges Bani Asadi, Mark B. Gerstein, Alexej Abyzov, Wing H. Wong,
+            and Hugo Y.K. Lam<br>
+            <b>MetaSV: an accurate and integrative structural-variant caller for next generation sequencing</b><br>
+            Bioinformatics first published online April 10, 2015 <a href="http://dx.doi.org/10.1093/bioinformatics/btv204"
+                onclick="trackOutboundLink('http://dx.doi.org/10.1093/bioinformatics/btv204'); return false;">doi:10.1093/bioinformatics/btv204</a>
+        </div>
+    </div>
+
+<h2>Download MetaSV</h2>
+
+<p>Latest version:  <a href="https://github.com/bioinform/metasv/archive/0.3.tar.gz"
+onclick="trackOutboundLink('https://github.com/bioinform/metasv/archive/0.3.tar.gz'); return false;">https://github.com/bioinform/metasv/archive/0.3.tar.gz</a></p>
+
+<p>For other versions, see "releases". <a href="https://github.com/bioinform/metasv/releases"
+onclick="trackOutboundLink('https://github.com/bioinform/metasv/releases'); return false;">https://github.com/bioinform/metasv/releases</a></p>
+
+
+<h2>System Requirements</h2>
+<p>
+   The following Python packages must be installed:
+   <ul>
+      <li><a href="http://pythonhosted.org/pybedtools">pybedtools</a>:  Note that <a href="https://github.com/arq5x/bedtools2">bedtools</a> (version 2.21 or greater) has to be installed separately in order for pybedtools to work.</li>
+      <li><a href="https://pypi.python.org/packages/source/p/pysam/pysam-0.7.7.tar.gz">pysam-0.7.7</a>: MetaSV has only been tested with version 0.7.7 of pysam.</li>
+      <li><a href="https://github.com/jamescasbon/PyVCF">pyvcf</a></li>
+   </ul>
+   In addition, paths to the following tools must be provided as MetaSV arguments:
+   <ul>
+      <li><a href="http://bioinf.spbau.ru/spades">SPAdes</a>: Used for assembly around the SV breakpoints</li>
+      <li><a href="https://github.com/abyzovlab/AGE">AGE</a>: Used for determining the SV breakpoints using assembled contigs. Please use AGE code from the following <a href="https://github.com/marghoob/AGE/archive/simple-parseable-output.zip">fork</a> of the main repository-the code was modified to make AGE output simpler to parse. This dependency on the fork will be fixed in the next release. Please compile AGE without <code>OpenMP</code> support using <code>make OMP=no</code>.</li>
+   </ul>
+</p>
+
+
+<h2>Installing MetaSV</h2>
+<p>MetaSV is a python package and can be installed using <code>pip</code>. To install type <code>pip install https://github.com/bioinform/metasv/archive/0.3.tar.gz</code>. The current version
+of MetaSV is 0.3. In general, the install source would be https://github.com/bioinform/metasv/archive/version.tar.gz</p>
+
+
+<h2>Running MetaSV</h2>
+
+<p>Type <code>run_metasv.py -h</code> for help.</p>
+
+
+<h2>Testing MetaSV</h2>
+
+<p><code>cd test</code></p>
+<p><code>./test_run.sh</code></p>
+
+<h2>Examples</h2>
+
+	<h4>Example 1:</h4> Complete run of MetaSV using all 4 SV detectors, soft-clips based analysis to enhance insertion detection, and local assembly to improve breakpoint resolution.
+
+	<p><code>run_metasv.py --reference reference.fasta --boost_ins --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D pindel_LI pindel_SI pindel_TD pindel_INV --sample HG005 --bam alignments.bam --spades SPAdes/spades.py --age AGE/age_align --num_threads 15 --workdir work --outdir out --min_ins_support 2 --max_ins_intervals 500000 --isize_mean 500 --isize_sd 150 </code></p>
+
+	<h4>Example 2:</h4> Only merging output of 4 SV detectors without further sof-clips based analysis or local assembly.
+	
+	<p><code>run_metasv.py --reference reference.fasta --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D pindel_LI pindel_SI pindel_TD pindel_INV --outdir out --sample NA12878 --disable_assembly --filter_gaps --keep_standard_contigs </code></p>
+
+	<h4>Example 3:</h4> Only perform analysis of soft-clipped reads to enhance insertions detection along with the assembly (without using other SV detectors).
+
+	<p><code>run_metasv.py --reference reference.fasta --boost_ins --sample HG005 --bam alignments.bam --spades SPAdes/spades.py --age AGE/age_align --num_threads 15 --workdir work --outdir out --min_ins_support 2 --max_ins_intervals 500000 --isize_mean 500 --isize_sd 150 </code></p>
+
+	<h4>Example 4:</h4> Restrict the analysis to detection of deletion SVs.
+
+	<p><code>run_metasv.py --reference reference.fasta --breakdancer_native breakdancer.out --breakseq_native breakseq.gff --cnvnator_native cnvnator.call --pindel_native pindel_D --sample HG005 --bam alignments.bam --spades SPAdes/spades.py --age AGE/age_align --num_threads 15 --workdir work --outdir out --isize_mean 500 --isize_sd 150 --svs_to_assemble DEL --svs_to_report DEL</code></p>
+
+<h2>Important options</h2>
+ 
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Use</th> 
+		  </tr>
+		  <tr>
+			<td><code>--sample STRING</code></td>
+			<td>Sample name (default: None)</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--reference STRING</code></td>
+			<td>Reference file</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--gaps STRING</code></td>
+			<td>Gap bed file (default: None)</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--boost_ins</code></td>
+			<td>Use soft-clips for improving insertion detection
+                        (default: False)</td> 
+			<td>Enable for soft-clip analysis</td>
+		  </tr>	  
+		  <tr>
+			<td><code>--disable_assembly</code></td>
+			<td>Disable assembly
+                        (default: False)</td> 
+			<td>--</td>
+		  </tr>
+		  <tr>
+			<td><code>--bam STRING</code></td>
+			<td>BAM file (default: None)</td> 
+			<td>Include for assembly and genotyping</td>
+		  </tr>
+		  <tr>
+			<td><code>--svs_to_assemble {DEL,INS} [{DEL,INS} ...]</code></td>
+			<td>SVs to assemble (default: set(['DEL', 'INS']))</td> 
+			<td>Include for assembly</td>
+		  </tr>
+		  <tr>
+			<td><code>--spades STRING</code></td>
+			<td>Path to SPAdes executable (default: None)</td> 
+			<td>Include for assembly</td>
+		  </tr>
+			<td><code>--age STRING</code></td>
+			<td>Path to AGE executable (default: None)</td> 
+			<td>Include for assembly</td>
+		  </tr>
+		  </tr>
+			<td><code>--num_threads INT</code></td>
+			<td>Number of threads to use (default: 1)</td> 
+			<td>--</td>
+		  </tr>
+		</table>
+                        
+
+
+<h2>Advanced Options for balancing the sensitivity/specificity trade-off</h2>
+	
+	<p>There are different factors that contribute in balancing sensitivity/specificity trade-off:
+
+	<p>NOTE: In the following tables:</p>
+	<p style="text-indent: 5em;">INC:	Increasing/Enabling will increase sensitivity (and thus decrease specificity)</p>
+	<p style="text-indent: 5em;">DEC:	Decreasing/Disabling will increase sensitivity (and thus decrease specificity)</p>
+			
+	<h4>Reference options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--filter_gaps</code></td>
+			<td>Filter out gaps (default: False)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--keep_standard_contigs</code></td>
+			<td>Keep only the major contigs + MT (default: False)</td> 
+			<td>DEC</td>
+		  </tr>
+		</table>
+		
+	<h4>Input BAM options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--isize_mean NUM</code></td>
+			<td>Insert size mean (default: 350.0)</td> 
+			<td> - </td>
+		  </tr>
+		  <tr>
+			<td><code>--isize_sd NUM</code></td>
+			<td>Insert size standard deviation (default: 50.0)</td> 
+			<td> - </td>
+		  </tr>
+		</table>
+
+
+	<h4>Tool output merging options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--wiggle INT</code></td>
+			<td>Wiggle for interval overlap (default: 100)</td> 
+			<td>-</td>
+		  </tr>
+		  <tr>
+			<td><code>--inswiggle INT</code></td>
+			<td>Wiggle for insertions, overides wiggle (default: 100)</td> 
+			<td>-</td>
+		  </tr>
+		  <tr>
+			<td><code>--minsvlen INT</code></td>
+			<td>Minimum length acceptable to be an SV (default: 50)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--maxsvlen INT</code></td>
+			<td>Maximum length SV to report (default: 1000000)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--overlap_ratio NUM</code></td>
+			<td>Reciprocal overlap ratio (default: 0.5)</td> 
+			<td>-</td>
+		  </tr>
+		</table>
+
+
+
+         
+  	<h4>Insertion detection options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--min_avg_base_qual NUM</code></td>
+			<td>Minimum average base quality (default: 20)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_mapq NUM</code></td>
+			<td>Minimum MAPQ (default: 5)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_soft_clip INT</code></td>
+			<td>Minimum soft-clip (default: 20)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--max_nm INT</code></td>
+			<td>Maximum number of edits (default: 10)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_matches INT</code></td>
+			<td>Mininum number of matches (default: 50)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_ins_support INT</code></td>
+			<td>Minimum read support for calling insertions using
+                        soft-clips (default: 5)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--min_ins_support_frac NUM</code></td>
+			<td>Minimum fraction of reads supporting insertion using
+                        soft-clips (default: 0)</td> 
+			<td>DEC</td>
+		  </tr>
+		  <tr>
+			<td><code>--max_ins_intervals INT</code></td>
+			<td>Maximum number of insertion intervals to generate
+                        (default: 10000)</td> 
+			<td>INC</td>
+		  </tr>
+		</table>
+
+                        
+     
+  
+  	<h4>Assembly options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--extraction_max_read_pairs INT</code></td>
+			<td>Maximum number of pairs to extract for assembly
+                        (default: 10000)</td> 
+			<td>INC</td>
+		  </tr>
+		  <tr>
+			<td><code>--spades_max_interval_size INT</code></td>
+			<td>Maximum SV length for assembly (default: 50000)</td> 
+			<td>INC</td>
+		  </tr>
+		</table>
+     
+
+  
+  	<h4>Genotyping options:</h4>
+		
+		<table style="width:100%">
+		  <tr>
+			<th>Option</th>
+			<th>Definition</th> 
+			<th>Impact</th>
+		  </tr>
+		  <tr>
+			<td><code>--gt_window INT</code></td>
+			<td>Window for genotyping (default: 100)</td> 
+			<td>-</td>
+		  </tr>
+		  <tr>
+			<td><code>--gt_normal_frac NUM</code></td>
+			<td>Min. fraction of reads supporting reference for
+                        genotyping (default: 0.05)</td> 
+			<td>-</td>
+		  </tr>
+		</table>
+   
+                        
+
+<h2>References/Tools</h2>
+
+<ul >
+   <li><a href="https://github.com/abyzovlab/AGE" style="font-family:monospace;">[AGE]</a> Abyzov,A. and Gerstein,M. (2011) <a href="http://bioinformatics.oxfordjournals.org/content/27/5/595">AGE: defining breakpoints of genomic
+structural variants at single-nucleotide resolution, through optimal alignments
+with gap excision.</a> Bioinformatics, 27, 595–603.</li>
+
+   <li><a href="https://github.com/genome/breakdancer/" style="font-family:monospace;">[BreakDancer]</a> 
+   Chen,K. et al. (2009) <a href="http://www.nature.com/nmeth/journal/v6/n9/abs/nmeth.1363.html">BreakDancer: an algorithm for high-resolution mapping
+of genomic structural variation.</a> Nat. Methods, 6, 677–681.</li>
+
+   <li><a href="https://github.com/bioinform/breakseq2/" style="font-family:monospace;">[BreakSeq2]</a> 
+   <p>Abyzov,A. et al. (2015) <a href="http://www.nature.com/ncomms/2015/150601/ncomms8256/abs/ncomms8256.html">Analysis of deletion breakpoints from 1,092
+humans reveals details of mutation mechanisms.</a> Nat. Commun., 6, 7256.</p>
+   <p>Lam,H.Y. et al. (2010) <a href="http://www.nature.com/nbt/journal/v28/n1/abs/nbt.1600.html">Nucleotide-resolution analysis of structural variants
+using BreakSeq and a breakpoint library.</a>  Nat. Biotechnol., 28, 47–55.<p></li>
+
+   <li><a href="https://github.com/abyzovlab/CNVnator" style="font-family:monospace;">[CNVnator]</a> 
+   Abyzov,A. et al. (2011) <a href="http://genome.cshlp.org/content/21/6/974">CNVnator: an approach to discover, genotype, and
+characterize typical and atypical CNVs from family and population genome
+sequencing.</a> Genome Res., 21, 974–984.</li>
+
+   <li><a href="https://github.com/genome/pindel/" style="font-family:monospace;">[Pindel]</a> 
+   Ye,K. et al. (2009) <a href="http://bioinformatics.oxfordjournals.org/content/25/21/2865">Pindel: a pattern growth approach to detect break points of
+large deletions and medium sized insertions from paired-end short reads.</a> Bioinformatics, 25, 2865–2871.</li>
+
+   <li><a href="http://bioinf.spbau.ru/spades" style="font-family:monospace;">[SPAdes]</a> 
+   Ye,K. et al. (2009) <a href="http://online.liebertpub.com/doi/abs/10.1089/cmb.2012.0021">Bankevich,A. et al. (2012) SPAdes: a new genome assembly algorithm
+and its applications to single-cell sequencing.</a> J. Comput. Biol., 19,
+455–477.</li>
+
+</ul>
+
+
+
+    </div>
+    
+    
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+</body>

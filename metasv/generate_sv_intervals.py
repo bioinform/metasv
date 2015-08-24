@@ -25,7 +25,7 @@ def concatenate_files(files, output):
                 outfile.write(infile.read())
 
 
-def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_soft_clip=50, max_nm=10,
+def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_nm=10,
                       min_matches=50):
     if aln.is_duplicate:
         return False
@@ -47,7 +47,7 @@ def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, m
         return False
     soft_clip = soft_clips[0]
 
-    if not (min_soft_clip <= soft_clip <= max_soft_clip):
+    if not (min_soft_clip <= soft_clip):
         return False
 
     if aln.cigar[0][0] == 4:
@@ -96,7 +96,7 @@ def generate_sc_intervals_callback(result, result_list):
 
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
                           min_soft_clip=SC_MIN_SOFT_CLIP,
-                          max_soft_clip=SC_MAX_SOFT_CLIP, pad=SC_PAD, min_support=MIN_SUPPORT, max_isize=1000000000,
+                          pad=SC_PAD, min_support=MIN_SUPPORT, max_isize=1000000000,
                           min_support_frac=MIN_SUPPORT_FRAC, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
@@ -115,7 +115,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             if abs(aln.tlen) > max_isize:
                 continue
             if not is_good_candidate(aln, min_avg_base_qual=min_avg_base_qual, min_mapq=min_mapq,
-                                     min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip, max_nm=max_nm,
+                                     min_soft_clip=min_soft_clip, max_nm=max_nm,
                                      min_matches=min_matches): continue
             interval = get_interval(aln, pad=pad)
             soft_clip_location = sum(interval) / 2
@@ -168,7 +168,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
 def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_threads=1,
                                    min_avg_base_qual=SC_MIN_AVG_BASE_QUAL,
-                                   min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP,
+                                   min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP, 
                                    pad=SC_PAD,
                                    min_support=MIN_SUPPORT, min_support_frac=MIN_SUPPORT_FRAC,
                                    max_intervals=MAX_INTERVALS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES):
@@ -202,7 +202,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
 
         args_list = [bam, chromosome, process_workdir]
         kwargs_dict = {"min_avg_base_qual": min_avg_base_qual, "min_mapq": min_mapq, "min_soft_clip": min_soft_clip,
-                       "max_soft_clip": max_soft_clip, "pad": pad, "min_support": min_support,
+                       "pad": pad, "min_support": min_support,
                        "min_support_frac": min_support_frac, "max_nm": max_nm, "min_matches": min_matches}
         pool.apply_async(generate_sc_intervals, args=args_list, kwds=kwargs_dict,
                          callback=partial(generate_sc_intervals_callback, result_list=bed_files))
@@ -269,7 +269,6 @@ if __name__ == "__main__":
                         type=int)
     parser.add_argument("--min_mapq", help="Minimum MAPQ", default=SC_MIN_MAPQ, type=int)
     parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=SC_MIN_SOFT_CLIP, type=int)
-    parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=SC_MAX_SOFT_CLIP, type=int)
     parser.add_argument("--max_nm", help="Maximum number of edits", default=SC_MAX_NM, type=int)
     parser.add_argument("--min_matches", help="Minimum number of matches", default=SC_MIN_MATCHES, type=int)
     parser.add_argument("--pad", help="Padding on both sides of the candidate locations", default=SC_PAD, type=int)
@@ -288,6 +287,6 @@ if __name__ == "__main__":
     parallel_generate_sc_intervals(args.bams, args.chromosomes, args.skip_bed, args.workdir,
                                    num_threads=args.num_threads, min_avg_base_qual=args.min_avg_base_qual,
                                    min_mapq=args.min_mapq, min_soft_clip=args.min_soft_clip,
-                                   max_soft_clip=args.max_soft_clip, pad=args.pad, min_support=args.min_support,
+                                   pad=args.pad, min_support=args.min_support,
                                    min_support_frac=args.min_support_frac, max_intervals=args.max_intervals,
                                    max_nm=args.max_nm, min_matches=args.min_matches)

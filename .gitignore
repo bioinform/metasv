@@ -1,6 +1,13 @@
 *.pyc
 
 .idea/**
-build
-dist
-*.egg-info
+
+/build
+
+/MetaSV.egg-info
+
+/dist
+
+/test/out
+
+/test/work

@@ -28,6 +28,8 @@ def create_dirs(dirlist):
 
 
 def run_metasv(args):
+    logger.info("Arguments are " + str(args))
+
     # Check if there is work to do
     if not (args.pindel_vcf + args.breakdancer_vcf + args.breakseq_vcf + args.cnvnator_vcf +
             args.pindel_native + args.breakdancer_native + args.breakseq_native + args.cnvnator_native +
@@ -281,7 +283,6 @@ def run_metasv(args):
                                                           max_intervals=args.max_ins_intervals, min_mapq=args.min_mapq,
                                                           min_avg_base_qual=args.min_avg_base_qual,
                                                           min_soft_clip=args.min_soft_clip,
-                                                          max_soft_clip=args.max_soft_clip,
                                                           max_nm=args.max_nm, min_matches=args.min_matches)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
