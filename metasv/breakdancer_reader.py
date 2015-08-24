@@ -150,7 +150,7 @@ class BreakDancerRecord:
         if self.chr1 != self.chr2:
             return None
 
-        alt = ["<%s>" % self.sv_type]
+        alt = [vcf.model._SV(self.sv_type)]
         sv_len = -self.sv_len if self.sv_type == "DEL" else self.sv_len
         info = {"SVLEN": sv_len,
                 "SVTYPE": self.sv_type}
