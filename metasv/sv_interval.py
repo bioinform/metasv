@@ -195,6 +195,7 @@ class SVInterval:
                 # TODO: kind of strange
                 if interval.info:
                     temp_info.update(interval.info)
+        temp_info.update({"SOURCES": str(self)})
         return temp_info
 
     def _get_svmethods(self):
@@ -228,7 +229,6 @@ class SVInterval:
         info.update({"VT": "SV"})
         info.update({"SVTOOL": "MetaSVMerge"})
         info.update({"NUM_SVMETHODS": len(self.sources)})
-        info.update({"SOURCES": str(self)})
         if self.cipos:
             info.update({"CIPOS": (",".join([str(a) for a in self.cipos]))})
 
