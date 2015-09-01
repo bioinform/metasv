@@ -2,6 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+import operator
 import os
 import copy
 import bisect
@@ -11,9 +12,12 @@ import json
 import base64
 
 svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV"]
-sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"]  # order is important!
+sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator",
+              "Manta", "Lumpy", "CNVkit"]  # order is important!
 precise_sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller"]
-sv_sources_to_type = {"Pindel": "SR", "BreakSeq": "JM", "BreakDancer": "RP", "CNVnator": "RD", "HaplotypeCaller": "AS"}
+sv_sources_to_type = {"Pindel": ["SR"], "BreakSeq": ["JM"], "BreakDancer": ["RP"],
+                      "CNVnator": ["RD"], "HaplotypeCaller": ["AS"],
+                      "Manta": ["SR", "RP"], "Lumpy": ["SR", "RP"], "CNVkit": ["RD"]}
 
 mydir = os.path.dirname(os.path.realpath(__file__))
 gaps_b37 = os.path.join(mydir, "resources/b37.gaps.bed")
@@ -191,7 +195,14 @@ class SVInterval:
                 # TODO: kind of strange
                 if interval.info:
                     temp_info.update(interval.info)
+        temp_info.update({"SOURCES": str(self)})
         return temp_info
+
+    def _get_svmethods(self):
+        """Retrieve structural variant methods used in all of the callers input sources.
+        """
+        svmethods = reduce(operator.add, [sv_sources_to_type[tool] for tool in self.sources])
+        return sorted(list(set(svmethods)))
 
     def to_vcf_record(self, fasta_handle=None, sample=""):
         if self.start <= 0:
@@ -205,12 +216,10 @@ class SVInterval:
 
         # formulate the INFO field
         info = self.get_info()
-        svmethods = [sv_sources_to_type[tool] for tool in self.sources]
-        svmethods.sort()
         sv_len = -self.length if self.sv_type == "DEL" else self.length
         info.update({"SVLEN": sv_len,
                      "SVTYPE": self.sv_type,
-                     "SVMETHOD": ",".join(svmethods)})
+                     "SVMETHOD": ",".join(self._get_svmethods())})
         if self.sv_type == "DEL" or self.sv_type == "DUP":
             info["END"] = self.end
 
@@ -220,7 +229,6 @@ class SVInterval:
         info.update({"VT": "SV"})
         info.update({"SVTOOL": "MetaSVMerge"})
         info.update({"NUM_SVMETHODS": len(self.sources)})
-        info.update({"SOURCES": str(self)})
         if self.cipos:
             info.update({"CIPOS": (",".join([str(a) for a in self.cipos]))})
 
@@ -229,7 +237,7 @@ class SVInterval:
                                        ".",
                                        fasta_handle.fetch(self.chrom, max(0, self.start - 2),
                                                           max(1, self.start - 1)) if fasta_handle else "N",
-                                       ["<%s>" % self.sv_type],
+                                       [vcf.model._SV(self.sv_type)],
                                        ".",
                                        "PASS" if self.is_validated else "LowQual",
                                        info,
@@ -245,10 +253,9 @@ class SVInterval:
         # if not self.sub_intervals and list(self.sources)[0] == "HaplotypeCaller": return None
         # if len(self.sources) == 1 and list(self.sources)[0] == "HaplotypeCaller": return None
         end = self.end if self.sv_type != "INS" else (self.end + 1)
-
         return pybedtools.Interval(self.chrom, self.start, end, name="%s,%s,%d,%s" % (
             base64.b64encode(json.dumps(self.get_info())), self.sv_type, self.length,
-            ";".join(sorted([sv_sources_to_type[tool] for tool in self.sources]))),
+            ";".join(self._get_svmethods())),
             score=str(len(self.sources)))
 
     def to_svp_record(self, sample_name, id_num):
@@ -262,7 +269,7 @@ class SVInterval:
         start_inner = self.start
         end_inner = self.end
         end_outer = self.end
-        type_of_computational_approach = ",".join(sorted([sv_sources_to_type[tool] for tool in self.sources]))
+        type_of_computational_approach = ",".join(self._get_svmethods())
 
         return "%s\t%d\t%d\t%d\t%d\t%s\t%d\t%s\t%s\t%s\t%s\tMetaSV\t%d" % (
             self.chrom, start_outer, start_inner, end_inner, end_outer, self.sv_type, self.length, "BWA", "Illumina",
