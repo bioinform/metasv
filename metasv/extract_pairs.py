@@ -105,7 +105,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
             else:
                 aln_pairs.append(aln_pair)
     else:
-        logger.info("Too many reads encountered. Skipping read extraction.")
+        logger.info("Too many reads encountered. Skipping read extraction. (%d >%d)"%(len(aln_dict),max_read_pairs))
 
     bam.close()
 

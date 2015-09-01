@@ -114,8 +114,11 @@ def run_spades_single_callback(result, result_list):
         result_list.append(result)
 
 
-def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE, svs_to_assemble=SVS_ASSEMBLY_SUPPORTED):
-    if interval.length > max_interval_size: return False
+def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE, svs_to_assemble=SVS_ASSEMBLY_SUPPORTED):   
+
+    if interval.length > max_interval_size: 
+        logger.info("Will not assemble (%s). Too large interval length: %d > %d" % (interval.name, interval.length,max_interval_size))
+        return False
     # TODO: fix this later to make MetaSV do the right thing
     should_assemble = False
     for supported_sv in svs_to_assemble:
@@ -164,6 +167,8 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
     chrs = set(chrs)
     all_intervals = [interval for interval in bedtool] if not chrs else [interval for interval in bedtool if
                                                                          interval.chrom in chrs]
+
+
     selected_intervals = filter(partial(should_be_assembled, max_interval_size=max_interval_size, svs_to_assemble=svs_to_assemble),
                                 all_intervals)
     ignored_intervals = filter(partial(shouldnt_be_assembled, max_interval_size=max_interval_size, svs_to_assemble=svs_to_assemble),

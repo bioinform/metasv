@@ -43,6 +43,8 @@ class AgeRecord:
         self.percents = [100, 100]  # Percent of matching bases in alignment for each flank
         self.start1_end1s = []  # Alignment intervals for the first sequence
         self.start2_end2s = []  # Alignment intervals for the second sequence
+        self.polarities1 = []  # Alignment polarities of intervals for the second sequence
+        self.polarities2 = []  # Alignment polarities of intervals for the second sequence
         self.excised_regions = []  # List of excised regions as intervals
         self.n_alt = 0  # Number of alternate regions
         self.alternate_regions = []
@@ -113,6 +115,8 @@ class AgeRecord:
                     self.start2_end2s = map(lambda y: map(int, y),
                                             map(lambda x: x.split(","), line.split(":")[2].split()))
 
+                    self.polarities1 = map(lambda y: 1 if y[1]>y[0] else -1,self.start1_end1s)
+                    self.polarities2 = map(lambda y: 1 if y[1]>y[0] else -1,self.start2_end2s)
                     self.nfrags = len(self.start1_end1s)
                     self.flanking_regions[0] = abs(self.start2_end2s[0][1] - self.start2_end2s[0][0] + 1)
                     self.flanking_regions[1] = 0 if len(self.start2_end2s) == 1 else abs(

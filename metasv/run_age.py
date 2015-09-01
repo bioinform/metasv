@@ -209,7 +209,9 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_
     func_logger.info("Generating the contig dictionary for parallel execution")
     small_contigs_count = 0
     for contig in contigs:
-        if contig.sv_region.length() > max_region_len: continue
+        if contig.sv_region.length() > max_region_len: 
+            func_logger.info("Too large SV region length: %d > %d" % (contig.sv_region.length(),max_region_len))
+            continue
         if (len(chrs) == 0 or contig.sv_region.chrom1 in chrs) and (len(sv_types) == 0 or contig.sv_type in sv_types):
             if contig.sequence_len >= min_contig_len:
                 contig_dict[contig.sv_region.to_tuple()].append(contig)
