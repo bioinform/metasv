@@ -14,6 +14,7 @@ from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
 from fasta_utils import get_contigs
 from genotype import parallel_genotype_intervals
+from _version import __version__
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -28,6 +29,7 @@ def create_dirs(dirlist):
 
 
 def run_metasv(args):
+    logger.info("Running MetaSV %s" % __version__)
     logger.info("Arguments are " + str(args))
 
     # Check if there is work to do
