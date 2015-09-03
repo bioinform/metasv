@@ -95,7 +95,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
                 is_pass = (int(interval.fields[8]) != -1) and (svlen == 0 or svlen >= 100)
             sv_id = "."
             ref = "."
-            alt = [vcf.model._SV(sv_type)]
+            alt = ["<%s>" % sv_type]
             qual = "."
             sv_filter = ["PASS" if is_pass else "LowQual"]
             info.update(

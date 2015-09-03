@@ -80,7 +80,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
                     spades_log_fd.write("Running spades for interval %s with extraction function %s\n" % (
                     str(interval).strip(), extract_fn_name))
                     retcode = run_cmd(
-                        "bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 --phred-offset 33 %s\"" % (
+                        "bash -c \"timeout -k 1 %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 --phred-offset 33 %s\"" % (
                             timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger,
                         spades_log_fd)
                     if retcode == 0:
@@ -115,7 +115,6 @@ def run_spades_single_callback(result, result_list):
 
 
 def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE, svs_to_assemble=SVS_ASSEMBLY_SUPPORTED):   
-
     if interval.length > max_interval_size: 
         logger.info("Will not assemble (%s). Too large interval length: %d > %d" % (interval.name, interval.length,max_interval_size))
         return False

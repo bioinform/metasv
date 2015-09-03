@@ -126,6 +126,12 @@ def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, star
             #Potentially long inversion
             candidate_inv_intervals=[i for i in left_end_near_l_bp if ((set(candidate_norm_intervals)&set(left_end_near_r_bp))-set([i]))] + \
                                     [i for i in right_end_near_r_bp if ((set(candidate_norm_intervals)&set(right_end_near_l_bp))-set([i]))]
+            
+
+            if len(candidate_inv_intervals)>1:
+                candidate_inv_intervals=[i for i in set(candidate_inv_intervals)&set(left_end_near_l_bp) if (pad< (sum(age_record.start1_end1s[i])/2.0))] + \
+                                        [i for i in set(candidate_inv_intervals)&set(right_end_near_r_bp) if ((age_record.inputs[0].length-pad) > (sum(age_record.start1_end1s[i])/2.0))]
+            
             if candidate_inv_intervals:
                 func_logger.info('Potentially long-inversion interval: %s'%candidate_inv_intervals)
                 long_inversion=True
@@ -159,23 +165,23 @@ def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, star
         func_logger.info('norm_interval: %s'%str(norm_interval))
 
         s_inv=sorted(age_record.start1_end1s[inv_interval])
-        s_ref=sorted(age_record.start1_end1s[norm_interval])
-        if (s_ref[0]-s_inv[0])*(s_ref[1]-s_inv[1])<=0:
+        s_norm=sorted(age_record.start1_end1s[norm_interval])
+        if (s_norm[0]-s_inv[0])*(s_norm[1]-s_inv[1])<=0:
             func_logger.info('Bad intervals (one fully covers the other): %s'%str(age_record))
             continue
         
         if not long_inversion:
-            if (((s_ref[1]>s_inv[1]) and (abs(s_inv[1]-s_ref[0])>10)) or ((s_ref[0]<s_inv[0]) and (abs(s_inv[0]-s_ref[1])>10))):
+            if (((s_norm[1]>s_inv[1]) and (abs(s_inv[1]-s_norm[0])>10)) or ((s_norm[0]<s_inv[0]) and (abs(s_inv[0]-s_norm[1])>10))):
                 func_logger.info('Bad middle bp in seq1: %s'%str(age_record))
                 continue
-            bp_idx = 0 if (s_ref[1]>s_inv[1]) else 1
+            bp_idx = 0 if (s_norm[1]>s_inv[1]) else 1
             bp1_seq2=age_record.start2_end2s[inv_interval][filter(lambda x:age_record.start1_end1s[inv_interval][x]==s_inv[bp_idx],[0,1])[0]]
-            bp2_seq2=age_record.start2_end2s[norm_interval][filter(lambda x:age_record.start1_end1s[norm_interval][x]==s_ref[bp_idx],[0,1])[0]]
+            bp2_seq2=age_record.start2_end2s[norm_interval][filter(lambda x:age_record.start1_end1s[norm_interval][x]==s_norm[bp_idx],[0,1])[0]]
             bp1,bp2=s_inv
         else:
             bp_idx = 0 if inv_interval in left_end_near_l_bp else 1
             bp1=s_inv[bp_idx]
-            bp2=s_ref[bp_idx]
+            bp2=s_norm[bp_idx]
             bp1_seq2=age_record.start2_end2s[inv_interval][filter(lambda x:age_record.start1_end1s[inv_interval][x]==bp1,[0,1])[0]]
             bp2_seq2=age_record.start2_end2s[norm_interval][filter(lambda x:age_record.start1_end1s[norm_interval][x]==bp2,[0,1])[0]]
 

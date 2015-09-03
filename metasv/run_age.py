@@ -82,7 +82,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 file_handle.write(">{}.ref\n{}".format(region_name, reference_sequence))
 
 
-            truncation_w_pad = 1000
+            truncation_w_pad = 2000
             dist_to_expected_bp = 400
 
             age_records = []
@@ -97,7 +97,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                     
 
                     truncate_start = pad + dist_to_expected_bp + truncation_w_pad +1
-                    truncate_end = len(reference_sequence) -  (pad + dist_to_expected_bp + truncation_w_pad) - contig.sequence_len
+                    truncate_end = len(reference_sequence) -  (pad + dist_to_expected_bp + truncation_w_pad)
                     reference_sequence_tr=reference_sequence[0:truncate_start-1]+reference_sequence[truncate_end:]
                     region_name_tr = "%s.%d.%d.tr_%d_%d" % (region_object.chrom1, region_object.pos1, region_object.pos2,truncate_start,truncate_end)
                     ref_name_tr = os.path.join(age_workdir, "%s.ref.fa" % region_name_tr)
