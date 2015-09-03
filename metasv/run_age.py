@@ -82,8 +82,8 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 file_handle.write(">{}.ref\n{}".format(region_name, reference_sequence))
 
 
-			truncation_w_pad = 1000
-			dist_to_expected_bp = 400
+            truncation_w_pad = 1000
+            dist_to_expected_bp = 400
 
             age_records = []
             thread_logger.info("Processing %d contigs for region %s" % (len(contig_dict[region]), str(region_object)))
