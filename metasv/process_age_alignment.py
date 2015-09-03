@@ -124,10 +124,8 @@ def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, star
                 continue
         else:
             #Potentially long inversion
-            candidate_inv_intervals=[i for i in left_end_near_l_bp if (pad< (sum(age_record.start1_end1s[i])/2.0)) and 
-                                       ((set(candidate_norm_intervals)&set(left_end_near_r_bp))-set([i]))] + \
-                                    [i for i in right_end_near_r_bp if ((age_record.inputs[0].length-pad) > (sum(age_record.start1_end1s[i])/2.0)) and
-                                       ((set(candidate_norm_intervals)&set(right_end_near_l_bp))-set([i]))]
+            candidate_inv_intervals=[i for i in left_end_near_l_bp if ((set(candidate_norm_intervals)&set(left_end_near_r_bp))-set([i]))] + \
+                                    [i for i in right_end_near_r_bp if ((set(candidate_norm_intervals)&set(right_end_near_l_bp))-set([i]))]
             if candidate_inv_intervals:
                 func_logger.info('Potentially long-inversion interval: %s'%candidate_inv_intervals)
                 long_inversion=True
@@ -208,7 +206,7 @@ def get_reference_intervals(age_records, start=0, min_interval_len=100):
 
 
 def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_interval_len=200, pad=500,
-                        min_deletion_len=30,min_interval_len_inv=100):
+                        min_deletion_len=30, min_interval_len_inv=100, dist_to_expected_bp=400):
     func_logger = logging.getLogger("%s-%s" % (process_age_records.__name__, multiprocessing.current_process()))
 
     good_age_records = age_records
@@ -255,7 +253,7 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
         func_logger.info("Gathered reference intervals as %s" % (str(reference_intervals)))
         breakpoints = get_insertion_breakpoints(good_age_records, reference_intervals, start=sv_region.pos1 - pad)
     elif sv_type == "INV":
-        breakpoints = get_inversion_breakpoints(good_age_records, start=sv_region.pos1 - pad ,pad=pad, min_interval_len_inv=min_interval_len_inv)
+        breakpoints = get_inversion_breakpoints(good_age_records, start=sv_region.pos1 - pad ,pad=pad, min_interval_len_inv=min_interval_len_inv, dist_to_expected_bp=dist_to_expected_bp)
     else:
         return [], dict(info)
 
