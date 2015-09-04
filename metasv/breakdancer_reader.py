@@ -141,6 +141,17 @@ class BreakDancerRecord:
                               cipos=[0, self.pos2 - self.pos1],
                               info=self.info,
                               native_sv=self)
+        elif self.sv_type == "ITX" or self.sv_type == "CTX":
+            return SVInterval(self.chr1,
+                              self.pos1 + 1,
+                              self.pos2,  # fudge
+                              name=self.name,
+                              sv_type=self.sv_type,
+                              length=self.sv_len,
+                              sources=breakdancer_source,
+                              cipos=[0, self.pos2 - self.pos1],
+                              info=self.info,
+                              native_sv=self)
         else:
             logger.error("Bad SV type: " + repr(self))
 
@@ -178,7 +189,7 @@ class BreakDancerRecord:
 
 
 class BreakDancerReader:
-    svs_supported = set(["DEL", "INS", "INV"])
+    svs_supported = set(["DEL", "INS", "INV", "ITX", "CTX"])
 
     def __init__(self, file_name, reference_handle=None, svs_to_report=None):
         logger.info("File is " + str(file_name))
