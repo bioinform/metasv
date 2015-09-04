@@ -67,12 +67,12 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
             svlen = -1
             if "DEL" in sub_types:
                 index_to_use = sub_types.index("DEL")
-                svmethods_s = set(svmethods) - {"SC"}
+                svmethods_s = set(svmethods) - {"SC","AS"}
                 is_pass = len(svmethods_s) > 1
             elif "INV" in sub_types:
                 index_to_use = sub_types.index("INV")
                 svmethods_s = set(svmethods) - {"SC"}
-                is_pass = (len(svmethods_s) > 1) or (int(interval.fields[8]) != -1)
+                is_pass = (len(svmethods_s) > 1)
             elif "INS" in sub_types and "SC" in sub_methods:
                 index_to_use = sub_methods.index("SC")
                 pos = int(interval.fields[6])

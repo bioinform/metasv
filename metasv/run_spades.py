@@ -65,7 +65,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
             sv_type = interval.name.split(",")[1]
 
             extraction_counts = extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad,
-                                                                 max_read_pairs=max_read_pairs)
+                                                                 max_read_pairs=max_read_pairs, sv_type=sv_type)
             all_pair_count = extraction_counts[0][1]
 
             for fn_id, ((end1, end2), extracted_count) in enumerate(extraction_counts):
@@ -127,6 +127,7 @@ def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE, sv
 
     name_fields = interval.name.split(",")
     methods = set(name_fields[3].split(";"))
+    
     return len(methods) == 1 or not (methods & precise_methods)
 
 
@@ -172,6 +173,9 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
                                 all_intervals)
     ignored_intervals = filter(partial(shouldnt_be_assembled, max_interval_size=max_interval_size, svs_to_assemble=svs_to_assemble),
                                all_intervals)
+
+    logger.info("%d intervals selected" % len(selected_intervals))
+    logger.info("%d intervals ignored" % len(ignored_intervals))
 
     pool = multiprocessing.Pool(nthreads)
     assembly_fastas = []
