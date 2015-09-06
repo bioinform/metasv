@@ -149,7 +149,7 @@ class BreakDancerRecord:
                               sv_type=self.sv_type,
                               length=self.sv_len,
                               sources=breakdancer_source,
-                              cipos=[0, self.pos2 - self.pos1],
+                              cipos=[0, 0],
                               info=self.info,
                               native_sv=self)
         else:
@@ -158,6 +158,7 @@ class BreakDancerRecord:
         return None
 
     def to_vcf_record(self, sample):
+        print self.chr1 ,self.chr2, smaple
         if self.chr1 != self.chr2:
             return None
 
@@ -169,6 +170,8 @@ class BreakDancerRecord:
             info["END"] = self.pos1 + self.sv_len
         elif self.sv_type == "INS":
             info["END"] = self.pos1
+        elif self.sv_type == "ITX" or self.sv_type == "CTX":
+            info["END"] = self.pos2+ (-self.sv_len)
         else:
             return None
 
