@@ -298,7 +298,8 @@ def run_metasv(args):
                                                            max_interval_size=args.spades_max_interval_size,
                                                            svs_to_assemble=args.svs_to_assemble,
                                                            stop_on_fail=args.stop_spades_on_fail,
-                                                           max_read_pairs=args.extraction_max_read_pairs)
+                                                           max_read_pairs=args.extraction_max_read_pairs,
+                                                           assembly_max_tools=args.assembly_max_tools)
         breakpoints_bed = run_age_parallel(intervals_bed=assembly_bed, reference=args.reference,
                                            assembly=assembled_fasta,
                                            pad=AGE_PAD, age=args.age, chrs=list(contig_whitelist),
