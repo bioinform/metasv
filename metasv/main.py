@@ -292,7 +292,7 @@ def run_metasv(args):
         logger.info("Will run assembly now")
 
         assembled_fasta, ignored_bed = run_spades_parallel(bam=args.bam.name, spades=args.spades, bed=assembly_bed,
-                                                           work=spades_tmpdir, pad=SPADES_PAD,
+                                                           work=spades_tmpdir, pad=args.assembly_pad,
                                                            nthreads=args.num_threads,
                                                            chrs=list(contig_whitelist),
                                                            max_interval_size=args.spades_max_interval_size,
@@ -302,7 +302,7 @@ def run_metasv(args):
                                                            assembly_max_tools=args.assembly_max_tools)
         breakpoints_bed = run_age_parallel(intervals_bed=assembly_bed, reference=args.reference,
                                            assembly=assembled_fasta,
-                                           pad=AGE_PAD, age=args.age, chrs=list(contig_whitelist),
+                                           pad=args.assembly_pad, age=args.age, chrs=list(contig_whitelist),
                                            nthreads=args.num_threads,
                                            min_contig_len=AGE_MIN_CONTIG_LENGTH, age_workdir=age_tmpdir)
 

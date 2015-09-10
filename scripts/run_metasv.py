@@ -105,6 +105,8 @@ if __name__ == "__main__":
                            help="Maximum SV length for assembly")
     as_parser.add_argument("--assembly_max_tools", type=int, default=ASSEMBLY_MAX_TOOLS,
                            help="Skip assembly if more than this many tools support a call (default 1)")
+    as_parser.add_argument("--assembly_pad", type=int, default=SPADES_PAD,
+                           help="Padding base pairs to use for assembling breakpoint with Spades and AGE")
     as_parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
     as_parser.add_argument("--age", help="Path to AGE executable", required=False)
 
