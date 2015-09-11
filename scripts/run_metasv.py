@@ -42,6 +42,8 @@ if __name__ == "__main__":
                               required=False, default=[])
     input_parser.add_argument("--cnvkit_vcf", nargs="+", help="VCF file or dir for CNVkit VCFs",
                               required=False, default=[])
+    input_parser.add_argument("--wham_vcf", nargs="+", help="VCF file or dir for WHAM VCFs",
+                              required=False, default=[])
 
     reference_parser = parser.add_argument_group("Reference options")
     reference_parser.add_argument("--reference", metavar="reference", help="Reference file", required=True)
@@ -101,6 +103,10 @@ if __name__ == "__main__":
                            help="Maximum number of pairs to extract for assembly")
     as_parser.add_argument("--spades_max_interval_size", type=int, default=SPADES_MAX_INTERVAL_SIZE,
                            help="Maximum SV length for assembly")
+    as_parser.add_argument("--assembly_max_tools", type=int, default=ASSEMBLY_MAX_TOOLS,
+                           help="Skip assembly if more than this many tools support a call (default 1)")
+    as_parser.add_argument("--assembly_pad", type=int, default=SPADES_PAD,
+                           help="Padding base pairs to use for assembling breakpoint with Spades and AGE")
     as_parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
     as_parser.add_argument("--age", help="Path to AGE executable", required=False)
 
