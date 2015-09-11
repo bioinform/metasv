@@ -105,7 +105,7 @@ def run_metasv(args):
                 
                 BD_min_inv_len = args.mean_read_length+4*args.isize_sd
                 if toolname=="BreakDancer" and interval.sv_type == "INV" and  abs(interval.length)< BD_min_inv_len:
-                    #Filter BreakDancer (~200,000) artifact INVs with size < readlength+4*isize_sd
+                    #Filter BreakDancer artifact INVs with size < readlength+4*isize_sd
                     continue
 
                 if not interval:
