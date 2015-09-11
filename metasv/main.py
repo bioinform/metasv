@@ -101,6 +101,12 @@ def run_metasv(args):
         for native_file in nativename:
             for record in svReader(native_file, svs_to_report=args.svs_to_report):
                 interval = record.to_sv_interval()
+                
+                readlength = 100
+                BD_min_inv_len = readlength+4*args.isize_sd
+                if toolname=="BreakDancer" and interval.sv_type == "INV" and  abs(interval.length)< BD_min_inv_len:
+                    #Filter BreakDancer (~200,000) artifact INVs with size < readlength+4*isize_sd
+                    continue
 
                 if not interval:
                     # This is the case for SVs we want to skip

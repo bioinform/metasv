@@ -119,12 +119,6 @@ class BreakDancerRecord:
             logger.error("Bad entry: " + repr(self))
             return None
 
-
-        #To filter BreakDancer (~200,000) artifact INVs with size 321
-        BD_MIN_INV_LEN = 330
-        if self.sv_type == "INV" and abs(self.sv_len) < BD_MIN_INV_LEN:
-            return None
-
         if self.sv_type == "DEL" or self.sv_type == "INV":
             return SVInterval(self.chr1,
                               self.pos1 + 1,
