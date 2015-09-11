@@ -44,6 +44,8 @@ if __name__ == "__main__":
                               required=False, default=[])
     input_parser.add_argument("--wham_vcf", nargs="+", help="VCF file or dir for WHAM VCFs",
                               required=False, default=[])
+                              
+    input_parser.add_argument("--mean_read_length", type=float, default=MEAN_READ_LENGTH, help="Mean read length")
 
     reference_parser = parser.add_argument_group("Reference options")
     reference_parser.add_argument("--reference", metavar="reference", help="Reference file", required=True)

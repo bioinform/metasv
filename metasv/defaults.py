@@ -5,6 +5,7 @@ WIGGLE = 100
 INS_WIGGLE = 100
 SVS_SUPPORTED = set(["DEL", "DUP", "INS", "INV"])
 SVS_ASSEMBLY_SUPPORTED = set(["DEL", "INS" , "INV"])
+MEAN_READ_LENGTH=100
 
 # For generating candidate intervals for insertion assembly
 MIN_SUPPORT = 5
