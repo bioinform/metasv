@@ -114,16 +114,12 @@ def run_spades_single_callback(result, result_list):
         result_list.append(result)
 
 
-<<<<<<< HEAD
-def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE, svs_to_assemble=SVS_ASSEMBLY_SUPPORTED):   
+def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
+                        svs_to_assemble=SVS_ASSEMBLY_SUPPORTED, assembly_max_tools=ASSEMBLY_MAX_TOOLS):
     if interval.length > max_interval_size: 
         logger.info("Will not assemble (%s). Too large interval length: %d > %d" % (interval.name, interval.length,max_interval_size))
         return False
-=======
-def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
-                        svs_to_assemble=SVS_ASSEMBLY_SUPPORTED, assembly_max_tools=ASSEMBLY_MAX_TOOLS):
-    if interval.length > max_interval_size: return False
->>>>>>> d4955b8aa2b83708bb65530e6e74b0f656181d7d
+
     # TODO: fix this later to make MetaSV do the right thing
     should_assemble = False
     for supported_sv in svs_to_assemble:
@@ -137,14 +133,9 @@ def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
     except TypeError:
         info = dict()
     methods = set(name_fields[3].split(";"))
-<<<<<<< HEAD
 
-    
-    return len(methods) == 1 or not (methods & precise_methods)
-=======
     return int(info.get("NUM_SVTOOLS", 1)) <= assembly_max_tools or not (methods & precise_methods)
->>>>>>> d4955b8aa2b83708bb65530e6e74b0f656181d7d
-
+    
 
 def shouldnt_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
                           svs_to_assemble=SVS_ASSEMBLY_SUPPORTED, assembly_max_tools=ASSEMBLY_MAX_TOOLS):
@@ -184,14 +175,8 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
     chrs = set(chrs)
     all_intervals = [interval for interval in bedtool] if not chrs else [interval for interval in bedtool if
                                                                          interval.chrom in chrs]
-<<<<<<< HEAD
-
-
-    selected_intervals = filter(partial(should_be_assembled, max_interval_size=max_interval_size, svs_to_assemble=svs_to_assemble),
-=======
     selected_intervals = filter(partial(should_be_assembled, max_interval_size=max_interval_size,
                                         svs_to_assemble=svs_to_assemble, assembly_max_tools=assembly_max_tools),
->>>>>>> d4955b8aa2b83708bb65530e6e74b0f656181d7d
                                 all_intervals)
     ignored_intervals = filter(partial(shouldnt_be_assembled, max_interval_size=max_interval_size,
                                        svs_to_assemble=svs_to_assemble, assembly_max_tools=assembly_max_tools),
