@@ -67,7 +67,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
             svlen = -1
             if "DEL" in sub_types:
                 index_to_use = sub_types.index("DEL")
-                svmethods_s = set(svmethods) - {"SC"}
+                svmethods_s = set(svmethods) - {"SC","AS"}
                 is_pass = len(svmethods_s) > 1
             elif "INV" in sub_types:
                 index_to_use = sub_types.index("INV")

@@ -65,7 +65,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
             sv_type = interval.name.split(",")[1]
 
             extraction_counts = extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad,
-                                                                 max_read_pairs=max_read_pairs)
+                                                                 max_read_pairs=max_read_pairs, sv_type=sv_type)
             all_pair_count = extraction_counts[0][1]
 
             for fn_id, ((end1, end2), extracted_count) in enumerate(extraction_counts):
@@ -116,7 +116,10 @@ def run_spades_single_callback(result, result_list):
 
 def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
                         svs_to_assemble=SVS_ASSEMBLY_SUPPORTED, assembly_max_tools=ASSEMBLY_MAX_TOOLS):
-    if interval.length > max_interval_size: return False
+    if interval.length > max_interval_size: 
+        logger.info("Will not assemble (%s). Too large interval length: %d > %d" % (interval.name, interval.length,max_interval_size))
+        return False
+
     # TODO: fix this later to make MetaSV do the right thing
     should_assemble = False
     for supported_sv in svs_to_assemble:
@@ -130,8 +133,9 @@ def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
     except TypeError:
         info = dict()
     methods = set(name_fields[3].split(";"))
-    return int(info.get("NUM_SVTOOLS", 1)) <= assembly_max_tools or not (methods & precise_methods)
 
+    return int(info.get("NUM_SVTOOLS", 1)) <= assembly_max_tools or not (methods & precise_methods)
+    
 
 def shouldnt_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
                           svs_to_assemble=SVS_ASSEMBLY_SUPPORTED, assembly_max_tools=ASSEMBLY_MAX_TOOLS):
@@ -177,6 +181,9 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
     ignored_intervals = filter(partial(shouldnt_be_assembled, max_interval_size=max_interval_size,
                                        svs_to_assemble=svs_to_assemble, assembly_max_tools=assembly_max_tools),
                                all_intervals)
+
+    logger.info("%d intervals selected" % len(selected_intervals))
+    logger.info("%d intervals ignored" % len(ignored_intervals))
 
     pool = multiprocessing.Pool(nthreads)
     assembly_fastas = []

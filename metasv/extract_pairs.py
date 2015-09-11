@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 import time
 from functools import partial, update_wrapper
-from defaults import EXTRACTION_MAX_READ_PAIRS, EXTRACTION_MAX_NM
+from defaults import EXTRACTION_MAX_READ_PAIRS, EXTRACTION_MAX_NM, EXTRACTION_MAX_INTERVAL_TRUNCATION, EXTRACTION_TRUNCATION_PAD
 
 import pysam
 
@@ -59,7 +59,9 @@ def discordant_with_normal_orientation(aln, mate, isize_min=300, isize_max=400):
     return not (isize_min <= abs(aln.tlen) <= isize_max)
 
 
-def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pairs=EXTRACTION_MAX_READ_PAIRS):
+def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pairs = EXTRACTION_MAX_READ_PAIRS,
+                       truncation_pad_read_extract = EXTRACTION_TRUNCATION_PAD,  
+                       max_interval_len_truncation = EXTRACTION_MAX_INTERVAL_TRUNCATION, sv_type=''):
     logger = logging.getLogger("%s-%s" % (extract_read_pairs.__name__, multiprocessing.current_process()))
 
     extract_fn_names = [extract_fn.__name__ for extract_fn in extract_fns]
@@ -80,7 +82,15 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
         logger.error("Skipping read extraction since interval too close to chromosome beginning")
     else:
         # Read alignments from the interval in memory and build a dictionary to get mate instead of calling bammate.mate() function
-        aln_list = [aln for aln in bam.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
+        if abs(chr_end-chr_start)>max_interval_len_truncation and sv_type in ['INV','DEL']:
+            # For large SVs, middle sequences has no effect on genotyping. So, we only extract reads around breakpoints to speed up
+            truncate_start = chr_start + pad + truncation_pad_read_extract 
+            truncate_end = chr_end -  (pad + truncation_pad_read_extract)
+            logger.info("Truncate the reads in [%d-%d] for %s_%d_%d" % (truncate_start,truncate_end,chr_name,chr_start,chr_end))
+            aln_list = [aln for aln in bam.fetch(chr_name, start=chr_start, end=truncate_start-1) if not aln.is_secondary] + \
+                       [aln for aln in bam.fetch(chr_name, start=truncate_end+1, end=chr_end) if not aln.is_secondary]
+        else:        
+            aln_list = [aln for aln in bam.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
 
     aln_dict = {}
     for aln in aln_list:
@@ -105,7 +115,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
             else:
                 aln_pairs.append(aln_pair)
     else:
-        logger.info("Too many reads encountered. Skipping read extraction.")
+        logger.info("Too many reads encountered for %s. Skipping read extraction. (%d >%d)"%(region, len(aln_dict),max_read_pairs))
 
     bam.close()
 

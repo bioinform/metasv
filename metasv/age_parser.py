@@ -34,7 +34,7 @@ class AgeInput:
 
 
 class AgeRecord:
-    def __init__(self, age_out_file=None):
+    def __init__(self, age_out_file=None,tr_region_1=[]):
         # Index 0 corresponds to the reference sequence
         self.aligned_bases = 0
         self.breakpoint_identities = []  # Homology lengths around the breakpoints
@@ -42,7 +42,10 @@ class AgeRecord:
         self.percent = 100  # Percent of matching bases in alignment
         self.percents = [100, 100]  # Percent of matching bases in alignment for each flank
         self.start1_end1s = []  # Alignment intervals for the first sequence
+        self.start1_end1s_orig = []  # Alignment intervals for the first sequence (without considering truncations)
         self.start2_end2s = []  # Alignment intervals for the second sequence
+        self.polarities1 = []  # Alignment polarities of intervals for the second sequence
+        self.polarities2 = []  # Alignment polarities of intervals for the second sequence
         self.excised_regions = []  # List of excised regions as intervals
         self.n_alt = 0  # Number of alternate regions
         self.alternate_regions = []
@@ -67,7 +70,9 @@ class AgeRecord:
 
         self.age_file = age_out_file
         self.score = 0
-
+        self.tr_region_1=tr_region_1 # Truncation region in first sequence
+        self.invalid_tr_intervals=[] #Indicies of invalid intervals in first sequence due to truncation
+        
         if age_out_file is None:
             return
 
@@ -86,6 +91,9 @@ class AgeRecord:
                     words = line.split()
                     file1 = words[-1]
                     len1 = int(words[-3])
+                    if self.tr_region_1:
+                        len1+=self.tr_region_1[1]
+                        
                     self.inputs.append(AgeInput(file1, len1))
                     continue
 
@@ -108,11 +116,23 @@ class AgeRecord:
                     continue
 
                 if line.startswith("Alignment:"):
-                    self.start1_end1s = map(lambda y: map(int, y),
+                    self.start1_end1s_orig = map(lambda y: map(int, y),
                                             map(lambda x: x.split(","), line.split(":")[1].split()))
                     self.start2_end2s = map(lambda y: map(int, y),
                                             map(lambda x: x.split(","), line.split(":")[2].split()))
+                    
+                    if self.tr_region_1:
+                        self.start1_end1s = map(lambda x:map(lambda y:self.update_pos_tr(y),x),self.start1_end1s_orig)
+                        self.invalid_tr_intervals=[i for i,interval in enumerate(self.start1_end1s_orig) if 
+                                                     (interval[0]< self.tr_region_1[0]) ^ (interval[1]< self.tr_region_1[0])]
+                        if self.invalid_tr_intervals:
+                            logger.warn("These intervals has problems (spanned over truncation): %s" % self.invalid_tr_intervals)
 
+                    else:
+                        self.start1_end1s=self.start1_end1s_orig
+                    
+                    self.polarities1 = map(lambda y: 1 if y[1]>y[0] else -1,self.start1_end1s)
+                    self.polarities2 = map(lambda y: 1 if y[1]>y[0] else -1,self.start2_end2s)
                     self.nfrags = len(self.start1_end1s)
                     self.flanking_regions[0] = abs(self.start2_end2s[0][1] - self.start2_end2s[0][0] + 1)
                     self.flanking_regions[1] = 0 if len(self.start2_end2s) == 1 else abs(
@@ -122,18 +142,22 @@ class AgeRecord:
                     self.ref_flanking_regions[1] = 0 if len(self.start1_end1s) == 1 else abs(
                         self.start1_end1s[1][1] - self.start1_end1s[1][0] + 1)
                     continue
-
+                
+                
+                #TODO: May need to fix EXCISED REGIONS for truncated regions
                 if line.startswith("EXCISED REGION(S):"):
                     self.excised_regions = map(lambda y: map(int, y),
                                                map(lambda x: x.split(","), line.split(":")[1].split()))
                     continue
 
+                #TODO: May need to fix ALTERNATIVE REGION for truncated regions
                 if line.startswith("ALTERNATIVE REGION(S):"):
                     words = line.split(":")[1].split()
                     self.n_alt = int(words[0])
                     self.alternate_regions = map(lambda y: map(int, y), map(lambda x: x.split(","), words[1:]))
                     continue
 
+                #TODO: May need to fix breakpoint_identities for truncated regions
                 if line.startswith("Identity at b"):
                     self.breakpoint_identities = map(lambda y: map(int, y),
                                                      map(lambda x: x.split(","), line.split(":")[1].split()))
@@ -199,6 +223,12 @@ class AgeRecord:
 
     def almost_all_bases_aligned(self, min_unaligned=10):
         return self.aligned_bases + min_unaligned >= self.contig.sequence_len
+
+    def update_pos_tr(self, pos):
+        if pos < self.tr_region_1[0]:
+            return pos
+        else:
+            return pos+self.tr_region_1[1]
 
     def __str__(self):
         return repr(self.__dict__)
