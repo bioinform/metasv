@@ -114,7 +114,8 @@ def run_spades_single_callback(result, result_list):
         result_list.append(result)
 
 
-def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE, svs_to_assemble=SVS_ASSEMBLY_SUPPORTED):
+def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
+                        svs_to_assemble=SVS_ASSEMBLY_SUPPORTED, assembly_max_tools=ASSEMBLY_MAX_TOOLS):
     if interval.length > max_interval_size: return False
     # TODO: fix this later to make MetaSV do the right thing
     should_assemble = False
@@ -124,13 +125,18 @@ def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE, sv
     if not should_assemble: return False
 
     name_fields = interval.name.split(",")
+    try:
+        info = json.loads(base64.b64decode(name_fields[0]))
+    except TypeError:
+        info = dict()
     methods = set(name_fields[3].split(";"))
-    return len(methods) == 1 or not (methods & precise_methods)
+    return int(info.get("NUM_SVTOOLS", 1)) <= assembly_max_tools or not (methods & precise_methods)
 
 
-def shouldnt_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE, svs_to_assemble=SVS_ASSEMBLY_SUPPORTED):
+def shouldnt_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
+                          svs_to_assemble=SVS_ASSEMBLY_SUPPORTED, assembly_max_tools=ASSEMBLY_MAX_TOOLS):
     return not should_be_assembled(interval, max_interval_size=max_interval_size,
-                                   svs_to_assemble=svs_to_assemble)
+                                   svs_to_assemble=svs_to_assemble, assembly_max_tools=assembly_max_tools)
 
 
 def add_breakpoints(interval):
@@ -150,7 +156,8 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
                         max_interval_size=SPADES_MAX_INTERVAL_SIZE,
                         timeout=SPADES_TIMEOUT, isize_min=ISIZE_MIN, isize_max=ISIZE_MAX,
                         svs_to_assemble=SVS_ASSEMBLY_SUPPORTED,
-                        stop_on_fail=False, max_read_pairs=EXTRACTION_MAX_READ_PAIRS):
+                        stop_on_fail=False, max_read_pairs=EXTRACTION_MAX_READ_PAIRS,
+                        assembly_max_tools=ASSEMBLY_MAX_TOOLS):
     pybedtools.set_tempdir(work)
 
     logger.info("Running SPAdes on the intervals in %s" % bed)
@@ -164,9 +171,11 @@ def run_spades_parallel(bam=None, spades=None, bed=None, work=None, pad=SPADES_P
     chrs = set(chrs)
     all_intervals = [interval for interval in bedtool] if not chrs else [interval for interval in bedtool if
                                                                          interval.chrom in chrs]
-    selected_intervals = filter(partial(should_be_assembled, max_interval_size=max_interval_size, svs_to_assemble=svs_to_assemble),
+    selected_intervals = filter(partial(should_be_assembled, max_interval_size=max_interval_size,
+                                        svs_to_assemble=svs_to_assemble, assembly_max_tools=assembly_max_tools),
                                 all_intervals)
-    ignored_intervals = filter(partial(shouldnt_be_assembled, max_interval_size=max_interval_size, svs_to_assemble=svs_to_assemble),
+    ignored_intervals = filter(partial(shouldnt_be_assembled, max_interval_size=max_interval_size,
+                                       svs_to_assemble=svs_to_assemble, assembly_max_tools=assembly_max_tools),
                                all_intervals)
 
     pool = multiprocessing.Pool(nthreads)

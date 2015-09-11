@@ -35,7 +35,7 @@ def run_metasv(args):
     # Check if there is work to do
     if not (args.pindel_vcf + args.breakdancer_vcf + args.breakseq_vcf + args.cnvnator_vcf +
             args.pindel_native + args.breakdancer_native + args.breakseq_native + args.cnvnator_native +
-            args.manta_vcf + args.lumpy_vcf + args.cnvkit_vcf):
+            args.manta_vcf + args.lumpy_vcf + args.cnvkit_vcf, args.wham_vcf):
         logger.warning("Nothing to merge since no SV file specified")
 
     # Simple check for arguments
@@ -74,7 +74,8 @@ def run_metasv(args):
     vcf_name_list = [("CNVnator", args.cnvnator_vcf), ("Pindel", args.pindel_vcf),
                      ("BreakDancer", args.breakdancer_vcf),
                      ("BreakSeq", args.breakseq_vcf), ("HaplotypeCaller", args.gatk_vcf),
-                     ("Lumpy", args.lumpy_vcf), ("Manta", args.manta_vcf), ("CNVkit", args.cnvkit_vcf)]
+                     ("Lumpy", args.lumpy_vcf), ("Manta", args.manta_vcf), ("CNVkit", args.cnvkit_vcf),
+                     ("WHAM", args.wham_vcf)]
     native_name_list = [("CNVnator", args.cnvnator_native, CNVnatorReader),
                         ("Pindel", args.pindel_native, PindelReader),
                         ("BreakSeq", args.breakseq_native, BreakSeqReader),
@@ -291,16 +292,17 @@ def run_metasv(args):
         logger.info("Will run assembly now")
 
         assembled_fasta, ignored_bed = run_spades_parallel(bam=args.bam.name, spades=args.spades, bed=assembly_bed,
-                                                           work=spades_tmpdir, pad=SPADES_PAD,
+                                                           work=spades_tmpdir, pad=args.assembly_pad,
                                                            nthreads=args.num_threads,
                                                            chrs=list(contig_whitelist),
                                                            max_interval_size=args.spades_max_interval_size,
                                                            svs_to_assemble=args.svs_to_assemble,
                                                            stop_on_fail=args.stop_spades_on_fail,
-                                                           max_read_pairs=args.extraction_max_read_pairs)
+                                                           max_read_pairs=args.extraction_max_read_pairs,
+                                                           assembly_max_tools=args.assembly_max_tools)
         breakpoints_bed = run_age_parallel(intervals_bed=assembly_bed, reference=args.reference,
                                            assembly=assembled_fasta,
-                                           pad=AGE_PAD, age=args.age, chrs=list(contig_whitelist),
+                                           pad=args.assembly_pad, age=args.age, chrs=list(contig_whitelist),
                                            nthreads=args.num_threads,
                                            min_contig_len=AGE_MIN_CONTIG_LENGTH, age_workdir=age_tmpdir)
 
