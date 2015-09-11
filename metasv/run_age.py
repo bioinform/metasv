@@ -36,7 +36,9 @@ def run_cmd(cmd, logger, out, err):
 
 
 def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference=None, assembly=None, pad=AGE_PAD,
-                   age=None,
+                   age=None, truncation_pad_read_age = AGE_TRUNCATION_PAD,
+                   max_interval_len_truncation_age = AGE_MAX_INTERVAL_TRUNCATION,
+                   dist_to_expected_bp = AGE_DIST_TO_BP,
                    age_workdir=None, timeout=AGE_TIMEOUT, keep_temp=False, myid=0):
     thread_logger = logging.getLogger("%s-%s" % (run_age_single.__name__, multiprocessing.current_process()))
 
@@ -82,8 +84,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 file_handle.write(">{}.ref\n{}".format(region_name, reference_sequence))
 
 
-            truncation_w_pad = 2000
-            dist_to_expected_bp = 400
+            
 
             age_records = []
             thread_logger.info("Processing %d contigs for region %s" % (len(contig_dict[region]), str(region_object)))
@@ -92,12 +93,13 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                     "Writing the assembeled sequence %s of length %s" % (contig.raw_name, contig.sequence_len))
                 
                 tr_region=[]
-                if region_object.length()>50000 and contig.sv_type == "INV":
+                if region_object.length()>max_interval_len_truncation_age and contig.sv_type == "INV":
+                    # For large SVs, middle sequences has no effect on genotyping. So, we truncate middle region of reference to speed up
                     thread_logger.info("Truncate the reference sequence.")
                     
 
-                    truncate_start = pad + dist_to_expected_bp + truncation_w_pad +1
-                    truncate_end = len(reference_sequence) -  (pad + dist_to_expected_bp + truncation_w_pad)
+                    truncate_start = pad + dist_to_expected_bp + truncation_pad_read_age +1
+                    truncate_end = len(reference_sequence) -  (pad + dist_to_expected_bp + truncation_pad_read_age)
                     reference_sequence_tr=reference_sequence[0:truncate_start-1]+reference_sequence[truncate_end:]
                     region_name_tr = "%s.%d.%d.tr_%d_%d" % (region_object.chrom1, region_object.pos1, region_object.pos2,truncate_start,truncate_end)
                     ref_name_tr = os.path.join(age_workdir, "%s.ref.fa" % region_name_tr)

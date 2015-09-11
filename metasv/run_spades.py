@@ -127,6 +127,7 @@ def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE, sv
 
     name_fields = interval.name.split(",")
     methods = set(name_fields[3].split(";"))
+
     
     return len(methods) == 1 or not (methods & precise_methods)
 

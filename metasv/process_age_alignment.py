@@ -84,7 +84,7 @@ def check_closeness_to_bp(pos,pad,dist_to_expected_bp,LR_bp,seq_length=0):
     
     
 
-def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, start=0,pad=500,dist_to_expected_bp=400,min_interval_len_inv=100):
+def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, start=0, pad=500, dist_to_expected_bp=400, min_interval_len_inv=100):
     func_logger = logging.getLogger("%s-%s" % (get_deletion_breakpoints.__name__, multiprocessing.current_process()))
 
     potential_breakpoints = []
@@ -171,13 +171,17 @@ def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, star
             continue
         
         if not long_inversion:
-            if (((s_norm[1]>s_inv[1]) and (abs(s_inv[1]-s_norm[0])>10)) or ((s_norm[0]<s_inv[0]) and (abs(s_inv[0]-s_norm[1])>10))):
+            if (((s_norm[1]>s_inv[1]) and ((s_inv[1]-s_norm[0])>10)) or ((s_norm[0]<s_inv[0]) and ((s_norm[1]-s_inv[0])>10))):
+                func_logger.info('Bad middle bp in seq1: %s'%str(age_record))
+                continue
+            if (((s_norm[1]>s_inv[1]) and ((s_norm[0]-s_inv[0])>400) and((s_norm[0]-s_inv[1])>50)) or ((s_norm[0]<s_inv[0]) and ((s_inv[1]-s_norm[1])>400)  and ((s_inv[0]-s_norm[1])>50))):
                 func_logger.info('Bad middle bp in seq1: %s'%str(age_record))
                 continue
             bp_idx = 0 if (s_norm[1]>s_inv[1]) else 1
             bp1_seq2=age_record.start2_end2s[inv_interval][filter(lambda x:age_record.start1_end1s[inv_interval][x]==s_inv[bp_idx],[0,1])[0]]
             bp2_seq2=age_record.start2_end2s[norm_interval][filter(lambda x:age_record.start1_end1s[norm_interval][x]==s_norm[bp_idx],[0,1])[0]]
-            bp1,bp2=s_inv
+            bp1=s_inv[0] if bp_idx==0 else s_norm[1]
+            bp2=s_norm[0] if bp_idx==0 else s_inv[1]
         else:
             bp_idx = 0 if inv_interval in left_end_near_l_bp else 1
             bp1=s_inv[bp_idx]
@@ -212,7 +216,7 @@ def get_reference_intervals(age_records, start=0, min_interval_len=100):
 
 
 def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_interval_len=200, pad=500,
-                        min_deletion_len=30, min_interval_len_inv=100, dist_to_expected_bp=400):
+                        min_deletion_len=30, min_interval_len_inv=50, dist_to_expected_bp=400):
     func_logger = logging.getLogger("%s-%s" % (process_age_records.__name__, multiprocessing.current_process()))
 
     good_age_records = age_records
