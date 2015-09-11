@@ -13,11 +13,12 @@ import base64
 
 svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV"]
 sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator",
-              "Manta", "Lumpy", "CNVkit"]  # order is important!
+              "Manta", "Lumpy", "WHAM", "CNVkit"]  # order is important!
 precise_sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller"]
 sv_sources_to_type = {"Pindel": ["SR"], "BreakSeq": ["JM"], "BreakDancer": ["RP"],
                       "CNVnator": ["RD"], "HaplotypeCaller": ["AS"],
-                      "Manta": ["SR", "RP"], "Lumpy": ["SR", "RP"], "CNVkit": ["RD"]}
+                      "Manta": ["SR", "RP"], "Lumpy": ["SR", "RP"], "CNVkit": ["RD"],
+                      "WHAM": ["SR", "RP"]}
 
 mydir = os.path.dirname(os.path.realpath(__file__))
 gaps_b37 = os.path.join(mydir, "resources/b37.gaps.bed")
@@ -195,13 +196,23 @@ class SVInterval:
                 # TODO: kind of strange
                 if interval.info:
                     temp_info.update(interval.info)
-        temp_info.update({"SOURCES": str(self)})
+        temp_info.update({"SOURCES": str(self),
+                          "NUM_SVMETHODS": len(self._get_svmethods()),
+                          "NUM_SVTOOLS": len(self._get_tools())})
         return temp_info
+
+    def _get_tools(self):
+        """Retrieve tools contributing to this structural variant call.
+
+        These can come from both our current sources as well as merged sub_intervals.
+        """
+        tools = set(self.sources).union(*[set(x.sources) for x in self.sub_intervals])
+        return sorted(list(tools))
 
     def _get_svmethods(self):
         """Retrieve structural variant methods used in all of the callers input sources.
         """
-        svmethods = reduce(operator.add, [sv_sources_to_type[tool] for tool in self.sources])
+        svmethods = reduce(operator.add, [sv_sources_to_type[tool] for tool in self._get_tools()])
         return sorted(list(set(svmethods)))
 
     def to_vcf_record(self, fasta_handle=None, sample=""):
@@ -228,7 +239,6 @@ class SVInterval:
 
         info.update({"VT": "SV"})
         info.update({"SVTOOL": "MetaSVMerge"})
-        info.update({"NUM_SVMETHODS": len(self.sources)})
         if self.cipos:
             info.update({"CIPOS": (",".join([str(a) for a in self.cipos]))})
 
