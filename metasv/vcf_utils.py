@@ -6,6 +6,9 @@ from sv_interval import *
 from defaults import SVS_SUPPORTED, MAX_SV_LENGTH
 import pysam
 
+# Callers to remove filtered values when reading
+REMOVE_FILTERED = set(["BreakSeq", "Lumpy", "Manta", "CNVkit", "WHAM"])
+
 
 def print_header(header, file_fd):
     for line in header:
@@ -110,7 +113,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                                       gt=gt)
 
         else:
-            if source == "BreakSeq" and "PASS" not in vcf_record.FILTER: continue
+            if source in REMOVE_FILTERED and vcf_record.FILTER and "PASS" not in vcf_record.FILTER: continue
 
             if len(vcf_record.ALT) > 1: continue
             if "SVTYPE" not in vcf_record.INFO or "END" not in vcf_record.INFO:
