@@ -252,7 +252,7 @@ class SVInterval:
             info.update({"IMPRECISE": None})
 
         info.update({"VT": "SV"})
-        info.update({"SVTOOL": "MetaSVMerge"})
+        info.update({"SVTOOL": "MetaSV"})
         if self.cipos:
             info.update({"CIPOS": (",".join([str(a) for a in self.cipos]))})
 
@@ -287,6 +287,8 @@ class SVInterval:
         if self.sv_type in ["ITX", "CTX"]:
             info["END"] = self.end
             info["CHR2"] = self.chrom2
+            if not self.is_precise:
+                info.update({"IMPRECISE": None})
 
         return pybedtools.Interval(self.chrom, self.start, end, name="%s,%s,%d,%s" % (
             base64.b64encode(json.dumps(info)), self.sv_type, self.length,
