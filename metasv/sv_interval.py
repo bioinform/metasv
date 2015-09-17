@@ -245,6 +245,9 @@ class SVInterval:
         if self.sv_type in ["DEL","DUP", "ITX", "CTX"]:
             info["END"] = self.end
 
+        if self.sv_type in ["ITX", "CTX"]:
+            info["CHR2"] = self.chrom2
+
         if not self.is_precise:
             info.update({"IMPRECISE": None})
 
@@ -254,10 +257,10 @@ class SVInterval:
             info.update({"CIPOS": (",".join([str(a) for a in self.cipos]))})
 
         vcf_record = vcf.model._Record(self.chrom,
-                                       self.start - 1,
+                                       self.start,
                                        ".",
-                                       fasta_handle.fetch(self.chrom, max(0, self.start - 2),
-                                                          max(1, self.start - 1)) if fasta_handle else "N",
+                                       fasta_handle.fetch(self.chrom, max(0, self.start - 1),
+                                                          max(1, self.start)) if fasta_handle else "N",
                                        [vcf.model._SV(self.sv_type)],
                                        ".",
                                        "PASS" if self.is_validated else "LowQual",
@@ -270,12 +273,23 @@ class SVInterval:
     def to_bed_interval(self, sample_name):
         if self.start <= 0:
             return None
-        if self.sv_type not in ["DEL", "INS", "INV"]: return None
+        if self.sv_type not in ["DEL", "INS", "INV", "ITX", "CTX", "DUP"]: return None
         # if not self.sub_intervals and list(self.sources)[0] == "HaplotypeCaller": return None
         # if len(self.sources) == 1 and list(self.sources)[0] == "HaplotypeCaller": return None
-        end = self.end if self.sv_type != "INS" else (self.end + 1)
+        if self.sv_type == "INS":
+            end = self.end + 1
+        elif self.sv_type in ["ITX","CTX"] :
+            end = self.start + 1
+        else:
+            end = self.end
+        info = self.get_info()
+        
+        if self.sv_type in ["ITX", "CTX"]:
+            info["END"] = self.end
+            info["CHR2"] = self.chrom2
+
         return pybedtools.Interval(self.chrom, self.start, end, name="%s,%s,%d,%s" % (
-            base64.b64encode(json.dumps(self.get_info())), self.sv_type, self.length,
+            base64.b64encode(json.dumps(info)), self.sv_type, self.length,
             ";".join(self._get_svmethods())),
             score=str(len(self.sources)))
 

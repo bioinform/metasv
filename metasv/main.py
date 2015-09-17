@@ -113,7 +113,7 @@ def run_metasv(args):
                 if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
                     
                     # Check length
-                    if interval.length < args.minsvlen and interval.sv_type != "CTX":
+                    if interval.length < args.minsvlen and interval.sv_type not in  ["ITX", "CTX"]:
                         continue
 
                     # Set wiggle
@@ -228,7 +228,7 @@ def run_metasv(args):
     for interval in final_intervals:
         interval.do_validation(args.overlap_ratio)
         interval.fix_pos()
-        if args.minsvlen <= interval.length <= args.maxsvlen or interval.sv_type == "CTX":
+        if args.minsvlen <= interval.length <= args.maxsvlen or interval.sv_type in ["ITX", "CTX"]:
             final_chr_intervals[interval.chrom].append(interval)
 
     # This is the merged VCF without assembly, ok for deletions at this point
