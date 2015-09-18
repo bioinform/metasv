@@ -39,6 +39,7 @@
 ##INFO=<ID=BA_PERCENT_MATCH,Number=1,Type=Integer,Description="Breakpoint assembly: percent of matching bases in alignment">
 ##INFO=<ID=VT,Number=1,Type=String,Description="indicates what type of variant the line represents">
 ##INFO=<ID=SVMETHOD,Number=.,Type=String,Description="Type of approach used to detect SV: RP (read pair), RD (read depth), SR (split read), JT (junction) or AS (assembly)">
+##INFO=<ID=CHR2,Number=.,Type=String,Description="Chromosome for END coordinate in case of a translocation">
 ##INFO=<ID=natorRD,Number=1,Type=Float,Description="CNVnator: Normalized RD">
 ##INFO=<ID=natorP1,Number=1,Type=Float,Description="CNVnator: e-val by t-test">
 ##INFO=<ID=natorP2,Number=1,Type=Float,Description="CNVnator: e-val by Gaussian tail">
@@ -63,4 +64,6 @@
 ##ALT=<ID=INS:ME:L1,Description="Insertion of L1 element">
 ##ALT=<ID=INV,Description="Inversion">
 ##ALT=<ID=CNV,Description="Copy number variable region">
+##ALT=<ID=ITX,Description="Intra-chromosomal translocation">
+##ALT=<ID=CTX,Description="Inter-chromosomal translocation">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT

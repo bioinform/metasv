@@ -61,7 +61,8 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
                 info = dict()
             if len(interval.fields) > 9:
                 info.update(json.loads(base64.b64decode(interval.fields[9])))
-
+            
+            
             index_to_use = 0
             is_pass = False
             svlen = -1
@@ -78,7 +79,17 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
                 pos = int(interval.fields[6])
                 end = int(interval.fields[7])
                 svlen = int(interval.fields[8])
-
+            elif "ITX" in sub_types:
+                index_to_use = sub_types.index("ITX")
+                svmethods_s = set(svmethods) - {"SC","AS"}
+                is_pass = len(svmethods_s) > 1
+                end = info["END"]
+            elif "CTX" in sub_types:
+                index_to_use = sub_types.index("CTX")
+                svmethods_s = set(svmethods) - {"SC","AS"}
+                is_pass = len(svmethods_s) > 1
+                end = info["END"]
+                
             if pos < 1:
                 func_logger.info("Variant with pos < 1 encountered. Skipping! %s" % str(interval))
                 continue

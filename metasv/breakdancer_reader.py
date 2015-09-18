@@ -89,7 +89,7 @@ class BreakDancerRecord:
         self.pos2 = int(fields[4])
         self.ori2 = fields[5]
         self.sv_type = fields[6]
-        self.sv_len = abs(int(fields[7]))
+        self.sv_len = abs(int(fields[7])) 
         self.score = float(fields[8])
         self.supporting_read_pairs = int(fields[9])
         self.supporting_reads_pairs_lib = dict(
@@ -115,7 +115,7 @@ class BreakDancerRecord:
         if self.sv_type not in BreakDancerReader.svs_supported:
             return None
 
-        if self.chr1 != self.chr2:
+        if (self.chr1 != self.chr2) and (self.sv_type != "CTX"):
             logger.error("Bad entry: " + repr(self))
             return None
 
@@ -141,13 +141,28 @@ class BreakDancerRecord:
                               cipos=[0, self.pos2 - self.pos1],
                               info=self.info,
                               native_sv=self)
+        elif self.sv_type == "ITX" or self.sv_type == "CTX":
+            #As in Breakdancer Native output, we always assume that:
+            #For CTX: chr2 >= chr1
+            #For ITX: pos2 >= pos1
+            return SVInterval(self.chr1,
+                              self.pos1 + 1,
+                              self.pos2,  # fudge
+                              name=self.name,
+                              sv_type=self.sv_type,
+                              length=self.sv_len,
+                              sources=breakdancer_source,
+                              cipos=[0, 0],
+                              info=self.info,
+                              native_sv=self,
+                              chrom2= self.chr2)
         else:
             logger.error("Bad SV type: " + repr(self))
 
         return None
 
     def to_vcf_record(self, sample):
-        if self.chr1 != self.chr2:
+        if self.chr1 != self.chr2 and self.sv_type != "CTX":
             return None
 
         alt = [vcf.model._SV(self.sv_type)]
@@ -158,6 +173,8 @@ class BreakDancerRecord:
             info["END"] = self.pos1 + self.sv_len
         elif self.sv_type == "INS":
             info["END"] = self.pos1
+        elif self.sv_type == "ITX" or self.sv_type == "CTX":
+            info["END"] = self.pos2
         else:
             return None
 
@@ -178,7 +195,7 @@ class BreakDancerRecord:
 
 
 class BreakDancerReader:
-    svs_supported = set(["DEL", "INS", "INV"])
+    svs_supported = set(["DEL", "INS", "INV", "ITX", "CTX"])
 
     def __init__(self, file_name, reference_handle=None, svs_to_report=None):
         logger.info("File is " + str(file_name))

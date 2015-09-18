@@ -102,7 +102,6 @@ def run_metasv(args):
         for native_file in nativename:
             for record in svReader(native_file, svs_to_report=args.svs_to_report):
                 interval = record.to_sv_interval()
-                
                 BD_min_inv_len = args.mean_read_length+4*args.isize_sd
                 if toolname=="BreakDancer" and interval.sv_type == "INV" and  abs(interval.length)< BD_min_inv_len:
                     #Filter BreakDancer artifact INVs with size < readlength+4*isize_sd
@@ -112,16 +111,18 @@ def run_metasv(args):
                     # This is the case for SVs we want to skip
                     continue
                 if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
-
+                    
                     # Check length
-                    if interval.length < args.minsvlen:
+                    if interval.length < args.minsvlen and interval.sv_type not in  ["ITX", "CTX"]:
                         continue
 
                     # Set wiggle
-                    interval.wiggle = max(args.inswiggle if interval.sv_type == "INS" else 0, args.wiggle)
-
+                    if interval.sv_type not in ["ITX","CTX"]:
+                        interval.wiggle = max(args.inswiggle if interval.sv_type == "INS" else 0, args.wiggle)
+                    else:
+                        interval.wiggle = TX_WIGGLE
+                    
                     intervals[toolname][interval.sv_type].append(interval)
-
         sv_types |= set(intervals[toolname].keys())
 
     # Handles the VCF input cases, we will just deal with these cases
@@ -227,7 +228,7 @@ def run_metasv(args):
     for interval in final_intervals:
         interval.do_validation(args.overlap_ratio)
         interval.fix_pos()
-        if args.minsvlen <= interval.length <= args.maxsvlen:
+        if args.minsvlen <= interval.length <= args.maxsvlen or interval.sv_type in ["ITX", "CTX"]:
             final_chr_intervals[interval.chrom].append(interval)
 
     # This is the merged VCF without assembly, ok for deletions at this point
