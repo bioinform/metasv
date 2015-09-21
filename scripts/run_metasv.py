@@ -36,6 +36,16 @@ if __name__ == "__main__":
     input_parser.add_argument("--gatk_vcf", nargs="+", metavar="file", help="VCF file or dir for gatk VCFs",
                               required=False,
                               default=[])
+    input_parser.add_argument("--manta_vcf", nargs="+", help="VCF file or dir for Manta VCFs",
+                              required=False, default=[])
+    input_parser.add_argument("--lumpy_vcf", nargs="+", help="VCF file or dir for Lumpy VCFs",
+                              required=False, default=[])
+    input_parser.add_argument("--cnvkit_vcf", nargs="+", help="VCF file or dir for CNVkit VCFs",
+                              required=False, default=[])
+    input_parser.add_argument("--wham_vcf", nargs="+", help="VCF file or dir for WHAM VCFs",
+                              required=False, default=[])
+                              
+    input_parser.add_argument("--mean_read_length", type=float, default=MEAN_READ_LENGTH, help="Mean read length")
 
     reference_parser = parser.add_argument_group("Reference options")
     reference_parser.add_argument("--reference", metavar="reference", help="Reference file", required=True)
@@ -74,7 +84,6 @@ if __name__ == "__main__":
                                   default=SC_MIN_AVG_BASE_QUAL, type=int)
     insertion_parser.add_argument("--min_mapq", help="Minimum MAPQ", default=SC_MIN_MAPQ, type=int)
     insertion_parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=SC_MIN_SOFT_CLIP, type=int)
-    insertion_parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=SC_MAX_SOFT_CLIP, type=int)
     insertion_parser.add_argument("--max_nm", help="Maximum number of edits", default=SC_MAX_NM, type=int)
     insertion_parser.add_argument("--min_matches", help="Mininum number of matches", default=SC_MIN_MATCHES, type=int)
     insertion_parser.add_argument("--min_ins_support",
@@ -96,6 +105,10 @@ if __name__ == "__main__":
                            help="Maximum number of pairs to extract for assembly")
     as_parser.add_argument("--spades_max_interval_size", type=int, default=SPADES_MAX_INTERVAL_SIZE,
                            help="Maximum SV length for assembly")
+    as_parser.add_argument("--assembly_max_tools", type=int, default=ASSEMBLY_MAX_TOOLS,
+                           help="Skip assembly if more than this many tools support a call (default 1)")
+    as_parser.add_argument("--assembly_pad", type=int, default=SPADES_PAD,
+                           help="Padding base pairs to use for assembling breakpoint with Spades and AGE")
     as_parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
     as_parser.add_argument("--age", help="Path to AGE executable", required=False)
 

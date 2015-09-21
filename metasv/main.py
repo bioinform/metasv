@@ -14,6 +14,7 @@ from run_age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
 from fasta_utils import get_contigs
 from genotype import parallel_genotype_intervals
+from _version import __version__
 
 FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -28,9 +29,13 @@ def create_dirs(dirlist):
 
 
 def run_metasv(args):
+    logger.info("Running MetaSV %s" % __version__)
+    logger.info("Arguments are " + str(args))
+
     # Check if there is work to do
-    if not (
-                                args.pindel_vcf + args.breakdancer_vcf + args.breakseq_vcf + args.cnvnator_vcf + args.pindel_native + args.breakdancer_native + args.breakseq_native + args.cnvnator_native):
+    if not (args.pindel_vcf + args.breakdancer_vcf + args.breakseq_vcf + args.cnvnator_vcf +
+            args.pindel_native + args.breakdancer_native + args.breakseq_native + args.cnvnator_native +
+            args.manta_vcf + args.lumpy_vcf + args.cnvkit_vcf, args.wham_vcf):
         logger.warning("Nothing to merge since no SV file specified")
 
     # Simple check for arguments
@@ -68,7 +73,9 @@ def run_metasv(args):
     # Load the intervals from different files
     vcf_name_list = [("CNVnator", args.cnvnator_vcf), ("Pindel", args.pindel_vcf),
                      ("BreakDancer", args.breakdancer_vcf),
-                     ("BreakSeq", args.breakseq_vcf), ("HaplotypeCaller", args.gatk_vcf)]
+                     ("BreakSeq", args.breakseq_vcf), ("HaplotypeCaller", args.gatk_vcf),
+                     ("Lumpy", args.lumpy_vcf), ("Manta", args.manta_vcf), ("CNVkit", args.cnvkit_vcf),
+                     ("WHAM", args.wham_vcf)]
     native_name_list = [("CNVnator", args.cnvnator_native, CNVnatorReader),
                         ("Pindel", args.pindel_native, PindelReader),
                         ("BreakSeq", args.breakseq_native, BreakSeqReader),
@@ -95,21 +102,27 @@ def run_metasv(args):
         for native_file in nativename:
             for record in svReader(native_file, svs_to_report=args.svs_to_report):
                 interval = record.to_sv_interval()
+                BD_min_inv_len = args.mean_read_length+4*args.isize_sd
+                if toolname=="BreakDancer" and interval.sv_type == "INV" and  abs(interval.length)< BD_min_inv_len:
+                    #Filter BreakDancer artifact INVs with size < readlength+4*isize_sd
+                    continue
 
                 if not interval:
                     # This is the case for SVs we want to skip
                     continue
                 if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
-
+                    
                     # Check length
-                    if interval.length < args.minsvlen:
+                    if interval.length < args.minsvlen and interval.sv_type not in  ["ITX", "CTX"]:
                         continue
 
                     # Set wiggle
-                    interval.wiggle = max(args.inswiggle if interval.sv_type == "INS" else 0, args.wiggle)
-
+                    if interval.sv_type not in ["ITX","CTX"]:
+                        interval.wiggle = max(args.inswiggle if interval.sv_type == "INS" else 0, args.wiggle)
+                    else:
+                        interval.wiggle = TX_WIGGLE
+                    
                     intervals[toolname][interval.sv_type].append(interval)
-
         sv_types |= set(intervals[toolname].keys())
 
     # Handles the VCF input cases, we will just deal with these cases
@@ -134,7 +147,7 @@ def run_metasv(args):
         for vcffile in vcf_list:
             load_intervals(vcffile, intervals[toolname], gap_intervals, include_intervals, toolname, contig_whitelist,
                            minsvlen=args.minsvlen, wiggle=args.wiggle, inswiggle=args.inswiggle,
-                           svs_to_report=args.svs_to_report)
+                           svs_to_report=args.svs_to_report, maxsvlen=args.maxsvlen)
         sv_types |= set(intervals[toolname].keys())
 
     logger.info("SV types are %s" % (str(sv_types)))
@@ -215,7 +228,7 @@ def run_metasv(args):
     for interval in final_intervals:
         interval.do_validation(args.overlap_ratio)
         interval.fix_pos()
-        if args.minsvlen <= interval.length <= args.maxsvlen:
+        if args.minsvlen <= interval.length <= args.maxsvlen or interval.sv_type in ["ITX", "CTX"]:
             final_chr_intervals[interval.chrom].append(interval)
 
     # This is the merged VCF without assembly, ok for deletions at this point
@@ -279,23 +292,23 @@ def run_metasv(args):
                                                           max_intervals=args.max_ins_intervals, min_mapq=args.min_mapq,
                                                           min_avg_base_qual=args.min_avg_base_qual,
                                                           min_soft_clip=args.min_soft_clip,
-                                                          max_soft_clip=args.max_soft_clip,
                                                           max_nm=args.max_nm, min_matches=args.min_matches)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
         logger.info("Will run assembly now")
 
         assembled_fasta, ignored_bed = run_spades_parallel(bam=args.bam.name, spades=args.spades, bed=assembly_bed,
-                                                           work=spades_tmpdir, pad=SPADES_PAD,
+                                                           work=spades_tmpdir, pad=args.assembly_pad,
                                                            nthreads=args.num_threads,
                                                            chrs=list(contig_whitelist),
                                                            max_interval_size=args.spades_max_interval_size,
                                                            svs_to_assemble=args.svs_to_assemble,
                                                            stop_on_fail=args.stop_spades_on_fail,
-                                                           max_read_pairs=args.extraction_max_read_pairs)
+                                                           max_read_pairs=args.extraction_max_read_pairs,
+                                                           assembly_max_tools=args.assembly_max_tools)
         breakpoints_bed = run_age_parallel(intervals_bed=assembly_bed, reference=args.reference,
                                            assembly=assembled_fasta,
-                                           pad=AGE_PAD, age=args.age, chrs=list(contig_whitelist),
+                                           pad=args.assembly_pad, age=args.age, chrs=list(contig_whitelist),
                                            nthreads=args.num_threads,
                                            min_contig_len=AGE_MIN_CONTIG_LENGTH, age_workdir=age_tmpdir)
 

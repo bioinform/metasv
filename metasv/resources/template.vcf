@@ -30,8 +30,16 @@
 ##INFO=<ID=SVTOOL,Number=1,Type=String,Description="Tool used to generate the SV">
 ##INFO=<ID=SOURCES,Number=.,Type=String,Description="List of original raw SV calls as Toolname:Start:End:Size">
 ##INFO=<ID=NUM_SVMETHODS,Number=1,Type=Integer,Description="Number of methods supporting the event">
+##INFO=<ID=NUM_SVTOOLS,Number=1,Type=Integer,Description="Number of SV callers supporting the event">
+##INFO=<ID=BA_FLANK_PERCENT,Number=1,Type=Integer,Description="Breakpoint assembly: percent of total length in flanks">
+##INFO=<ID=BA_NFRAGS,Number=1,Type=Integer,Description="Breakpoint assembly: Number of fragments in the alignment">
+##INFO=<ID=BA_NUM_ALT,Number=1,Type=Integer,Description="Breakpoint assembly: Number of alternative regions">
+##INFO=<ID=BA_NUM_BP,Number=1,Type=Integer,Description="Breakpoint assembly: Number of breakpoints">
+##INFO=<ID=BA_NUM_GOOD_REC,Number=1,Type=Integer,Description="Breakpoint assembly: Number of good records in assembly">
+##INFO=<ID=BA_PERCENT_MATCH,Number=1,Type=Integer,Description="Breakpoint assembly: percent of matching bases in alignment">
 ##INFO=<ID=VT,Number=1,Type=String,Description="indicates what type of variant the line represents">
 ##INFO=<ID=SVMETHOD,Number=.,Type=String,Description="Type of approach used to detect SV: RP (read pair), RD (read depth), SR (split read), JT (junction) or AS (assembly)">
+##INFO=<ID=CHR2,Number=.,Type=String,Description="Chromosome for END coordinate in case of a translocation">
 ##INFO=<ID=natorRD,Number=1,Type=Float,Description="CNVnator: Normalized RD">
 ##INFO=<ID=natorP1,Number=1,Type=Float,Description="CNVnator: e-val by t-test">
 ##INFO=<ID=natorP2,Number=1,Type=Float,Description="CNVnator: e-val by Gaussian tail">
@@ -56,4 +64,6 @@
 ##ALT=<ID=INS:ME:L1,Description="Insertion of L1 element">
 ##ALT=<ID=INV,Description="Inversion">
 ##ALT=<ID=CNV,Description="Copy number variable region">
+##ALT=<ID=ITX,Description="Intra-chromosomal translocation">
+##ALT=<ID=CTX,Description="Inter-chromosomal translocation">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT

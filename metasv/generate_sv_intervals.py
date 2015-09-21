@@ -25,7 +25,7 @@ def concatenate_files(files, output):
                 outfile.write(infile.read())
 
 
-def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_soft_clip=50, max_nm=10,
+def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_nm=10,
                       min_matches=50):
     if aln.is_duplicate:
         return False
@@ -47,7 +47,7 @@ def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, m
         return False
     soft_clip = soft_clips[0]
 
-    if not (min_soft_clip <= soft_clip <= max_soft_clip):
+    if not (min_soft_clip <= soft_clip):
         return False
 
     if aln.cigar[0][0] == 4:
@@ -133,7 +133,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             if abs(aln.tlen) > max_isize:
                 continue
             if not is_good_candidate(aln, min_avg_base_qual=min_avg_base_qual, min_mapq=min_mapq,
-                                     min_soft_clip=min_soft_clip, max_soft_clip=max_soft_clip, max_nm=max_nm,
+                                     min_soft_clip=min_soft_clip, max_nm=max_nm,
                                      min_matches=min_matches): continue
             interval = get_interval(aln, pad=pad)
             soft_clip_location = sum(interval) / 2
@@ -189,7 +189,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
 def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_threads=1,
                                    min_avg_base_qual=SC_MIN_AVG_BASE_QUAL,
-                                   min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP, max_soft_clip=SC_MAX_SOFT_CLIP,
+                                   min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP, 
                                    pad=SC_PAD,
                                    min_support=MIN_SUPPORT, min_support_frac=MIN_SUPPORT_FRAC,
                                    max_intervals=MAX_INTERVALS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD):
@@ -290,7 +290,6 @@ if __name__ == "__main__":
                         type=int)
     parser.add_argument("--min_mapq", help="Minimum MAPQ", default=SC_MIN_MAPQ, type=int)
     parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=SC_MIN_SOFT_CLIP, type=int)
-    parser.add_argument("--max_soft_clip", help="Maximum soft-clip", default=SC_MAX_SOFT_CLIP, type=int)
     parser.add_argument("--max_nm", help="Maximum number of edits", default=SC_MAX_NM, type=int)
     parser.add_argument("--min_matches", help="Minimum number of matches", default=SC_MIN_MATCHES, type=int)
     parser.add_argument("--isize_mean", help="Insert-size mean", default=ISIZE_MEAN, type=float)
@@ -311,6 +310,6 @@ if __name__ == "__main__":
     parallel_generate_sc_intervals(args.bams, args.chromosomes, args.skip_bed, args.workdir,
                                    num_threads=args.num_threads, min_avg_base_qual=args.min_avg_base_qual,
                                    min_mapq=args.min_mapq, min_soft_clip=args.min_soft_clip,
-                                   max_soft_clip=args.max_soft_clip, pad=args.pad, min_support=args.min_support,
+                                   pad=args.pad, min_support=args.min_support,
                                    min_support_frac=args.min_support_frac, max_intervals=args.max_intervals,
                                    max_nm=args.max_nm, min_matches=args.min_matches, isize_mean=args.isize_mean, isize_sd=args.isize_sd)

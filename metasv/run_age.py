@@ -36,7 +36,9 @@ def run_cmd(cmd, logger, out, err):
 
 
 def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference=None, assembly=None, pad=AGE_PAD,
-                   age=None,
+                   age=None, truncation_pad_read_age = AGE_TRUNCATION_PAD,
+                   max_interval_len_truncation_age = AGE_MAX_INTERVAL_TRUNCATION,
+                   dist_to_expected_bp = AGE_DIST_TO_BP,
                    age_workdir=None, timeout=AGE_TIMEOUT, keep_temp=False, myid=0):
     thread_logger = logging.getLogger("%s-%s" % (run_age_single.__name__, multiprocessing.current_process()))
 
@@ -81,13 +83,41 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             with open(ref_name, "w") as file_handle:
                 file_handle.write(">{}.ref\n{}".format(region_name, reference_sequence))
 
+
+            
+
             age_records = []
             thread_logger.info("Processing %d contigs for region %s" % (len(contig_dict[region]), str(region_object)))
             for contig in contig_dict[region]:
                 thread_logger.info(
                     "Writing the assembeled sequence %s of length %s" % (contig.raw_name, contig.sequence_len))
-                if contig.sequence_len * region_object.length() >= 100000000:
-                    thread_logger.info("Skipping contig because AGE problem is large")
+                
+                tr_region=[]
+                if region_object.length()>max_interval_len_truncation_age and contig.sv_type == "INV":
+                    # For large SVs, middle sequences has no effect on genotyping. So, we truncate middle region of reference to speed up
+                    thread_logger.info("Truncate the reference sequence.")
+                    
+
+                    truncate_start = pad + dist_to_expected_bp + truncation_pad_read_age +1
+                    truncate_end = len(reference_sequence) -  (pad + dist_to_expected_bp + truncation_pad_read_age)
+                    reference_sequence_tr=reference_sequence[0:truncate_start-1]+reference_sequence[truncate_end:]
+                    region_name_tr = "%s.%d.%d.tr_%d_%d" % (region_object.chrom1, region_object.pos1, region_object.pos2,truncate_start,truncate_end)
+                    ref_name_tr = os.path.join(age_workdir, "%s.ref.fa" % region_name_tr)
+
+                    thread_logger.info("Writing the truncated ref sequence for region %s, contig %s" % (region_name_tr, contig.raw_name))
+                    with open(ref_name_tr, "w") as file_handle:
+                        file_handle.write(">{}.ref\n{}".format(region_name_tr, reference_sequence_tr))
+                        
+                    ref_len = len(reference_sequence_tr)
+                    ref_f_name = ref_name_tr
+                    tr_region = [truncate_start,truncate_end-truncate_start+1]
+                    
+                else:
+                    ref_len = region_object.length()
+                    ref_f_name = ref_name
+                    
+                if contig.sequence_len * ref_len >= 100000000:
+                    thread_logger.info("Skipping contig because AGE problem is large (contig_len = %d , ref_len= %d)"%(contig.sequence_len, ref_len))
                     continue
 
                 contig_sequence = assembly_fasta.fetch(contig.raw_name)
@@ -103,7 +133,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 age_cmd = "%s %s -both -go=-6 %s %s >%s 2>%s" % (
                     age,
                     "-inv" if contig.sv_type == "INV" else "-indel",
-                    ref_name,
+                    ref_f_name,
                     asm_name,
                     out,
                     err)
@@ -112,7 +142,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 retcode = run_cmd(execute_cmd, thread_logger, None, None)
 
                 if retcode == 0:
-                    age_record = AgeRecord(out)
+                    age_record = AgeRecord(out,tr_region_1=tr_region)
                     if len(age_record.inputs) == 2:
                         age_record.contig = contig
                         age_records.append(age_record)
@@ -122,6 +152,8 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 if not keep_temp:
                     os.remove(asm_name)
                     os.remove(err)
+                    if tr_region:
+                        os.remove(ref_name_tr)
 
             unique_age_records = get_unique_age_records(age_records)
 
@@ -135,12 +167,14 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             else:
                 sv_type = sv_types[0]
                 thread_logger.info("Processing region of type %s" % sv_type)
-                breakpoints, info_dict = process_age_records(unique_age_records, sv_type=sv_type, pad=pad)
+                breakpoints, info_dict = process_age_records(unique_age_records, sv_type=sv_type, pad=pad, dist_to_expected_bp=dist_to_expected_bp)
                 bedtools_fields = matching_interval.fields
                 if len(breakpoints) == 1 and sv_type == "INS":
                     bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1]])
                 elif len(breakpoints) == 2 and (sv_type == "DEL" or sv_type == "INV"):
                     bedtools_fields += map(str, breakpoints + [breakpoints[1] - breakpoints[0]])
+                    if (sv_type == "INV"):
+                        bedtools_fields[3] += ";AS"
                 else:
                     bedtools_fields += map(str, [bedtools_fields[1], bedtools_fields[2], -1])
                 bedtools_fields.append(base64.b64encode(json.dumps(info_dict)))
@@ -209,7 +243,9 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_
     func_logger.info("Generating the contig dictionary for parallel execution")
     small_contigs_count = 0
     for contig in contigs:
-        if contig.sv_region.length() > max_region_len: continue
+        if contig.sv_region.length() > max_region_len: 
+            func_logger.info("Too large SV region length: %d > %d" % (contig.sv_region.length(),max_region_len))
+            continue
         if (len(chrs) == 0 or contig.sv_region.chrom1 in chrs) and (len(sv_types) == 0 or contig.sv_type in sv_types):
             if contig.sequence_len >= min_contig_len:
                 contig_dict[contig.sv_region.to_tuple()].append(contig)

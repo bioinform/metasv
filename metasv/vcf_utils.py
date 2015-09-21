@@ -3,8 +3,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 from sv_interval import *
-from defaults import SVS_SUPPORTED
+from defaults import SVS_SUPPORTED, MAX_SV_LENGTH
 import pysam
+
+# Callers to remove filtered values when reading
+REMOVE_FILTERED = set(["BreakSeq", "Lumpy", "Manta", "CNVkit", "WHAM"])
 
 
 def print_header(header, file_fd):
@@ -60,7 +63,8 @@ def get_gt(gt, fmt):
 
 
 def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[], source=None, contig_whitelist=[],
-                   minsvlen=50, wiggle=100, inswiggle=100, svs_to_report=SVS_SUPPORTED):
+                   minsvlen=50, wiggle=100, inswiggle=100, svs_to_report=SVS_SUPPORTED,
+                   maxsvlen=MAX_SV_LENGTH):
     if not os.path.isfile(in_vcf): return intervals
     logger.info("Loading SV intervals from %s" % in_vcf)
 
@@ -109,7 +113,7 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
                                       gt=gt)
 
         else:
-            if source == "BreakSeq" and "PASS" not in vcf_record.FILTER: continue
+            if source in REMOVE_FILTERED and vcf_record.FILTER and "PASS" not in vcf_record.FILTER: continue
 
             if len(vcf_record.ALT) > 1: continue
             if "SVTYPE" not in vcf_record.INFO or "END" not in vcf_record.INFO:
@@ -126,11 +130,14 @@ def load_intervals(in_vcf, intervals={}, gap_intervals=[], include_intervals=[],
             # Handle broken header if SVLEN is reported as an array
             svlen = abs(vcf_record.INFO["SVLEN"]) if isinstance(vcf_record.INFO["SVLEN"], int) else abs(
                 vcf_record.INFO["SVLEN"][0])
-
             if svlen < minsvlen:
+                logger.warn("Skipping " + str(vcf_record) + " due to small size")
+                continue
+            if svlen > maxsvlen:
+                logger.warn("Skipping " + str(vcf_record) + " due to large size")
                 continue
             wiggle = max(inswiggle, wiggle) if (
-                source in ["Pindel", "BreakSeq", "HaplotypeCaller"] and sv_type == "INS") else wiggle
+                source in precise_sv_sources and sv_type == "INS") else wiggle
             if source == "Pindel" and sv_type == "INS":
                 vcf_record.POS += 1
             interval = SVInterval(vcf_record.CHROM, vcf_record.POS, int(vcf_record.INFO["END"]), source, sv_type, svlen,

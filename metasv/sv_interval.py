@@ -2,6 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+import operator
 import os
 import copy
 import bisect
@@ -10,10 +11,14 @@ import vcf
 import json
 import base64
 
-svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV"]
-sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator"]  # order is important!
+svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV" ,"ITX", "CTX"]
+sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator",
+              "Manta", "Lumpy", "WHAM", "CNVkit"]  # order is important!
 precise_sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller"]
-sv_sources_to_type = {"Pindel": "SR", "BreakSeq": "JM", "BreakDancer": "RP", "CNVnator": "RD", "HaplotypeCaller": "AS"}
+sv_sources_to_type = {"Pindel": ["SR"], "BreakSeq": ["JM"], "BreakDancer": ["RP"],
+                      "CNVnator": ["RD"], "HaplotypeCaller": ["AS"],
+                      "Manta": ["SR", "RP"], "Lumpy": ["SR", "RP"], "CNVkit": ["RD"],
+                      "WHAM": ["SR", "RP"]}
 
 mydir = os.path.dirname(os.path.realpath(__file__))
 gaps_b37 = os.path.join(mydir, "resources/b37.gaps.bed")
@@ -31,9 +36,10 @@ def get_gaps_file(contig_names):
 
 
 class SVInterval:
-    def __init__(self, chrom=None, start=0, end=0, name=None, sv_type=None, length=0, sources=set(), gt="./1", wiggle=0,
-                 info=None, cipos=[], ciend=[], native_sv=None):
+    def __init__(self, chrom=None,  start=0, end=0, name=None, sv_type=None, length=0, sources=set(), gt="./1", wiggle=0,
+                 info=None, cipos=[], ciend=[], native_sv=None, chrom2=None):
         self.chrom = chrom
+        self.chrom2 = chrom2 if chrom2 else chrom
         self.start = start
         self.end = end
         self.name = name
@@ -50,7 +56,7 @@ class SVInterval:
         self.cipos = cipos
         self.ciend = ciend
         self.native_sv = native_sv
-
+        
     def merge(self, interval):
         self.start = min(self.start, interval.start - interval.wiggle)
         self.end = max(self.end, interval.end + interval.wiggle)
@@ -79,28 +85,38 @@ class SVInterval:
     def __str__(self):
         if self.sub_intervals:
             return ",".join([str(interval) for interval in self.sub_intervals])
-        return "%s-%d-%d-%d-%s" % (self.chrom, self.start, self.end, self.length, ",".join(list(self.sources)))
+        return "%s-%d-%s-%d-%d-%s" % (self.chrom, self.start, self.chrom2, self.end, self.length, ",".join(list(self.sources)))
 
     def __repr__(self):
         return "<" + self.__class__.__name__ + " " + str(self.__dict__) + ">"
 
     def overlaps(self, other, min_fraction_self=1e-9, min_fraction_other=1e-9, min_overlap_length_self=1,
                  min_overlap_length_other=1):
-        if self.chrom != other.chrom:
-            return False
-        if max(self.start - self.wiggle, other.start - other.wiggle) \
-                >= min(self.end + self.wiggle, other.end + other.wiggle):
-            return False
+        if self.sv_type not in ["ITX","CTX"] :
+            if self.chrom != other.chrom:
+                return False
 
-        self_length = float(self.end - self.start + 2 * self.wiggle)
-        other_length = float(other.end - other.start + 2 * other.wiggle)
-        overlap_length = min(self.end + self.wiggle, other.end + other.wiggle) - max(self.start - self.wiggle,
-                                                                                     other.start - other.wiggle)
-        return float(overlap_length) >= max(min_fraction_self * self_length,
-                                            min_fraction_other * other_length) and overlap_length >= max(
-            min_fraction_self, min_overlap_length_other)
+            if max(self.start - self.wiggle, other.start - other.wiggle) \
+                    >= min(self.end + self.wiggle, other.end + other.wiggle):
+                return False
+
+            self_length = float(self.end - self.start + 2 * self.wiggle)
+            other_length = float(other.end - other.start + 2 * other.wiggle)
+            overlap_length = min(self.end + self.wiggle, other.end + other.wiggle) - max(self.start - self.wiggle,
+                                                                                         other.start - other.wiggle)
+            return float(overlap_length) >= max(min_fraction_self * self_length,
+                                                min_fraction_other * other_length) and overlap_length >= max(
+                min_fraction_self, min_overlap_length_other)
+        else:
+            if self.sv_type == "CTX" and not (self.chrom == other.chrom and self.chrom2 == other.chrom2):
+                return False
+            return ( abs(self.end - other.end) < self.wiggle ) and ( abs(self.start - other.start) < self.wiggle )
+        
 
     def is_adjacent(self, other, gap=0):
+        if self.sv_type in ["ITX","CTX"] :
+            return False
+    
         if self.chrom != other.chrom:
             return False
         return (other.start <= gap + self.end + gap < other.end) or (
@@ -191,7 +207,24 @@ class SVInterval:
                 # TODO: kind of strange
                 if interval.info:
                     temp_info.update(interval.info)
+        temp_info.update({"SOURCES": str(self),
+                          "NUM_SVMETHODS": len(self._get_svmethods()),
+                          "NUM_SVTOOLS": len(self._get_tools())})
         return temp_info
+
+    def _get_tools(self):
+        """Retrieve tools contributing to this structural variant call.
+
+        These can come from both our current sources as well as merged sub_intervals.
+        """
+        tools = set(self.sources).union(*[set(x.sources) for x in self.sub_intervals])
+        return sorted(list(tools))
+
+    def _get_svmethods(self):
+        """Retrieve structural variant methods used in all of the callers input sources.
+        """
+        svmethods = reduce(operator.add, [sv_sources_to_type[tool] for tool in self._get_tools()])
+        return sorted(list(set(svmethods)))
 
     def to_vcf_record(self, fasta_handle=None, sample=""):
         if self.start <= 0:
@@ -205,31 +238,30 @@ class SVInterval:
 
         # formulate the INFO field
         info = self.get_info()
-        svmethods = [sv_sources_to_type[tool] for tool in self.sources]
-        svmethods.sort()
         sv_len = -self.length if self.sv_type == "DEL" else self.length
         info.update({"SVLEN": sv_len,
                      "SVTYPE": self.sv_type,
-                     "SVMETHOD": ",".join(svmethods)})
-        if self.sv_type == "DEL" or self.sv_type == "DUP":
+                     "SVMETHOD": ",".join(self._get_svmethods())})
+        if self.sv_type in ["DEL","DUP", "ITX", "CTX"]:
             info["END"] = self.end
+
+        if self.sv_type in ["ITX", "CTX"]:
+            info["CHR2"] = self.chrom2
 
         if not self.is_precise:
             info.update({"IMPRECISE": None})
 
         info.update({"VT": "SV"})
-        info.update({"SVTOOL": "MetaSVMerge"})
-        info.update({"NUM_SVMETHODS": len(self.sources)})
-        info.update({"SOURCES": str(self)})
+        info.update({"SVTOOL": "MetaSV"})
         if self.cipos:
             info.update({"CIPOS": (",".join([str(a) for a in self.cipos]))})
 
         vcf_record = vcf.model._Record(self.chrom,
-                                       self.start - 1,
+                                       self.start,
                                        ".",
-                                       fasta_handle.fetch(self.chrom, max(0, self.start - 2),
-                                                          max(1, self.start - 1)) if fasta_handle else "N",
-                                       ["<%s>" % self.sv_type],
+                                       fasta_handle.fetch(self.chrom, max(0, self.start - 1),
+                                                          max(1, self.start)) if fasta_handle else "N",
+                                       [vcf.model._SV(self.sv_type)],
                                        ".",
                                        "PASS" if self.is_validated else "LowQual",
                                        info,
@@ -241,14 +273,26 @@ class SVInterval:
     def to_bed_interval(self, sample_name):
         if self.start <= 0:
             return None
-        if self.sv_type not in ["DEL", "INS", "INV"]: return None
+        if self.sv_type not in ["DEL", "INS", "INV", "ITX", "CTX", "DUP"]: return None
         # if not self.sub_intervals and list(self.sources)[0] == "HaplotypeCaller": return None
         # if len(self.sources) == 1 and list(self.sources)[0] == "HaplotypeCaller": return None
-        end = self.end if self.sv_type != "INS" else (self.end + 1)
+        if self.sv_type == "INS":
+            end = self.end + 1
+        elif self.sv_type in ["ITX","CTX"] :
+            end = self.start + 1
+        else:
+            end = self.end
+        info = self.get_info()
+        
+        if self.sv_type in ["ITX", "CTX"]:
+            info["END"] = self.end
+            info["CHR2"] = self.chrom2
+            if not self.is_precise:
+                info.update({"IMPRECISE": None})
 
         return pybedtools.Interval(self.chrom, self.start, end, name="%s,%s,%d,%s" % (
-            base64.b64encode(json.dumps(self.get_info())), self.sv_type, self.length,
-            ";".join(sorted([sv_sources_to_type[tool] for tool in self.sources]))),
+            base64.b64encode(json.dumps(info)), self.sv_type, self.length,
+            ";".join(self._get_svmethods())),
             score=str(len(self.sources)))
 
     def to_svp_record(self, sample_name, id_num):
@@ -262,7 +306,7 @@ class SVInterval:
         start_inner = self.start
         end_inner = self.end
         end_outer = self.end
-        type_of_computational_approach = ",".join(sorted([sv_sources_to_type[tool] for tool in self.sources]))
+        type_of_computational_approach = ",".join(self._get_svmethods())
 
         return "%s\t%d\t%d\t%d\t%d\t%s\t%d\t%s\t%s\t%s\t%s\tMetaSV\t%d" % (
             self.chrom, start_outer, start_inner, end_inner, end_outer, self.sv_type, self.length, "BWA", "Illumina",
