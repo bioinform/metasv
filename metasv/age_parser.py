@@ -122,7 +122,7 @@ class AgeRecord:
                                             map(lambda x: x.split(","), line.split(":")[2].split()))
                     
                     if self.tr_region_1:
-                        self.start1_end1s = map(lambda x:map(lambda y:self.update_pos_tr(y),x),self.start1_end1s_orig)
+                        self.update_pos_tr()
                         self.invalid_tr_intervals=[i for i,interval in enumerate(self.start1_end1s_orig) if 
                                                      (interval[0]< self.tr_region_1[0]) ^ (interval[1]< self.tr_region_1[0])]
                         if self.invalid_tr_intervals:
@@ -224,11 +224,27 @@ class AgeRecord:
     def almost_all_bases_aligned(self, min_unaligned=10):
         return self.aligned_bases + min_unaligned >= self.contig.sequence_len
 
-    def update_pos_tr(self, pos):
-        if pos < self.tr_region_1[0]:
-            return pos
-        else:
-            return pos+self.tr_region_1[1]
+    def update_pos_tr(self):
+        self.start1_end1s = []
+        tr_p,tr_l = self.tr_region_1
+        for i,ends in enumerate(self.start1_end1s_orig):
+            dist_to_tr = map(lambda x: x-tr_p, ends)
+            new_ends = [0,0]
+            if (dist_to_tr[0] < 0 and  dist_to_tr[0] >=0) or (dist_to_tr[0] >= 0 and  dist_to_tr[1] <0) :
+                j = filter(lambda x: ends[x]<tr_p,[0,1])[0]
+                if abs(ends[j]-tr_p)>abs(ends[1-j]-tr_p):                    
+                    new_ends[j] = ends[j]
+                    new_ends[1-j] = tr_p-1
+                    self.start2_end2s[i][1-j] -= (ends[1-j] - tr_p+1)
+                else:
+                    new_ends[1-j] = ends[1-j] + tr_l
+                    new_ends[j] = tr_p + tr_l 
+                    self.start2_end2s[i][j] += (tr_p - ends[j])
+            elif dist_to_tr[0] >= 0:
+                new_ends = map(lambda x: x+tr_l, ends)
+            else:
+                new_ends = ends                
+            self.start1_end1s.append(new_ends)
 
     def __str__(self):
         return repr(self.__dict__)
