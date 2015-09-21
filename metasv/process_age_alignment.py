@@ -84,7 +84,7 @@ def check_closeness_to_bp(pos,pad,dist_to_expected_bp,LR_bp,seq_length=0):
     
     
 
-def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, start=0, pad=500, dist_to_expected_bp=400, min_interval_len_inv=100):
+def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, start=0, pad=500, dist_to_expected_bp=400, min_interval_len_inv=50):
     func_logger = logging.getLogger("%s-%s" % (get_deletion_breakpoints.__name__, multiprocessing.current_process()))
 
     potential_breakpoints = []
@@ -110,24 +110,21 @@ def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, star
         candidate_inv_intervals=list(set(left_end_near_l_bp)&set(right_end_near_r_bp))
         candidate_norm_intervals=list(set(left_end_near_r_bp)|set(right_end_near_l_bp))
         
+        if len(candidate_inv_intervals)>1 and len(candidate_norm_intervals)<=1: 
+            candidate_inv_intervals=list(set(candidate_inv_intervals)-set(candidate_norm_intervals))
+        
         if len(candidate_inv_intervals)>1:
             dist_to_exp_bps=map(lambda x: abs(min(age_record.start1_end1s[x])-pad)+abs(max(age_record.start1_end1s[x])-(age_record.inputs[0].length-pad)),candidate_inv_intervals)
             inv_interval=min(enumerate(dist_to_exp_bps),key=lambda x:x[1])[0]
         elif len(candidate_inv_intervals)==1 :
             inv_interval=candidate_inv_intervals[0]
         
-        if not inv_interval==-1:
-            interval=age_record.start2_end2s[inv_interval]            
-            if min([interval[0],abs(interval[0]-age_record.inputs[1].length),
-                    interval[1],abs(interval[1]-age_record.inputs[1].length)]) < min_endpoint_dist:
-                func_logger.info('Inverted interval end points are too close to borders in Seq2: %s'%str(age_record))
-                continue
-        else:
+        
+        if inv_interval==-1:
             #Potentially long inversion
             candidate_inv_intervals=[i for i in left_end_near_l_bp if ((set(candidate_norm_intervals)&set(left_end_near_r_bp))-set([i]))] + \
                                     [i for i in right_end_near_r_bp if ((set(candidate_norm_intervals)&set(right_end_near_l_bp))-set([i]))]
             
-
             if len(candidate_inv_intervals)>1:
                 candidate_inv_intervals=[i for i in set(candidate_inv_intervals)&set(left_end_near_l_bp) if (pad< (sum(age_record.start1_end1s[i])/2.0))] + \
                                         [i for i in set(candidate_inv_intervals)&set(right_end_near_r_bp) if ((age_record.inputs[0].length-pad) > (sum(age_record.start1_end1s[i])/2.0))]
@@ -140,6 +137,8 @@ def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, star
                     inv_interval=min(enumerate(dist_to_exp_bps),key=lambda x:x[1])[0]
                 else:
                     inv_interval=candidate_inv_intervals[0]
+        elif age_record.inputs[0].length > ((2*pad+min_interval_len_inv)):
+            long_inversion=True
 
         if inv_interval==-1:
             func_logger.info('Not candidate inversion interval found for this age record: %s'%str(age_record))
@@ -149,7 +148,7 @@ def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, star
         func_logger.info('inverted interval: %s'%str(inv_interval))
 
         candidate_norm_intervals=filter(lambda x: polarities[x]!=polarities[inv_interval], set(candidate_norm_intervals)-set([inv_interval]))
-        if long_inversion:
+        if long_inversion and (inv_interval not in set(left_end_near_l_bp) & set(right_end_near_r_bp)) :
             candidate_norm_intervals=list(set(candidate_norm_intervals)&set(left_end_near_r_bp if (inv_interval in left_end_near_l_bp) else right_end_near_l_bp))
     
         if not candidate_norm_intervals:
@@ -170,24 +169,24 @@ def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, star
             func_logger.info('Bad intervals (one fully covers the other): %s'%str(age_record))
             continue
         
-        if not long_inversion:
+        if not long_inversion:        
+            interval=age_record.start2_end2s[inv_interval]            
+            if min([interval[0],abs(interval[0]-age_record.inputs[1].length),
+                    interval[1],abs(interval[1]-age_record.inputs[1].length)]) < min_endpoint_dist:
+                func_logger.info('Inverted interval end points are too close to borders in Seq2: %s'%str(age_record))
+                continue
             if (((s_norm[1]>s_inv[1]) and ((s_inv[1]-s_norm[0])>10)) or ((s_norm[0]<s_inv[0]) and ((s_norm[1]-s_inv[0])>10))):
-                func_logger.info('Bad middle bp in seq1: %s'%str(age_record))
+                func_logger.info('Bad middle bp in seq1 (covers>10): %s'%str(age_record))
+                continue    
+            if (((s_norm[1]>s_inv[1]) and ((s_norm[0]-s_inv[1])>50)) or ((s_norm[0]<s_inv[0]) and ((s_inv[0]-s_norm[1])>50))):
+                func_logger.info('Bad middle bp in seq1 (apart>50): %s'%str(age_record))
                 continue
-            if (((s_norm[1]>s_inv[1]) and ((s_norm[0]-s_inv[0])>400) and((s_norm[0]-s_inv[1])>50)) or ((s_norm[0]<s_inv[0]) and ((s_inv[1]-s_norm[1])>400)  and ((s_inv[0]-s_norm[1])>50))):
-                func_logger.info('Bad middle bp in seq1: %s'%str(age_record))
-                continue
-            bp_idx = 0 if (s_norm[1]>s_inv[1]) else 1
-            bp1_seq2=age_record.start2_end2s[inv_interval][filter(lambda x:age_record.start1_end1s[inv_interval][x]==s_inv[bp_idx],[0,1])[0]]
-            bp2_seq2=age_record.start2_end2s[norm_interval][filter(lambda x:age_record.start1_end1s[norm_interval][x]==s_norm[bp_idx],[0,1])[0]]
-            bp1=s_inv[0] if bp_idx==0 else s_norm[1]
-            bp2=s_norm[0] if bp_idx==0 else s_inv[1]
-        else:
-            bp_idx = 0 if inv_interval in left_end_near_l_bp else 1
-            bp1=s_inv[bp_idx]
-            bp2=s_norm[bp_idx]
-            bp1_seq2=age_record.start2_end2s[inv_interval][filter(lambda x:age_record.start1_end1s[inv_interval][x]==bp1,[0,1])[0]]
-            bp2_seq2=age_record.start2_end2s[norm_interval][filter(lambda x:age_record.start1_end1s[norm_interval][x]==bp2,[0,1])[0]]
+
+        bp_idx = 0 if (s_norm[1]>s_inv[1]) else 1
+        bp1=s_inv[bp_idx]
+        bp2=s_norm[bp_idx]
+        bp1_seq2=age_record.start2_end2s[inv_interval][filter(lambda x:age_record.start1_end1s[inv_interval][x]==bp1,[0,1])[0]]
+        bp2_seq2=age_record.start2_end2s[norm_interval][filter(lambda x:age_record.start1_end1s[norm_interval][x]==bp2,[0,1])[0]]
 
         if abs(bp1_seq2-bp2_seq2)>10:
             func_logger.info('BPs do not match in seq2: %s'%str(age_record))
