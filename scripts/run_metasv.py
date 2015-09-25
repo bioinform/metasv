@@ -78,7 +78,7 @@ if __name__ == "__main__":
                                 required=False)
 
     insertion_parser = parser.add_argument_group("Insertion detection options")
-    insertion_parser.add_argument("--boost_ins", help="Use soft-clips for improving insertion detection",
+    insertion_parser.add_argument("--boost_sc", help="Use soft-clips for improving breakpoint detection",
                                   action="store_true")
     insertion_parser.add_argument("--min_avg_base_qual", help="Minimum average base quality",
                                   default=SC_MIN_AVG_BASE_QUAL, type=int)
@@ -111,6 +111,8 @@ if __name__ == "__main__":
                            help="Padding base pairs to use for assembling breakpoint with Spades and AGE")
     as_parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
     as_parser.add_argument("--age", help="Path to AGE executable", required=False)
+    as_parser.add_argument("--min_inv_subalign_len", help="Minimum length of inversion sub-alginment", type=int,
+                        default=MIN_INV_SUBALIGN_LENGTH)
 
     gt_parser = parser.add_argument_group("Genotyping options")
     gt_parser.add_argument("--gt_window", type=int, default=GT_WINDOW, help="Window for genotyping")

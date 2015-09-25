@@ -282,8 +282,8 @@ def run_metasv(args):
         assembly_bed = merged_bed
 
         # this does the improved assembly location finder with softclipped reads
-        if args.boost_ins and "INS" in args.svs_to_assemble:
-            logger.info("Generating intervals for insertions")
+        if args.boost_sc:
+            logger.info("Generating Soft-Clipping intervals.")
             assembly_bed = parallel_generate_sc_intervals([args.bam.name], list(contig_whitelist), merged_bed,
                                                           args.workdir,
                                                           num_threads=args.num_threads,
@@ -292,7 +292,11 @@ def run_metasv(args):
                                                           max_intervals=args.max_ins_intervals, min_mapq=args.min_mapq,
                                                           min_avg_base_qual=args.min_avg_base_qual,
                                                           min_soft_clip=args.min_soft_clip,
-                                                          max_nm=args.max_nm, min_matches=args.min_matches)
+                                                          max_nm=args.max_nm, min_matches=args.min_matches,
+                                                          isize_mean=args.isize_mean, isize_sd=args.isize_sd,                                                        
+                                                          svs_to_assemble=args.svs_to_assemble,
+                                                          overlap_ratio=args.overlap_ratio
+                                                          )
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
         logger.info("Will run assembly now")
@@ -310,7 +314,8 @@ def run_metasv(args):
                                            assembly=assembled_fasta,
                                            pad=args.assembly_pad, age=args.age, chrs=list(contig_whitelist),
                                            nthreads=args.num_threads,
-                                           min_contig_len=AGE_MIN_CONTIG_LENGTH, age_workdir=age_tmpdir)
+                                           min_contig_len=AGE_MIN_CONTIG_LENGTH, min_inv_subalign_len=args.min_inv_subalign_len,
+                                           age_workdir=age_tmpdir)
 
         final_bed = os.path.join(args.workdir, "final.bed")
         if breakpoints_bed:
