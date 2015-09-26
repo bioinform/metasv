@@ -78,8 +78,6 @@ if __name__ == "__main__":
                                 required=False)
 
     insertion_parser = parser.add_argument_group("Insertion detection options")
-    insertion_parser.add_argument("--boost_sc", help="Use soft-clips for improving breakpoint detection",
-                                  action="store_true")
     insertion_parser.add_argument("--min_avg_base_qual", help="Minimum average base quality",
                                   default=SC_MIN_AVG_BASE_QUAL, type=int)
     insertion_parser.add_argument("--min_mapq", help="Minimum MAPQ", default=SC_MIN_MAPQ, type=int)
@@ -113,7 +111,8 @@ if __name__ == "__main__":
     as_parser.add_argument("--age", help="Path to AGE executable", required=False)
     as_parser.add_argument("--min_inv_subalign_len", help="Minimum length of inversion sub-alginment", type=int,
                         default=MIN_INV_SUBALIGN_LENGTH)
-
+    as_parser.add_argument("--boost_sc", help="Use soft-clips for improving breakpoint detection",
+                                  action="store_true")
     gt_parser = parser.add_argument_group("Genotyping options")
     gt_parser.add_argument("--gt_window", type=int, default=GT_WINDOW, help="Window for genotyping")
     gt_parser.add_argument("--gt_normal_frac", type=float, default=GT_NORMAL_FRAC,
@@ -135,4 +134,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    args.svs_to_assemble = set(args.svs_to_assemble) & set(args.svs_to_report)
     sys.exit(run_metasv(args))

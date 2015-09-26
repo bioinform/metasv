@@ -294,7 +294,7 @@ def run_metasv(args):
                                                           min_soft_clip=args.min_soft_clip,
                                                           max_nm=args.max_nm, min_matches=args.min_matches,
                                                           isize_mean=args.isize_mean, isize_sd=args.isize_sd,                                                        
-                                                          svs_to_assemble=args.svs_to_assemble,
+                                                          svs_to_softclip=args.svs_to_assemble,
                                                           overlap_ratio=args.overlap_ratio
                                                           )
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
