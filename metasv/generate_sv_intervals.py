@@ -114,40 +114,6 @@ def add_other_bp_fields(feature,start,end):
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name='%s,%d-%d'%(feature.name,start,end), score=feature.score,
                                otherfields=feature.fields[6:])
 
-def fix_merged_fields(feature,inter_tools=True):
-    name_fields = feature.name.split(",")
-    n = len(name_fields)/4
-    info = {}    
-    sv_type = name_fields[1]
-    sv_length = 0
-    sv_tools=set([])
-    
-    if not inter_tools:
-        info["SUBINTERVAL_INFOs"]=[]
-    for i in range(n):
-        sub_interval=name_fields[i*4:(i+1)*4]
-        sub_info=json.loads(base64.b64decode(sub_interval[0]))
-        if not inter_tools:
-            info["SUBINTERVAL_INFOs"].append(sub_info)
-        sv_tools.update(set(map(lambda x: x.split('-')[-1],sub_info["SOURCES"].split(','))))
-        if i==0:
-            info["SOURCES"] = sub_info["SOURCES"]
-        else:
-            info["SOURCES"] += ","+sub_info["SOURCES"]
-        sv_length = max(sv_length,int(sub_interval[2]))
-
-    sv_methods=sorted(list(reduce(operator.add, [sv_sources_to_type[tool] for tool in list(sv_tools)])))
-    info["NUM_SVMETHODS"] = len(sv_methods)
-    info["NUM_SVTOOLS"] = len(sv_tools)
-    
-    if not inter_tools:
-        info['SCORE'] = feature.score
-        
-    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name="%s,%s,%d,%s" % (
-            base64.b64encode(json.dumps(info)), sv_type, sv_length,
-            ";".join(sv_methods)),
-            score = feature.score if not inter_tools else "%d"%len(sv_methods))
-
 
 def get_full_interval(feature,pad):
     name_fields = feature.name.split(",")
@@ -159,10 +125,10 @@ def get_full_interval(feature,pad):
     if "-" in other_bp_ends:
         other_bp_start,other_bp_end=map(lambda x:int(x),other_bp_ends.split("-"))
         if other_bp_start != 0 or other_bp_end != 0:
-            start = min(feature.start,other_bp_start)
-            end = max(feature.end,other_bp_end)
+            start = min((feature.start+feature.end)/2,(other_bp_start+other_bp_end)/2)
+            end = max((feature.start+feature.end)/2,(other_bp_start+other_bp_end)/2)
 
-    sv_len = 0 if sv_type == "INS" else max(end-start-2*pad,0)
+    sv_len = 0 if sv_type == "INS" else max(end-start,0)
     info["SOURCES"] = "%s-%d-%s-%d-%d-SoftClip" % (feature.chrom, start, feature.chrom, end, sv_len)
     name = "%s,%s,%d,%s"%(base64.b64encode(json.dumps(info)),sv_type,sv_len,'SC')
     
@@ -261,8 +227,6 @@ def merge_intervals_bed(bedtool, overlap_ratio , c ,o):
                                      for interval in interval_bed.intervals])
                                      
     return merged_bed.sort()
-    
-    
 
 def merge_for_each_sv(bedtool,c,o,svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
                       overlap_ratio=OVERLAP_RATIO,d=0, reciprocal_for_2bp=True,
@@ -279,6 +243,80 @@ def merge_for_each_sv(bedtool,c,o,svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
         merged_bedtool=sv_bedtool.cat(merged_bedtool,postmerge=False)
     return merged_bedtool.sort()
     
+
+def fix_merged_fields(feature,inter_tools=True):
+    name_fields = feature.name.split(",")
+    n = len(name_fields)/4
+    info = {}    
+    sv_type = name_fields[1]
+    sv_length = 0
+    sv_tools=set([])
+    
+    if not inter_tools:
+        info["SUBINTERVAL_INFOs"]=[]
+    for i in range(n):
+        sub_interval=name_fields[i*4:(i+1)*4]
+        sub_info=json.loads(base64.b64decode(sub_interval[0]))
+        if not inter_tools:
+            info["SUBINTERVAL_INFOs"].append(sub_info)
+        sv_tools.update(set(map(lambda x: x.split('-')[-1],sub_info["SOURCES"].split(','))))
+        if i==0:
+            info["SOURCES"] = sub_info["SOURCES"]
+        else:
+            info["SOURCES"] += ","+sub_info["SOURCES"]
+        sv_length = max(sv_length,int(sub_interval[2]))
+
+    sv_methods=sorted(list(reduce(operator.add, [sv_sources_to_type[tool] for tool in list(sv_tools)])))
+    info["NUM_SVMETHODS"] = len(sv_methods)
+    info["NUM_SVTOOLS"] = len(sv_tools)
+    
+    if not inter_tools:
+        info['SCORE'] = feature.score
+        
+    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name="%s,%s,%d,%s" % (
+            base64.b64encode(json.dumps(info)), sv_type, sv_length,
+            ";".join(sv_methods)),
+            score = feature.score if not inter_tools else "%d"%len(sv_methods))
+
+
+def fine_tune_bps(feature):
+    name_fields = feature.name.split(",")
+    sv_type = name_fields[1]
+    sv_methods = name_fields[3]
+    if sv_type  == "INS":
+        return feature
+    info = json.loads(base64.b64decode(name_fields[0]))
+    if "SUBINTERVAL_INFOs" in info:
+        L_bps=[]
+        R_bps=[]
+        for source in info["SUBINTERVAL_INFOs"]:
+            sc_bp=sum(map(lambda x:int(x),source['sc_bp_ends'].split('-')))/2
+            other_bp=sum(map(lambda x:int(x),source['other_bp_ends'].split('-')))/2
+            if abs(sc_bp-feature.start) < (abs(sc_bp-feature.end)) and abs(other_bp-feature.start) >= (abs(other_bp-feature.end)):
+                L_bps.append(sc_bp)
+            elif abs(sc_bp-feature.start) >= (abs(sc_bp-feature.end)) and abs(other_bp-feature.start) < (abs(other_bp-feature.end)):
+                R_bps.append(sc_bp)
+    
+        if L_bps and R_bps:
+            L_bp=sum(L_bps)/len(L_bps)
+            R_bp=sum(R_bps)/len(R_bps)
+            sv_length = R_bp-L_bp
+            info["original_full_bp_ends"]=[feature.start,feature.end]
+            return pybedtools.Interval(feature.chrom, L_bp, R_bp, name="%s,%s,%d,%s" % (
+                    base64.b64encode(json.dumps(info)), sv_type, sv_length,
+                    ";".join(sv_methods)),    score = feature.score)
+        else:
+            return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=feature.name,    score = "-1")
+    return feature
+    
+        
+    
+        
+        
+    
+    
+        
+
 
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
                           min_soft_clip=SC_MIN_SOFT_CLIP,
@@ -379,7 +417,8 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                       overlap_ratio=overlap_ratio,
                                       reciprocal_for_2bp=True, 
                                       sv_type_field = [3,1], d=-500)
-        bedtool=bedtool.each(partial(fix_merged_fields,inter_tools=False)).moveto(merged_full_coverage_filtered_bed)
+        bedtool = bedtool.each(partial(fix_merged_fields,inter_tools=False)).each(partial(fine_tune_bps))
+        bedtool = bedtool.filter(lambda x: x.score != "-1").sort().moveto(merged_full_coverage_filtered_bed)
         func_logger.info("%d merged full intervals" % (bedtool.count()))
 
         sam_file.close()

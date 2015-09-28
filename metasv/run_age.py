@@ -270,7 +270,7 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_
         region_sublist = [region for (j, region) in enumerate(region_list) if (j % nthreads) == i]
         kwargs_dict = {"intervals_bed": intervals_bed, "region_list": region_sublist, "contig_dict": contig_dict,
                        "reference": reference, "assembly": assembly, "pad": pad, "age": age, "age_workdir": age_workdir,
-                       "timeout": timeout, "keep_temp": keep_temp, "myid": i}
+                       "timeout": timeout, "keep_temp": keep_temp, "myid": i, "min_inv_subalign_len": min_inv_subalign_len}
         pool.apply_async(run_age_single, args=[], kwds=kwargs_dict,
                          callback=partial(run_age_single_callback, result_list=breakpoints_beds))
 
@@ -313,8 +313,8 @@ if __name__ == "__main__":
     parser.add_argument("--assembly_tool", help="Tool used for assembly", choices=["spades", "tigra"], default="spades")
     parser.add_argument("--min_contig_len", help="Minimum length of contig to consider", type=int,
                         default=AGE_MIN_CONTIG_LENGTH)
-    parser.add_argument("--min_contig_len", help="Minimum length of contig to consider", type=int,
-                        default=AGE_MIN_CONTIG_LENGTH)
+    parser.add_argument("--max_region_len", help="Maximum length of an SV interval", type=int,
+                        default=AGE_MAX_REGION_LENGTH)                       
     parser.add_argument("--min_inv_subalign_len", help="Minimum length of inversion sub-alginment", type=int,
                         default=MIN_INV_SUBALIGN_LENGTH)
     parser.add_argument("--intervals_bed", help="BED file for assembly", type=file, required=True)
