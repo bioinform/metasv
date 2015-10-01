@@ -93,7 +93,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                     "Writing the assembeled sequence %s of length %s" % (contig.raw_name, contig.sequence_len))
                 
                 tr_region=[]
-                if region_object.length()>max_interval_len_truncation_age and contig.sv_type == "INV":
+                if region_object.length()>max_interval_len_truncation_age and contig.sv_type in ["INV","DEL"]:
                     # For large SVs, middle sequences has no effect on genotyping. So, we truncate middle region of reference to speed up
                     thread_logger.info("Truncate the reference sequence.")
                     
@@ -173,8 +173,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                     bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1]])
                 elif len(breakpoints) == 2 and (sv_type == "DEL" or sv_type == "INV"):
                     bedtools_fields += map(str, breakpoints + [breakpoints[1] - breakpoints[0]])
-                    if (sv_type == "INV"):
-                        bedtools_fields[3] += ";AS"
+                    bedtools_fields[3] += ";AS"
                 else:
                     bedtools_fields += map(str, [bedtools_fields[1], bedtools_fields[2], -1])
                 bedtools_fields.append(base64.b64encode(json.dumps(info_dict)))

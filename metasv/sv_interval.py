@@ -106,7 +106,7 @@ class SVInterval:
                                                                                          other.start - other.wiggle)
             return float(overlap_length) >= max(min_fraction_self * self_length,
                                                 min_fraction_other * other_length) and overlap_length >= max(
-                min_fraction_self, min_overlap_length_other)
+                min_overlap_length_self, min_overlap_length_other)
         else:
             if self.sv_type == "CTX" and not (self.chrom == other.chrom and self.chrom2 == other.chrom2):
                 return False
