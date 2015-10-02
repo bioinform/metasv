@@ -153,7 +153,7 @@ def infer_svtype(aln, isize_mean, isize_sd, num_sd=2):
     if aln.mate_is_unmapped:
         return "INS"
     if aln.tid != aln.rnext:
-        return "CTX"
+        return "CTX,INS"
     if (aln.is_reverse and aln.mate_is_reverse) or (not aln.is_reverse and not aln.mate_is_reverse):
         return "INV"
     if (aln.pos < aln.pnext and aln.is_reverse) or (aln.pos > aln.pnext and not aln.is_reverse):
@@ -429,6 +429,10 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             soft_clip_location = sum(interval) / 2
             strand = "-" if aln.is_reverse else "+"
             svtype = infer_svtype(aln, isize_mean, isize_sd)
+            if svtype == "CTX,INS":
+                # TODO : Should be fixed to handle CTX
+                svtype = "INS"
+            
             other_bp = find_other_bp(aln,isize_mean, isize_sd, svtype, soft_clip_location)
             if other_bp == -1: continue
             name = "%d,%d,%s" % (soft_clip_location, other_bp, strand)
