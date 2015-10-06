@@ -173,9 +173,9 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                     bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1]])
                 elif len(breakpoints) == 2 and (sv_type == "DEL" or sv_type == "INV"):
                     bedtools_fields += map(str, breakpoints + [breakpoints[1] - breakpoints[0]])
-                    bedtools_fields[3] += ";AS"
                 else:
                     bedtools_fields += map(str, [bedtools_fields[1], bedtools_fields[2], -1])
+                bedtools_fields[3] += ";AS"
                 bedtools_fields.append(base64.b64encode(json.dumps(info_dict)))
                 thread_logger.info("Writing out fields %s" % (str(bedtools_fields)))
                 bedtools_intervals.append(pybedtools.create_interval_from_list(bedtools_fields))

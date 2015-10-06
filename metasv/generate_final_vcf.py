@@ -17,6 +17,36 @@ mydir = os.path.dirname(os.path.realpath(__file__))
 vcf_template = os.path.join(mydir, "resources/template.vcf")
 
 
+def check_duplicates(vcf_record1,vcf_record2):
+    if vcf_record1.CHROM != vcf_record2.CHROM or vcf_record1.POS != vcf_record2.POS:
+        return False,[]
+    if vcf_record1.INFO["END"] != vcf_record2.INFO["END"] or \
+       vcf_record1.INFO["SVLEN"] != vcf_record2.INFO["SVLEN"] or \
+       vcf_record1.INFO["SVTYPE"] != vcf_record2.INFO["SVTYPE"]:
+        return False,[]
+    info={"END": vcf_record1.INFO["END"], "SVLEN": vcf_record1.INFO["SVLEN"], "SVTYPE": vcf_record1.INFO["SVTYPE"]}
+    svmethods= sorted(list(set(vcf_record1.INFO["SVMETHOD"]+vcf_record2.INFO["SVMETHOD"])))
+    info.update({"SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
+    sources = []
+    if "SOURCES" in vcf_record1.INFO:
+        sources.append(vcf_record1.INFO["SOURCES"])
+    if "SOURCES" in vcf_record2.INFO:
+        sources.append(vcf_record2.INFO["SOURCES"])
+    sources=",".join(sources)
+    if sources:
+        info["SOURCES"]=sources
+    if vcf_record1.FILTER[0] == "PASS" or vcf_record2.FILTER[0] == "PASS":
+       sv_filter = ["PASS"]
+    else:
+        if "AS" not in svmethods and len(set(svmethods) - {"SC","AS"})>1:
+            sv_filter = ["PASS"]
+        else:
+            sv_filter = ["LowQual"]   
+    sample_indexes = [0] 
+    return True, vcf.model._Record(vcf_record1.CHROM, vcf_record1.POS, vcf_record1.ID, 
+                                   vcf_record1.REF, vcf_record1.ALT, vcf_record1.QUAL, 
+                                   sv_filter, info, vcf_record1.FORMAT, sample_indexes)
+
 def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_template, sample=None, reference=None,
                               pass_calls=True):
     func_logger = logging.getLogger("%s" % (convert_metasv_bed_to_vcf.__name__))
@@ -85,9 +115,9 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
                     svlen = int(interval.fields[8])
                     is_pass = (int(interval.fields[8]) != -1) and (svlen >= 100)
                 
-            elif "INS" in sub_types and "SC" in sub_methods:
+            elif "INS" in sub_types and ("SC" in svmethods or "AS" in svmethods):
                 # TODO: I think it should be sub_types.index
-                index_to_use = sub_methods.index("SC")
+                index_to_use = [i for i,methods in enumerate(sub_methods) if "SC" in methods][0]
                 pos = int(interval.fields[6])
                 end = int(interval.fields[7])
                 svlen = int(interval.fields[8])
@@ -127,7 +157,16 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
             sample_indexes = [0]
             vcf_record = vcf.model._Record(chrom, pos, sv_id, ref, alt, qual, sv_filter, info, sv_format, sample_indexes)
             vcf_record.samples = vcf_template_reader._parse_samples([genotype], "GT", vcf_record)
-            vcf_records.append(vcf_record)
+            if vcf_records:
+                is_duplicate,merged_vcfrecord=check_duplicates(vcf_record,vcf_records[-1])
+                if is_duplicate:
+                    func_logger.info("Merging vcf records: %s and %s" % (vcf_record,vcf_records[-1]))
+                    vcf_records[-1]=merged_vcfrecord
+                else:
+                    vcf_records.append(vcf_record)
+            else:
+                vcf_records.append(vcf_record)
+            
 
     if contigs:
         vcf_records.sort(key=lambda x: (contigs_order_dict[x.CHROM], x.POS))

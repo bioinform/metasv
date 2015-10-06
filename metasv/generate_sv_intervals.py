@@ -391,6 +391,13 @@ def fine_tune_bps(feature,pad):
         return feature
     
         
+def add_INS_padding(feature,pad):
+    name_fields = feature.name.split(",")
+    sv_type = name_fields[1]
+    if not sv_type  == "INS":
+        return feature
+    else:
+        return pybedtools.Interval(feature.chrom, max(feature.start-pad,0), feature.end+pad, name=feature.name, score = feature.score)
     
         
         
@@ -627,8 +634,11 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     bedtool = bedtool.cut(xrange(6)).saveas(os.path.join(workdir, "top_intervals.bed"))
 
     interval_bed = os.path.join(workdir, "intervals.bed")
-    if skip_bed:
+    if skip_bed:        
         skip_bedtool = pybedtools.BedTool(skip_bed)
+        sc_skip_bed = os.path.join(workdir, "sc_metasv.bed")
+        if "INS" in svs_to_softclip:
+            skip_bedtool = skip_bedtool.each(partial(add_INS_padding,pad=pad)).saveas(sc_skip_bed)
         nonsc_skip_bed = os.path.join(workdir, "non_sc_metasv.bed")
         func_logger.info(
             "Merging %d features with %d features from %s" % (bedtool.count(), skip_bedtool.count(), skip_bed))
