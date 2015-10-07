@@ -95,11 +95,11 @@ def merged_interval_features(feature, bam_handle):
     plus_support = len([i for i in support_list[2:-1:3] if i == "+"])
     minus_support = len(locations) - plus_support
     locations_span = max(locations) - min(locations)
+    interval_readcount = bam_handle.count(reference=feature.chrom, start=feature.start, end=feature.end)
     info = {"plus_support":plus_support, "minus_support":minus_support, "locations_span":locations_span, "num_unique_locations":num_unique_locations,
-        "count_str": count_str, "other_bp_ends": other_bp_ends, "sc_bp_ends": "%s-%s"%(feature.start, feature.end)}
+        "count_str": count_str, "coverage":interval_readcount, "other_bp_ends": other_bp_ends, "sc_bp_ends": "%s-%s"%(feature.start, feature.end)}
     name = "%s,%s,0,SC" % (
         base64.b64encode(json.dumps(info)), feature.fields[6].split(',')[0])
-    interval_readcount = bam_handle.count(reference=feature.chrom, start=feature.start, end=feature.end)
 
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
                                otherfields=[str(interval_readcount), feature.fields[6]])
@@ -283,7 +283,7 @@ def merge_intervals_bed(bedtool, overlap_ratio , c ,o):
         return bedtool
 
     intervals=[intv for intv in bedtool]
-    
+
     current_merged_interval_list = [intervals[0]]
     start = intervals[0].start
     end = intervals[0].end   
@@ -355,7 +355,7 @@ def fix_merged_fields(feature,inter_tools=True):
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name="%s,%s,%d,%s" % (
             base64.b64encode(json.dumps(info)), sv_type, sv_length,
             ";".join(sv_methods)),
-            score = feature.score if not inter_tools else "%d"%len(sv_methods))
+            score = feature.score if not inter_tools else "%d"%len(sv_methods), otherfields=feature.fields[6:])
 
 
 def fine_tune_bps(feature,pad):
@@ -383,10 +383,10 @@ def fine_tune_bps(feature,pad):
             sv_length = R_bp-L_bp
             info["original_full_bp_ends"]=[feature.start,feature.end]
             return pybedtools.Interval(feature.chrom, L_bp, R_bp, name="%s,%s,%d,%s" % (
-                    base64.b64encode(json.dumps(info)), sv_type, sv_length,sv_methods),    score = feature.score)
+                    base64.b64encode(json.dumps(info)), sv_type, sv_length,sv_methods),    score = feature.score , otherfields=feature.fields[6:])
         else:
             #will be omitted
-            return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=feature.name,    score = "-1")
+            return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=feature.name,    score = "-1", otherfields=feature.fields[6:])
     else:
         return feature
     
@@ -399,8 +399,10 @@ def add_INS_padding(feature,pad):
     else:
         return pybedtools.Interval(feature.chrom, max(feature.start-pad,0), feature.end+pad, name=feature.name, score = feature.score)
     
-        
-        
+def find_coverage_frac(score,coverage):
+    scores = map(lambda x: float(x),score.split(","))
+    coverages = map(lambda x: float(x),coverage.split(","))
+    return sum(map(lambda k, v: k/v , scores, coverages))/len(scores)
     
     
         
@@ -527,7 +529,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         # Now merge on full intervals
         merged_full_coverage_filtered_bed = os.path.join(workdir, "merged_full_coverage_filtered_bp_merged.bed")
         if bedtool.count()>0:
-            bedtool=merge_for_each_sv(bedtool,c="4,5,6,7,8",o="collapse,sum,collapse,max,collapse",
+            bedtool=merge_for_each_sv(bedtool,c="4,5,6,7",o="collapse,collapse,collapse,collapse",
                                       svs_to_softclip=svs_to_softclip,
                                       overlap_ratio=overlap_ratio,
                                       reciprocal_for_2bp=True, 
@@ -625,9 +627,10 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     else:
         # Sample the top intervals
         top_fraction_cutoff = \
-            sorted([float(interval.score) / float(interval.fields[6]) for interval in bedtool], reverse=True)[
+            sorted([find_coverage_frac(interval.score, interval.fields[6]) for interval in bedtool], reverse=True)[
                 max_intervals - 1]
-        bedtool = bedtool.filter(lambda x: float(x.score) / float(x.fields[6]) >= top_fraction_cutoff).moveto(
+        func_logger.info("Normalized read support threshold: %0.3f" % top_fraction_cutoff)
+        bedtool = bedtool.filter(lambda x: find_coverage_frac(x.score,x.fields[6]) >= top_fraction_cutoff).moveto(
             top_intervals_all_cols_file)
 
     # Filter out the extra column added to simplify life later on
@@ -687,7 +690,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_intervals",
                         help="Maximum number of intervals to process. Intervals are ranked by normalized read-support",
                         type=int, default=MAX_INTERVALS)
-    as_parser.add_argument("--svs_to_softclip", nargs="+", help="SVs to perform soft-clip analysis on", default=SVS_SOFTCLIP_SUPPORTED,
+    parser.add_argument("--svs_to_softclip", nargs="+", help="SVs to perform soft-clip analysis on", default=SVS_SOFTCLIP_SUPPORTED,
                            choices=SVS_SOFTCLIP_SUPPORTED)
     parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=OVERLAP_RATIO, type=float,
                                 required=False)

@@ -340,7 +340,7 @@ def run_metasv(args):
 
         logger.info("Output final VCF file")
 
-        convert_metasv_bed_to_vcf(bedfile=genotyped_bed, vcf_out=final_vcf, sample=args.sample, pass_calls=False)
+        convert_metasv_bed_to_vcf(bedfile=genotyped_bed, vcf_out=final_vcf, workdir=args.workdir, sample=args.sample, pass_calls=False)
     else:
         shutil.copy(preasm_vcf, final_vcf)
         pysam.tabix_index(final_vcf, force=True, preset="vcf")

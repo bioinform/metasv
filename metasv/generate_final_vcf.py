@@ -17,11 +17,10 @@ mydir = os.path.dirname(os.path.realpath(__file__))
 vcf_template = os.path.join(mydir, "resources/template.vcf")
 
 
-def check_duplicates(vcf_record1,vcf_record2):
-    if vcf_record1.CHROM != vcf_record2.CHROM or vcf_record1.POS != vcf_record2.POS:
+def check_duplicates(vcf_record1,vcf_record2,max_dist=10):
+    if vcf_record1.CHROM != vcf_record2.CHROM or abs(int(vcf_record1.POS)-int(vcf_record2.POS))>max_dist:
         return False,[]
-    if vcf_record1.INFO["END"] != vcf_record2.INFO["END"] or \
-       vcf_record1.INFO["SVLEN"] != vcf_record2.INFO["SVLEN"] or \
+    if abs(int(vcf_record1.INFO["END"]) - int(vcf_record2.INFO["END"])) > max_dist or \
        vcf_record1.INFO["SVTYPE"] != vcf_record2.INFO["SVTYPE"]:
         return False,[]
     info={"END": vcf_record1.INFO["END"], "SVLEN": vcf_record1.INFO["SVLEN"], "SVTYPE": vcf_record1.INFO["SVTYPE"]}
@@ -47,9 +46,33 @@ def check_duplicates(vcf_record1,vcf_record2):
                                    vcf_record1.REF, vcf_record1.ALT, vcf_record1.QUAL, 
                                    sv_filter, info, vcf_record1.FORMAT, sample_indexes)
 
-def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_template, sample=None, reference=None,
+def filter_confused_INS_calls(vcf_out_nf, vcf_out, wiggle=20):
+    nonins_intervals=[]
+    
+    variants = pybedtools.BedTool(vcf_out_nf)
+    variants_INS = variants.filter(lambda x: "INS" in x.fields[4]).sort()
+    variants_others = variants.filter(lambda x: "INS" not in x.fields[4]).sort()
+    variants_good_nonINS = variants_others.filter(lambda x: ("DEL" in x.fields[4] or "INV" in x.fields[4]) and x.fields[6] != "LowQual").saveas()
+    nonINS_bp_intervals=[]
+    for interval in variants_good_nonINS:
+        start=interval.start
+        end=int(interval.fields[7].split("END=")[-1].split(";")[0])
+        nonINS_bp_intervals.append(pybedtools.Interval(interval.chrom,max(start-wiggle,0),start+wiggle))
+        nonINS_bp_intervals.append(pybedtools.Interval(interval.chrom,max(end-wiggle,0),end+wiggle))
+
+    nonINS_bedtool=pybedtools.BedTool(nonINS_bp_intervals) 
+    bad_INS=variants_INS.window(nonINS_bp_intervals,w=wiggle)
+
+    variants_filtered=variants_INS.window(bad_INS,w=wiggle,v=True).saveas(vcf_out)
+    variants_filtered =variants_filtered.cat(variants_others,postmerge=False).sort().saveas(vcf_out)
+
+
+def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_template_file=vcf_template, sample=None, reference=None,
                               pass_calls=True):
     func_logger = logging.getLogger("%s" % (convert_metasv_bed_to_vcf.__name__))
+
+    vcf_out_nf = os.path.join(workdir, "variants_nf.vcf")
+
 
     vcf_template_reader = vcf.Reader(open(vcf_template_file, "r"))
 
@@ -65,7 +88,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
     vcf_template_reader.metadata["fileDate"] = str(datetime.date.today())
     vcf_template_reader.metadata["source"] = [" ".join(sys.argv)]
 
-    vcf_writer = vcf.Writer(open(vcf_out, "w"), vcf_template_reader)
+    vcf_writer = vcf.Writer(open(vcf_out_nf, "w"), vcf_template_reader)
 
     vcf_records = []
     if bedfile:
@@ -158,10 +181,11 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
             vcf_record = vcf.model._Record(chrom, pos, sv_id, ref, alt, qual, sv_filter, info, sv_format, sample_indexes)
             vcf_record.samples = vcf_template_reader._parse_samples([genotype], "GT", vcf_record)
             if vcf_records:
-                is_duplicate,merged_vcfrecord=check_duplicates(vcf_record,vcf_records[-1])
+                is_duplicate,merged_vcf_record=check_duplicates(vcf_record,vcf_records[-1])
                 if is_duplicate:
                     func_logger.info("Merging vcf records: %s and %s" % (vcf_record,vcf_records[-1]))
-                    vcf_records[-1]=merged_vcfrecord
+                    merged_vcf_record.samples = vcf_template_reader._parse_samples([genotype], "GT", merged_vcf_record)            
+                    vcf_records[-1]=merged_vcf_record
                 else:
                     vcf_records.append(vcf_record)
             else:
@@ -176,6 +200,8 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, vcf_template_file=vcf_
     for vcf_record in vcf_records:
         vcf_writer.write_record(vcf_record)
     vcf_writer.close()
+
+    filter_confused_INS_calls(vcf_out_nf,vcf_out)    
 
     func_logger.info("Tabix compressing and indexing %s" % vcf_out)
     pysam.tabix_index(vcf_out, force=True, preset="vcf")
@@ -194,10 +220,11 @@ if __name__ == "__main__":
     parser.add_argument("--vcf", help="Final VCF to output", required=True)
     parser.add_argument("--vcf_template", help="VCF template", default=vcf_template)
     parser.add_argument("--reference", help="Reference FASTA", required=False)
+    parser.add_argument("--work", help="Work directory", default="work")
     parser.add_argument("--pass_only", action="store_true", help="Output only PASS calls")
 
     args = parser.parse_args()
 
-    convert_metasv_bed_to_vcf(bedfile=args.bed, vcf_out=args.vcf, vcf_template_file=args.vcf_template,
+    convert_metasv_bed_to_vcf(bedfile=args.bed, vcf_out=args.vcf, workdir=args.work, vcf_template_file=args.vcf_template,
                               sample=args.sample,
                               reference=args.reference, pass_calls=args.pass_only)
