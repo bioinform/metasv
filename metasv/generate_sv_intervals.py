@@ -394,10 +394,8 @@ def fine_tune_bps(feature,pad):
 def add_INS_padding(feature,pad):
     name_fields = feature.name.split(",")
     sv_type = name_fields[1]
-    if not sv_type  == "INS":
-        return feature
-    else:
-        return pybedtools.Interval(feature.chrom, max(feature.start-pad,0), feature.end+pad, name=feature.name, score = feature.score)
+    return pybedtools.Interval(feature.chrom, max(feature.start-pad,0),
+         feature.end+pad, name=feature.name, score = feature.score) if sv_type  != "INS" else feature
     
 def find_coverage_frac(score,coverage):
     scores = map(lambda x: float(x),score.split(","))

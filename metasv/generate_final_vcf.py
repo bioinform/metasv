@@ -19,10 +19,10 @@ vcf_template = os.path.join(mydir, "resources/template.vcf")
 
 def check_duplicates(vcf_record1,vcf_record2,max_dist=10):
     if vcf_record1.CHROM != vcf_record2.CHROM or abs(int(vcf_record1.POS)-int(vcf_record2.POS))>max_dist:
-        return False,[]
+        return None
     if abs(int(vcf_record1.INFO["END"]) - int(vcf_record2.INFO["END"])) > max_dist or \
        vcf_record1.INFO["SVTYPE"] != vcf_record2.INFO["SVTYPE"]:
-        return False,[]
+        return None
     info={"END": vcf_record1.INFO["END"], "SVLEN": vcf_record1.INFO["SVLEN"], "SVTYPE": vcf_record1.INFO["SVTYPE"]}
     svmethods= sorted(list(set(vcf_record1.INFO["SVMETHOD"]+vcf_record2.INFO["SVMETHOD"])))
     info.update({"SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
@@ -42,9 +42,9 @@ def check_duplicates(vcf_record1,vcf_record2,max_dist=10):
         else:
             sv_filter = ["LowQual"]   
     sample_indexes = [0] 
-    return True, vcf.model._Record(vcf_record1.CHROM, vcf_record1.POS, vcf_record1.ID, 
-                                   vcf_record1.REF, vcf_record1.ALT, vcf_record1.QUAL, 
-                                   sv_filter, info, vcf_record1.FORMAT, sample_indexes)
+    return vcf.model._Record(vcf_record1.CHROM, vcf_record1.POS, vcf_record1.ID, 
+                             vcf_record1.REF, vcf_record1.ALT, vcf_record1.QUAL, 
+                             sv_filter, info, vcf_record1.FORMAT, sample_indexes)
 
 def filter_confused_INS_calls(vcf_out_nf, vcf_out, wiggle=20):
     nonins_intervals=[]
@@ -124,26 +124,19 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_temp
                 svmethods_s = set(svmethods) - {"SC","AS"}
                 is_pass = len(svmethods_s) > 1
                 if "AS" in svmethods:
-                    pos = int(interval.fields[6])
-                    end = int(interval.fields[7])
-                    svlen = int(interval.fields[8])
-                    is_pass = (int(interval.fields[8]) != -1) and (svlen >= 100)
+                    pos, end, svlen = map(int, interval.fields[6:9])
+                    is_pass = svlen >= 100
             elif "INV" in sub_types:
                 index_to_use = sub_types.index("INV")
                 svmethods_s = set(svmethods) - {"SC","AS"}
                 is_pass = len(svmethods_s) > 1
                 if "AS" in svmethods:
-                    pos = int(interval.fields[6])
-                    end = int(interval.fields[7])
-                    svlen = int(interval.fields[8])
-                    is_pass = (int(interval.fields[8]) != -1) and (svlen >= 100)
-                
+                    pos, end, svlen = map(int, interval.fields[6:9])
+                    is_pass = svlen >= 100               
             elif "INS" in sub_types and ("SC" in svmethods or "AS" in svmethods):
                 # TODO: I think it should be sub_types.index
                 index_to_use = [i for i,methods in enumerate(sub_methods) if "SC" in methods][0]
-                pos = int(interval.fields[6])
-                end = int(interval.fields[7])
-                svlen = int(interval.fields[8])
+                pos, end, svlen = map(int, interval.fields[6:9])
             elif "ITX" in sub_types:
                 index_to_use = sub_types.index("ITX")
                 svmethods_s = set(svmethods) - {"SC","AS"}
@@ -181,8 +174,8 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_temp
             vcf_record = vcf.model._Record(chrom, pos, sv_id, ref, alt, qual, sv_filter, info, sv_format, sample_indexes)
             vcf_record.samples = vcf_template_reader._parse_samples([genotype], "GT", vcf_record)
             if vcf_records:
-                is_duplicate,merged_vcf_record=check_duplicates(vcf_record,vcf_records[-1])
-                if is_duplicate:
+                merged_vcf_record=check_duplicates(vcf_record,vcf_records[-1])
+                if merged_vcf_record:
                     func_logger.info("Merging vcf records: %s and %s" % (vcf_record,vcf_records[-1]))
                     merged_vcf_record.samples = vcf_template_reader._parse_samples([genotype], "GT", merged_vcf_record)            
                     vcf_records[-1]=merged_vcf_record
