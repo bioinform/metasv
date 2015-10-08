@@ -34,8 +34,8 @@ def find_softclip(aln):
         return None
     
     i, soft_clip = soft_clips[0]
-    dist_L_end = sum(map(lambda x:x[1], aln.cigar[0:i]))
-    dist_R_end = sum(map(lambda x:x[1], aln.cigar[i+1:]))
+    dist_L_end = sum(map(lambda x:x[1] if x[0] in [0,1,4] else 0, aln.cigar[0:i]))
+    dist_R_end = sum(map(lambda x:x[1] if x[0] in [0,1,4] else 0, aln.cigar[i+1:]))
 
     return soft_clip, dist_L_end, dist_R_end
 
@@ -395,7 +395,7 @@ def add_INS_padding(feature,pad):
     name_fields = feature.name.split(",")
     sv_type = name_fields[1]
     return pybedtools.Interval(feature.chrom, max(feature.start-pad,0),
-         feature.end+pad, name=feature.name, score = feature.score) if sv_type  != "INS" else feature
+         feature.end+pad, name=feature.name, score = feature.score) if sv_type  == "INS" else feature
     
 def find_coverage_frac(score,coverage):
     scores = map(lambda x: float(x),score.split(","))
