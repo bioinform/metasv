@@ -154,8 +154,8 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_temp
                               pass_calls=True):
     func_logger = logging.getLogger("%s" % (convert_metasv_bed_to_vcf.__name__))
 
+    intervals = []
     if bedfile:
-        intervals = []
         for interval in pybedtools.BedTool(bedfile):
             interval_info = get_interval_info(interval,pass_calls)            
             if interval_info:
