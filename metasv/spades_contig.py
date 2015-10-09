@@ -1,7 +1,7 @@
 from svregion import *
 import re
 
-pattern = re.compile(r'^(.+)_(\d+)_(\d+)_(INS|DEL|INV)_\d+_NODE_\d+_length_(\d+)_cov_(\d*\.\d+|\d+)')
+pattern = re.compile(r'^(.+)_(\d+)_(\d+)_(INS|DEL|INV|DUP)_\d+_NODE_\d+_length_(\d+)_cov_(\d*\.\d+|\d+)')
 
 
 class SpadesContig:

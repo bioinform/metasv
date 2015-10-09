@@ -153,11 +153,11 @@ def infer_svtype(aln, isize_mean, isize_sd, num_sd=2):
     if aln.mate_is_unmapped:
         return "INS"
     if aln.tid != aln.rnext:
-        return "CTX,INS"
+        return "CTX;INS"
     if (aln.is_reverse and aln.mate_is_reverse) or (not aln.is_reverse and not aln.mate_is_reverse):
         return "INV"
     if (aln.pos < aln.pnext and aln.is_reverse) or (aln.pos > aln.pnext and not aln.is_reverse):
-        return "DUP,ITX"
+        return "DUP;ITX"
     if abs(aln.tlen) > max_isize:
         return "DEL"
     if abs(aln.tlen) < min_isize:
@@ -198,6 +198,18 @@ def find_other_bp(aln, isize_mean, isize_sd, svtype, soft_clip_location, num_sd=
                 other_bp = max(soft_clip_location - (abs(aln.tlen) - isize_mean),0)
             elif dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos <= aln.pnext:
                 other_bp = max(soft_clip_location + (abs(aln.tlen) - isize_mean),0)
+            #if other_bp == -1:
+            #    print aln, dist_L_end, dist_R_end, aln.is_reverse, aln.pos > aln.pnext, other_bp
+            return other_bp
+    elif svtype == "DUP;ITX":
+        soft_clip_tuple = find_softclip(aln)
+        if soft_clip_tuple is not None:
+            soft_clip, dist_L_end, dist_R_end = soft_clip_tuple 
+            other_bp = -1           
+            if dist_L_end <= min_dist_end and aln.is_reverse and aln.pos <= aln.pnext:
+                other_bp = soft_clip_location + abs(aln.tlen) + isize_mean
+            elif dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos > aln.pnext:
+                other_bp = max(soft_clip_location - (abs(aln.tlen) + isize_mean),0)
             #if other_bp == -1:
             #    print aln, dist_L_end, dist_R_end, aln.is_reverse, aln.pos > aln.pnext, other_bp
             return other_bp
@@ -436,17 +448,24 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             soft_clip_location = sum(interval) / 2
             strand = "-" if aln.is_reverse else "+"
             svtype = infer_svtype(aln, isize_mean, isize_sd)
-            if svtype == "CTX,INS":
+            
+            if svtype == "CTX;INS":
                 # TODO : Should be fixed to handle CTX
                 svtype = "INS"
             
             other_bp = find_other_bp(aln,isize_mean, isize_sd, svtype, soft_clip_location)
             if other_bp == -1: continue
+
+            if svtype == "DUP;ITX":
+                # TODO : Should be fixed to handle ITX
+                svtype = "DUP"
+
             name = "%d,%d,%s" % (soft_clip_location, other_bp, strand)
             if ignore_none and svtype == "NONE":
                 continue
             if svtype not in svs_to_softclip:
                 continue
+            
             unmerged_intervals.append(
                 pybedtools.Interval(chromosome, interval[0], interval[1], name=name, score="1", strand=strand, otherfields=[svtype]))
 
