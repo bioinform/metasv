@@ -237,7 +237,7 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
                             check_closeness_to_bp(min(age_record.start1_end1s[0][1],
                                                   age_record.start1_end1s[1][0]),
                                                   pad,dist_to_expected_bp,"L") and 
-                            check_closeness_to_bp(min(age_record.start1_end1s[0][1],
+                            check_closeness_to_bp(max(age_record.start1_end1s[0][1],
                                                   age_record.start1_end1s[1][0]),
                                                   pad,dist_to_expected_bp,"R",
                                                   age_record.inputs[0].length)]
