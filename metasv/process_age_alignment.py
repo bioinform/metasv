@@ -232,6 +232,15 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
                             abs(age_record.start1_end1s[0][1] - age_record.start1_end1s[1][0]) >= min_deletion_len]
         good_age_records = [age_record for age_record in good_age_records if
                             float(age_record.score) / sum(age_record.ref_flanking_regions) >= 0.7]
+                                
+        good_age_records = [age_record for age_record in good_age_records if 
+                            check_closeness_to_bp(min(age_record.start1_end1s[0][1],
+                                                  age_record.start1_end1s[1][0]),
+                                                  pad,dist_to_expected_bp,"L") and 
+                            check_closeness_to_bp(min(age_record.start1_end1s[0][1],
+                                                  age_record.start1_end1s[1][0]),
+                                                  pad,dist_to_expected_bp,"R",
+                                                  age_record.inputs[0].length)]
     elif sv_type == "INV":
         good_age_records = [age_record for age_record in good_age_records if
                             len(age_record.start1_end1s) >= 2 and min(map(lambda x:abs(x[1]-x[0]),age_record.start1_end1s)) >= min_inv_subalign_len]
