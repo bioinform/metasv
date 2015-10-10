@@ -38,7 +38,8 @@ def run_cmd(cmd, logger, out, err):
 def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference=None, assembly=None, pad=AGE_PAD,
                    age=None, truncation_pad_read_age = AGE_TRUNCATION_PAD,
                    max_interval_len_truncation_age = AGE_MAX_INTERVAL_TRUNCATION,
-                   dist_to_expected_bp = AGE_DIST_TO_BP, min_inv_subalign_len = MIN_INV_SUBALIGN_LENGTH,
+                   dist_to_expected_bp = AGE_DIST_TO_BP, min_del_subalign_len = MIN_DEL_SUBALIGN_LENGTH, 
+                   min_inv_subalign_len = MIN_INV_SUBALIGN_LENGTH,
                    age_workdir=None, timeout=AGE_TIMEOUT, keep_temp=False, myid=0):
     thread_logger = logging.getLogger("%s-%s" % (run_age_single.__name__, multiprocessing.current_process()))
 
@@ -167,7 +168,10 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             else:
                 sv_type = sv_types[0]
                 thread_logger.info("Processing region of type %s" % sv_type)
-                breakpoints, info_dict = process_age_records(unique_age_records, sv_type=sv_type, pad=pad, dist_to_expected_bp=dist_to_expected_bp, min_inv_subalign_len=min_inv_subalign_len)
+                breakpoints, info_dict = process_age_records(unique_age_records, sv_type=sv_type, 
+                                                             pad=pad, dist_to_expected_bp=dist_to_expected_bp,
+                                                             min_del_subalign_len=min_del_subalign_len,
+                                                             min_inv_subalign_len=min_inv_subalign_len)
                 bedtools_fields = matching_interval.fields
                 if len(breakpoints) == 1 and sv_type == "INS":
                     bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1]])
@@ -212,7 +216,8 @@ def run_age_single_callback(result, result_list):
 def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_PAD, age=None, age_workdir=None,
                      timeout=AGE_TIMEOUT, keep_temp=False, assembly_tool="spades", chrs=[], nthreads=1,
                      min_contig_len=AGE_MIN_CONTIG_LENGTH,
-                     max_region_len=AGE_MAX_REGION_LENGTH, sv_types=[], min_inv_subalign_len=MIN_INV_SUBALIGN_LENGTH):
+                     max_region_len=AGE_MAX_REGION_LENGTH, sv_types=[], 
+                     min_del_subalign_len=MIN_DEL_SUBALIGN_LENGTH, min_inv_subalign_len=MIN_INV_SUBALIGN_LENGTH):
     func_logger = logging.getLogger("%s-%s" % (run_age_parallel.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(age_workdir):
@@ -269,7 +274,8 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_
         region_sublist = [region for (j, region) in enumerate(region_list) if (j % nthreads) == i]
         kwargs_dict = {"intervals_bed": intervals_bed, "region_list": region_sublist, "contig_dict": contig_dict,
                        "reference": reference, "assembly": assembly, "pad": pad, "age": age, "age_workdir": age_workdir,
-                       "timeout": timeout, "keep_temp": keep_temp, "myid": i, "min_inv_subalign_len": min_inv_subalign_len}
+                       "timeout": timeout, "keep_temp": keep_temp, "myid": i, 
+                       "min_del_subalign_len": min_del_subalign_len, "min_inv_subalign_len": min_inv_subalign_len}
         pool.apply_async(run_age_single, args=[], kwds=kwargs_dict,
                          callback=partial(run_age_single_callback, result_list=breakpoints_beds))
 
@@ -314,6 +320,8 @@ if __name__ == "__main__":
                         default=AGE_MIN_CONTIG_LENGTH)
     parser.add_argument("--max_region_len", help="Maximum length of an SV interval", type=int,
                         default=AGE_MAX_REGION_LENGTH)                       
+    parser.add_argument("--min_del_subalign_len", help="Minimum length of deletion sub-alginment", type=int,
+                        default=MIN_DEL_SUBALIGN_LENGTH)
     parser.add_argument("--min_inv_subalign_len", help="Minimum length of inversion sub-alginment", type=int,
                         default=MIN_INV_SUBALIGN_LENGTH)
     parser.add_argument("--intervals_bed", help="BED file for assembly", type=file, required=True)
@@ -323,4 +331,5 @@ if __name__ == "__main__":
     run_age_parallel(intervals_bed=args.intervals_bed.name, reference=args.reference.name, assembly=args.assembly.name,
                      pad=args.pad, age=args.age.name, age_workdir=args.work, timeout=args.timeout,
                      keep_temp=args.keep_temp, assembly_tool=args.assembly_tool, chrs=args.chrs, nthreads=args.nthreads,
-                     min_contig_len=args.min_contig_len, max_region_len=args.max_region_len, sv_types=args.sv_types, min_inv_subalign_len=args.min_inv_subalign_len,)
+                     min_contig_len=args.min_contig_len, max_region_len=args.max_region_len, sv_types=args.sv_types, 
+                     min_del_subalign_len=args.min_del_subalign_len, min_inv_subalign_len=args.min_inv_subalign_len)
