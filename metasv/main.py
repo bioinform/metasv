@@ -315,7 +315,8 @@ def run_metasv(args):
                                            assembly=assembled_fasta,
                                            pad=args.assembly_pad, age=args.age, chrs=list(contig_whitelist),
                                            nthreads=args.num_threads,
-                                           min_contig_len=AGE_MIN_CONTIG_LENGTH, min_inv_subalign_len=args.min_inv_subalign_len,
+                                           min_contig_len=AGE_MIN_CONTIG_LENGTH, min_del_subalign_len=args.min_del_subalign_len,
+                                           min_inv_subalign_len=args.min_inv_subalign_len,
                                            age_workdir=age_tmpdir)
 
         final_bed = os.path.join(args.workdir, "final.bed")
