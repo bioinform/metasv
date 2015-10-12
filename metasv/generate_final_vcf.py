@@ -92,6 +92,13 @@ def get_interval_info(feature,pass_calls):
         if "AS" in svmethods:
             pos, end, svlen = map(int, feature.fields[6:9])
             is_pass = svlen >= 100               
+    elif "DUP" in sub_types:
+        index_to_use = sub_types.index("DUP")
+        svmethods_s = set(svmethods) - {"SC","AS"}
+        is_pass = len(svmethods_s) > 1
+        if "AS" in svmethods:
+            pos, end, svlen = map(int, feature.fields[6:9])
+            is_pass = svlen >= 100               
     elif "INS" in sub_types and ("SC" in svmethods or "AS" in svmethods):
         # TODO: I think it should be sub_types.index
         #index_to_use = [i for i,methods in enumerate(sub_methods) if ("SC" in methods) or ("AS" in svmethods)][0]

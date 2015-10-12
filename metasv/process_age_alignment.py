@@ -84,7 +84,7 @@ def check_closeness_to_bp(pos,pad,dist_to_expected_bp,LR_bp,seq_length=0):
     else:
         return abs(pos-(seq_length-pad))<dist_to_expected_bp
     
-    
+
 
 def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, start=0, pad=500, dist_to_expected_bp=400, min_inv_subalign_len=MIN_INV_SUBALIGN_LENGTH):
     func_logger = logging.getLogger("%s-%s" % (get_deletion_breakpoints.__name__, multiprocessing.current_process()))
@@ -206,6 +206,54 @@ def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, star
     return [start + breakpoint for breakpoint in breakpoints]
 
 
+def get_duplication_breakpoints(age_records, window=20, max_endpoint_dist=10, start=0, pad=500, dist_to_expected_bp=400):
+    func_logger = logging.getLogger("%s-%s" % (get_deletion_breakpoints.__name__, multiprocessing.current_process()))
+
+    potential_breakpoints = []
+    for age_record in age_records:
+        left_end_near_l_bp=filter(lambda x: check_closeness_to_bp(min(age_record.start1_end1s[x]),pad,dist_to_expected_bp,"L"), [0,1])
+        right_end_near_r_bp=filter(lambda x: check_closeness_to_bp(max(age_record.start1_end1s[x]),pad,dist_to_expected_bp,"R",age_record.inputs[0].length), [0,1])
+        if (not left_end_near_l_bp) or (not right_end_near_r_bp):
+            func_logger.info('Not close to expected BPs: %s'%str(age_record))        
+            continue
+        if len(left_end_near_l_bp)==2 and len(right_end_near_r_bp)==1:
+            left_end_near_l_bp = list(set(left_end_near_l_bp)-set(right_end_near_r_bp))
+        elif len(left_end_near_l_bp)==1 and len(right_end_near_r_bp)==2:
+            right_end_near_r_bp = list(set(right_end_near_r_bp)-set(left_end_near_l_bp))
+        elif len(left_end_near_l_bp)==2 and len(right_end_near_r_bp)==2:
+            dist_to_exp_l_bp=map(lambda x: abs(min(age_record.start1_end1s[x])-pad),[0,1])
+            dist_to_exp_r_bp=map(lambda x: abs(max(age_record.start1_end1s[x])-(age_record.inputs[0].length-pad)),[0,1])
+            left_end_near_l_bp, right_end_near_r_bp = [[0],[1]]  if (dist_to_exp_l_bp[0]+dist_to_exp_r_bp[1]) < (dist_to_exp_l_bp[1]+dist_to_exp_r_bp[0]) else [[1],[0]]
+        
+        l_interval = left_end_near_l_bp[0]
+        r_interval = right_end_near_r_bp[0]
+        
+        bp_idx_l = 0 if age_record.start1_end1s[l_interval][0]<age_record.start1_end1s[l_interval][1] else 1
+        bp_idx_r = 1 if age_record.start1_end1s[r_interval][0]<age_record.start1_end1s[r_interval][1] else 0
+        if abs(age_record.start2_end2s[l_interval][bp_idx_l]-age_record.start2_end2s[r_interval][bp_idx_r]) > 10:
+            func_logger.info('BPs do not match in seq2: %s'%str(age_record))
+            continue
+        
+        end_l_seq2 = age_record.start2_end2s[l_interval][1-bp_idx_l]
+        end_r_seq2 = age_record.start2_end2s[r_interval][1-bp_idx_r]              
+        if max(min(end_r_seq2,end_l_seq2),
+               min(end_l_seq2-age_record.inputs[1].length,
+                   end_r_seq2-age_record.inputs[1].length)) > max_endpoint_dist:
+            func_logger.info('End points are too close to borders in Seq2: %s'%str(age_record))
+            continue
+        potential_breakpoints += [age_record.start1_end1s[l_interval][bp_idx_l],age_record.start1_end1s[r_interval][bp_idx_r]]
+
+    potential_breakpoints=sorted(potential_breakpoints)
+    breakpoints = []
+    for breakpoint in potential_breakpoints:
+        if min([window + 1] + [abs(b - breakpoint) for b in breakpoints]) >= window:
+            breakpoints.append(breakpoint)
+
+    func_logger.info("Gathered breakpoints as %s" % (str(breakpoints)))
+
+    return [start + breakpoint for breakpoint in breakpoints]
+    
+
 def get_reference_intervals(age_records, start=0, min_interval_len=100):
     intervals = []
     for age_record in age_records:
@@ -248,6 +296,9 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
     elif sv_type == "INV":
         good_age_records = [age_record for age_record in good_age_records if
                             len(age_record.start1_end1s) >= 2 and min(map(lambda x:abs(x[1]-x[0]),age_record.start1_end1s)) >= min_inv_subalign_len]
+    elif sv_type == "DUP":
+        good_age_records = [age_record for age_record in good_age_records if
+                            len(age_record.start1_end1s) == 2 and min(age_record.ref_flanking_regions) >= 100]
     else:
         pass
     # Add some features to an info dict
@@ -278,6 +329,8 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
         breakpoints = get_insertion_breakpoints(good_age_records, reference_intervals, start=sv_region.pos1 - pad)
     elif sv_type == "INV":
         breakpoints = get_inversion_breakpoints(good_age_records, start=sv_region.pos1 - pad ,pad=pad, min_inv_subalign_len=min_inv_subalign_len, dist_to_expected_bp=dist_to_expected_bp)
+    elif sv_type == "DUP":
+        breakpoints = get_duplication_breakpoints(good_age_records, start=sv_region.pos1 - pad ,pad=pad, dist_to_expected_bp=dist_to_expected_bp)
     else:
         return [], dict(info)
 
@@ -313,5 +366,10 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
         else:
             func_logger.info("False inversion interval %s" % (str(breakpoints)))
             return [], dict(info)
-
+    elif sv_type == "DUP":
+        if len(breakpoints) == 2:
+            func_logger.info("True duplication interval %s" % (str(breakpoints)))
+        else:
+            func_logger.info("False duplication interval %s" % (str(breakpoints)))
+            return [], dict(info)
     return breakpoints, dict(info)
