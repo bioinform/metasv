@@ -4,7 +4,7 @@ import multiprocessing
 from collections import defaultdict
 import pybedtools
 
-from defaults import MIN_INV_SUBALIGN_LENGTH
+from defaults import MIN_INV_SUBALIGN_LENGTH, MIN_DEL_SUBALIGN_LENGTH
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +217,8 @@ def get_reference_intervals(age_records, start=0, min_interval_len=100):
 
 
 def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_interval_len=200, pad=500,
-                        min_deletion_len=30, min_inv_subalign_len=MIN_INV_SUBALIGN_LENGTH, dist_to_expected_bp=400):
+                        min_deletion_len=30, min_del_subalign_len=MIN_DEL_SUBALIGN_LENGTH, 
+                        min_inv_subalign_len=MIN_INV_SUBALIGN_LENGTH, dist_to_expected_bp=400):
     func_logger = logging.getLogger("%s-%s" % (process_age_records.__name__, multiprocessing.current_process()))
 
     good_age_records = age_records
@@ -227,11 +228,23 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
         good_age_records = [age_record for age_record in good_age_records if not age_record.is_reference()]
     elif sv_type == "DEL":
         good_age_records = [age_record for age_record in good_age_records if
-                            len(age_record.start1_end1s) == 2 and min(age_record.ref_flanking_regions) >= 50]
+                            len(age_record.start1_end1s) == 2 and min(age_record.ref_flanking_regions) >= min_del_subalign_len]
         good_age_records = [age_record for age_record in good_age_records if
                             abs(age_record.start1_end1s[0][1] - age_record.start1_end1s[1][0]) >= min_deletion_len]
         good_age_records = [age_record for age_record in good_age_records if
                             float(age_record.score) / sum(age_record.ref_flanking_regions) >= 0.7]
+
+        good_age_records = [age_record for age_record in good_age_records if
+                            abs(age_record.start2_end2s[0][1] - age_record.start2_end2s[1][0]) <= 50]
+                                
+        good_age_records = [age_record for age_record in good_age_records if 
+                            check_closeness_to_bp(min(age_record.start1_end1s[0][1],
+                                                  age_record.start1_end1s[1][0]),
+                                                  pad,dist_to_expected_bp,"L") and 
+                            check_closeness_to_bp(max(age_record.start1_end1s[0][1],
+                                                  age_record.start1_end1s[1][0]),
+                                                  pad,dist_to_expected_bp,"R",
+                                                  age_record.inputs[0].length)]
     elif sv_type == "INV":
         good_age_records = [age_record for age_record in good_age_records if
                             len(age_record.start1_end1s) >= 2 and min(map(lambda x:abs(x[1]-x[0]),age_record.start1_end1s)) >= min_inv_subalign_len]
