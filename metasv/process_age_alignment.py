@@ -4,6 +4,8 @@ import multiprocessing
 from collections import defaultdict
 import pybedtools
 
+from defaults import MIN_INV_SUBALIGN_LENGTH
+
 logger = logging.getLogger(__name__)
 
 def get_insertion_breakpoints(age_records, intervals, window=20, start=0):
@@ -84,14 +86,14 @@ def check_closeness_to_bp(pos,pad,dist_to_expected_bp,LR_bp,seq_length=0):
     
     
 
-def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, start=0, pad=500, dist_to_expected_bp=400, min_interval_len_inv=50):
+def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, start=0, pad=500, dist_to_expected_bp=400, min_inv_subalign_len=MIN_INV_SUBALIGN_LENGTH):
     func_logger = logging.getLogger("%s-%s" % (get_deletion_breakpoints.__name__, multiprocessing.current_process()))
 
     potential_breakpoints = []
     for age_record in age_records:
     
         polarities=[abs(age_record.polarities1[i]-age_record.polarities2[i]) for i in range(age_record.nfrags)]               
-        good_intervals=[i for i in range(age_record.nfrags) if abs(age_record.start1_end1s[i][1]-age_record.start1_end1s[i][0]) > min_interval_len_inv and abs(age_record.start2_end2s[i][1]-age_record.start2_end2s[i][0]) > min_interval_len_inv]
+        good_intervals=[i for i in range(age_record.nfrags) if abs(age_record.start1_end1s[i][1]-age_record.start1_end1s[i][0]) > min_inv_subalign_len and abs(age_record.start2_end2s[i][1]-age_record.start2_end2s[i][0]) > min_inv_subalign_len]
         good_intervals=[i for i in good_intervals if abs(age_record.start1_end1s[i][1]-age_record.start1_end1s[i][0]) <= max(age_record.inputs[0].length-2*(pad-dist_to_expected_bp),pad+dist_to_expected_bp)]
         func_logger.info('Good intervals: %s'%str(good_intervals))
         if len(good_intervals)<2:
@@ -137,7 +139,7 @@ def get_inversion_breakpoints(age_records, window=20, min_endpoint_dist=10, star
                     inv_interval=min(enumerate(dist_to_exp_bps),key=lambda x:x[1])[0]
                 else:
                     inv_interval=candidate_inv_intervals[0]
-        elif age_record.inputs[0].length > ((2*pad+min_interval_len_inv)):
+        elif age_record.inputs[0].length > ((2*pad+min_inv_subalign_len)):
             long_inversion=True
 
         if inv_interval==-1:
@@ -215,7 +217,7 @@ def get_reference_intervals(age_records, start=0, min_interval_len=100):
 
 
 def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_interval_len=200, pad=500,
-                        min_deletion_len=30, min_interval_len_inv=50, dist_to_expected_bp=400):
+                        min_deletion_len=30, min_inv_subalign_len=MIN_INV_SUBALIGN_LENGTH, dist_to_expected_bp=400):
     func_logger = logging.getLogger("%s-%s" % (process_age_records.__name__, multiprocessing.current_process()))
 
     good_age_records = age_records
@@ -232,7 +234,7 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
                             float(age_record.score) / sum(age_record.ref_flanking_regions) >= 0.7]
     elif sv_type == "INV":
         good_age_records = [age_record for age_record in good_age_records if
-                            len(age_record.start1_end1s) >= 2 and min(map(lambda x:abs(x[1]-x[0]),age_record.start1_end1s)) >= min_interval_len_inv]
+                            len(age_record.start1_end1s) >= 2 and min(map(lambda x:abs(x[1]-x[0]),age_record.start1_end1s)) >= min_inv_subalign_len]
     else:
         pass
     # Add some features to an info dict
@@ -262,7 +264,7 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
         func_logger.info("Gathered reference intervals as %s" % (str(reference_intervals)))
         breakpoints = get_insertion_breakpoints(good_age_records, reference_intervals, start=sv_region.pos1 - pad)
     elif sv_type == "INV":
-        breakpoints = get_inversion_breakpoints(good_age_records, start=sv_region.pos1 - pad ,pad=pad, min_interval_len_inv=min_interval_len_inv, dist_to_expected_bp=dist_to_expected_bp)
+        breakpoints = get_inversion_breakpoints(good_age_records, start=sv_region.pos1 - pad ,pad=pad, min_inv_subalign_len=min_inv_subalign_len, dist_to_expected_bp=dist_to_expected_bp)
     else:
         return [], dict(info)
 

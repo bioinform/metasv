@@ -133,8 +133,13 @@ def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
     except TypeError:
         info = dict()
     methods = set(name_fields[3].split(";"))
-
-    return int(info.get("NUM_SVTOOLS", 1)) <= assembly_max_tools or not (methods & precise_methods)
+    num_tools = int(info.get("NUM_SVTOOLS", 1))
+    
+    if "SC" in methods:
+        methods.discard("SC")
+        num_tools -= 1 
+        
+    return  num_tools <= assembly_max_tools or not (methods & precise_methods)
     
 
 def shouldnt_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,

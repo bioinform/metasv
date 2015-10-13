@@ -14,11 +14,11 @@ import base64
 svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV" ,"ITX", "CTX"]
 sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator",
               "Manta", "Lumpy", "WHAM", "CNVkit"]  # order is important!
-precise_sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller"]
+precise_sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "SoftClip"]
 sv_sources_to_type = {"Pindel": ["SR"], "BreakSeq": ["JM"], "BreakDancer": ["RP"],
                       "CNVnator": ["RD"], "HaplotypeCaller": ["AS"],
                       "Manta": ["SR", "RP"], "Lumpy": ["SR", "RP"], "CNVkit": ["RD"],
-                      "WHAM": ["SR", "RP"]}
+                      "WHAM": ["SR", "RP"], "SoftClip": ["SC"]}
 
 mydir = os.path.dirname(os.path.realpath(__file__))
 gaps_b37 = os.path.join(mydir, "resources/b37.gaps.bed")
@@ -106,7 +106,7 @@ class SVInterval:
                                                                                          other.start - other.wiggle)
             return float(overlap_length) >= max(min_fraction_self * self_length,
                                                 min_fraction_other * other_length) and overlap_length >= max(
-                min_fraction_self, min_overlap_length_other)
+                min_overlap_length_self, min_overlap_length_other)
         else:
             if self.sv_type == "CTX" and not (self.chrom == other.chrom and self.chrom2 == other.chrom2):
                 return False
