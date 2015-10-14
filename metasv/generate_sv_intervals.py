@@ -144,7 +144,7 @@ def coverage_filter(feature, bam_handle, min_support_frac=MIN_SUPPORT_FRAC):
 
 
 def generate_sc_intervals_callback(result, result_list):
-    if result is not None:
+    if result:
         result_list.append(result)
 
 def infer_svtype(aln, isize_mean, isize_sd, num_sd=2):
@@ -171,7 +171,7 @@ def find_other_bp(aln, isize_mean, isize_sd, svtype, soft_clip_location, num_sd=
         return -2
     elif svtype == "INV":
         soft_clip_tuple = find_softclip(aln)
-        if soft_clip_tuple is not None:
+        if soft_clip_tuple:
             soft_clip, dist_L_end, dist_R_end = soft_clip_tuple 
             other_bp = -1           
             if dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos > aln.pnext:
@@ -191,7 +191,7 @@ def find_other_bp(aln, isize_mean, isize_sd, svtype, soft_clip_location, num_sd=
             return other_bp
     elif svtype == "DEL":
         soft_clip_tuple = find_softclip(aln)
-        if soft_clip_tuple is not None:
+        if soft_clip_tuple:
             soft_clip, dist_L_end, dist_R_end = soft_clip_tuple 
             other_bp = -1           
             if dist_L_end <= min_dist_end and aln.is_reverse and aln.pos > aln.pnext:
@@ -203,7 +203,7 @@ def find_other_bp(aln, isize_mean, isize_sd, svtype, soft_clip_location, num_sd=
             return other_bp
     elif svtype == "DUP;ITX":
         soft_clip_tuple = find_softclip(aln)
-        if soft_clip_tuple is not None:
+        if soft_clip_tuple:
             soft_clip, dist_L_end, dist_R_end = soft_clip_tuple 
             other_bp = -1           
             if dist_L_end <= min_dist_end and aln.is_reverse and aln.pos <= aln.pnext:
