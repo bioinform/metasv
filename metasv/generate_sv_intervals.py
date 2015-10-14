@@ -77,6 +77,43 @@ def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, m
     return avg_base_quality - 33 >= min_avg_base_qual
 
 
+def is_good_candidate_neighbour(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, max_nm=10,
+                      min_matches=50, skip_soft_clip=False,):
+    if aln.is_duplicate:
+        return False
+    if aln.is_unmapped:
+        return False
+    if aln.mapq < min_mapq:
+        return False
+    if aln.cigar is None:
+        return False
+
+	soft_clip_tuple = find_softclip(aln)
+	if skip_soft_clip and soft_clip_tuple is not None:
+		if soft_clip_tuple[0] > min_soft_clip:
+			return False
+
+
+    
+    ins_lengths = sum([0] + [length for (op, length) in aln.cigar if op == 1])
+    mismatches = int(aln.opt("XM")) if "XM" in aln.tags else 0
+    matches = aln.alen - ins_lengths - mismatches
+    nm = int(aln.opt("NM"))
+    if nm > max_nm or matches < min_matches:
+        return False
+
+	if soft_clip_tuple: 
+		soft_clip = soft_clip_tuple[0]
+	else:
+		soft_clip = 0
+		
+    if aln.cigar[0][0] == 4:
+        avg_base_quality = float(sum(map(ord, aln.qual[:soft_clip]))) / soft_clip
+    else:
+        avg_base_quality = float(sum(map(ord, aln.qual[-soft_clip:]))) / soft_clip
+
+    return avg_base_quality - 33 >= min_avg_base_qual
+
 def get_interval(aln, pad=500):
     start = aln.pos
     end = aln.aend
@@ -416,6 +453,14 @@ def find_coverage_frac(score,coverage):
     
     
         
+def add_neighbour_support(feature,bam_handle,min_mapq):
+
+    sv_type = feature.fields[6].split(',')[0]
+    for aln in bam_handle.fetch(reference=feature.chrom, start=feature.start, end=feature.end):
+		if not is_good_candidate(aln, min_avg_base_qual=min_avg_base_qual, min_mapq=min_mapq,
+								 min_soft_clip=0, max_nm=max_nm,
+								 min_matches=min_matches): continue
+
 
 
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
@@ -465,9 +510,10 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                 continue
             if svtype not in svs_to_softclip:
                 continue
-            
+
             unmerged_intervals.append(
                 pybedtools.Interval(chromosome, interval[0], interval[1], name=name, score="1", strand=strand, otherfields=[svtype]))
+
 
         if not unmerged_intervals:
             sam_file.close()
@@ -486,6 +532,10 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                     reciprocal_for_2bp=False, sv_type_field = [6,0])
         m_bedtool = m_bedtool.moveto(merged_bed)
         func_logger.info("%d merged intervals" % (m_bedtool.count()))
+
+
+		m_bedtool=m_bedtool.each(partial(add_neighbour_support,bam_handle=bam_handle,min_mapq=min_mapq)).moveto(merged_bed)
+
 
 
         # Check if the other break point also can be merged for the merged intervals (for 2bp SVs)
