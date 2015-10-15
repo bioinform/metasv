@@ -144,7 +144,7 @@ def coverage_filter(feature, bam_handle, min_support_frac=MIN_SUPPORT_FRAC):
 
 
 def generate_sc_intervals_callback(result, result_list):
-    if result:
+    if result is not None:
         result_list.append(result)
 
 def infer_svtype(aln, isize_mean, isize_sd, num_sd=2):
