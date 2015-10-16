@@ -90,7 +90,7 @@ def get_interval_info(feature,pass_calls):
         func_logger.info("Unknown SV type! %s" % str(feature))
         return None
                 
-    if not sv_type== "INS":
+    if sv_type != "INS":
         svmethods_s = set(svmethods) - {"SC","AS"}
         is_pass = len(svmethods_s) > 1
         if "AS" in svmethods:
