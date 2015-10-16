@@ -80,23 +80,18 @@ def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, m
 def is_good_candidate_neighbour(aln, min_mapq=5, min_soft_clip=20, max_nm=10,
                       min_matches=50, skip_soft_clip=False):
     if aln.is_duplicate:
-        print "is_duplicate"        
         return False
     if aln.is_unmapped:
-        print "is_unmapped"        
         return False
     if aln.mapq < min_mapq:
-        print "aln.mapq < min_mapq"        
         return False
     if aln.cigar is None:
-        print "aln.cigar is None"        
         return False
 
     if skip_soft_clip:
         soft_clip_tuple = find_softclip(aln)
         if soft_clip_tuple:
             if soft_clip_tuple[0] > min_soft_clip:
-                print "soft_clip_tuple[0] > min_soft_clip"        
                 return False
 
     ins_lengths = sum([0] + [length for (op, length) in aln.cigar if op == 1])
@@ -104,13 +99,12 @@ def is_good_candidate_neighbour(aln, min_mapq=5, min_soft_clip=20, max_nm=10,
     matches = aln.alen - ins_lengths - mismatches
     nm = int(aln.opt("NM"))
     if nm > max_nm or matches < min_matches:
-        print "nm > max_nm or matches < min_matches"        
         return False
     return True
 
 def get_interval(aln, pad=500):
     start = aln.pos
-    end = aln.aend
+    end = aln.aend    
 
     if aln.cigar[0][0] == 4:
         return max(0, start - pad), start + pad
@@ -127,13 +121,15 @@ def merged_interval_features(feature, bam_handle):
     minus_support = len(locations) - plus_support
     locations_span = max(locations) - min(locations)
     interval_readcount = bam_handle.count(reference=feature.chrom, start=feature.start, end=feature.end)
+    interval_reads = bam_handle.fetch(reference=feature.chrom, start=feature.start, end=feature.end)
+    highQ_readcount = len(filter(lambda x: x.mapq > 5,interval_reads))
     info = {"plus_support":plus_support, "minus_support":minus_support, "locations_span":locations_span, "num_unique_locations":num_unique_locations,
         "count_str": count_str, "coverage":interval_readcount, "other_bp_ends": other_bp_ends, "sc_bp_ends": "%s-%s"%(feature.start, feature.end)}
     name = "%s,%s,0,SC" % (
         base64.b64encode(json.dumps(info)), feature.fields[6].split(',')[0])
 
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
-                               otherfields=[str(interval_readcount), feature.fields[6]])
+                               otherfields=[str(interval_readcount)]+feature.fields[6:]+[str(highQ_readcount)])
 
 
 def generate_other_bp_interval(feature,pad):
@@ -339,54 +335,65 @@ def get_operator_fn(op):
         'max' : max,
         }[op]
 
-def blind_merge(intervals,cols,ords):
-    
-    columns=map(lambda x:int(x),cols.split(','))
-    orders=ords.split(',')
-    if columns and not orders:
-        print "Bad c and o combinations"
-    
-    if len(columns)>1 and len(orders)==1:
-        orders=[ords for c in columns]
+def blind_merge(intervals,cols,ops):
+    func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
+    try:
+        columns=map(lambda x:int(x),cols.split(','))
+        operations=ops.split(',')
+        if columns and not operations:
+            func_logger.error("Aborting!")
+            raise Exception("Bad column and operation combinations for merge: %s, %s\n" % (str(columns), operations))    
+        if len(columns)>1 and len(operations)==1:
+            operations=[ops for c in columns]
 
-    if len(columns)!=len(orders):
-        print "Bad c and o combinations"
+        if len(columns)!=len(operations):
+            func_logger.error("Aborting!")
+            raise Exception("Bad column and operation combinations for merge: %s, %s\n" % (str(columns), operations))    
     
-    column_operations={c:orders[i] for i,c in enumerate(columns)}    
+        column_operations={c:operations[i] for i,c in enumerate(columns)}    
     
-    if not intervals:
-        return intervals
+        if not intervals:
+            return intervals
     
-    start = int(intervals[0].start)
-    end = int(intervals[0].end)
-    chrom = intervals[0].chrom
-    other_fields = {c:[intervals[0].fields[c-1]] if c<=len(intervals[0].fields) else [""]  for c,o in column_operations.iteritems()}
-    for interval in intervals[1:]:
-        start = min(start, int(interval.start))
-        end = max(end, int(interval.end))
-        for c in column_operations: 
-            other_fields[c].append(interval.fields[c-1])
-    for c,o in column_operations.iteritems():
-        if o == "collapse":
-            other_fields[c] = ",".join(other_fields[c])
-        elif o in  ["sum", "min", "max"]:
-            other_fields[c] = "%s"%get_operator_fn(o)(map(lambda x:int(x) if x else 0,other_fields[c]))
-        elif o == "first":
-            other_fields[c] = other_fields[c][0]
-        elif o == "last":
-            other_fields[c] = other_fields[c][-1]
-        elif o == "distinct":
-            other_fields[c] = ",".join(set(other_fields[c]))
-        elif o == "count":
-            other_fields[c] = len(other_fields[c])
-        else:
-            print "not supported operation"
+        start = int(intervals[0].start)
+        end = int(intervals[0].end)
+        chrom = intervals[0].chrom
+        other_fields = {c:[intervals[0].fields[c-1]] if c<=len(intervals[0].fields) else [""]  for c,o in column_operations.iteritems()}
+        for interval in intervals[1:]:
+            start = min(start, int(interval.start))
+            end = max(end, int(interval.end))
+            for c in column_operations: 
+                other_fields[c].append(interval.fields[c-1])
+        for c,o in column_operations.iteritems():
+            if o == "collapse":
+                other_fields[c] = ",".join(other_fields[c])
+            elif o in  ["sum", "min", "max"]:
+                other_fields[c] = "%s"%get_operator_fn(o)(map(lambda x:int(x) if x else 0,other_fields[c]))
+            elif o == "first":
+                other_fields[c] = other_fields[c][0]
+            elif o == "last":
+                other_fields[c] = other_fields[c][-1]
+            elif o == "distinct":
+                other_fields[c] = ",".join(set(other_fields[c]))
+            elif o == "count":
+                other_fields[c] = len(other_fields[c])
+            else:
+                func_logger.error("Aborting!")
+                raise Exception("Not supported operation: %s\n" % (o))    
+        name = other_fields[columns[0]] if columns else ""
+        score = other_fields[columns[1]] if len(columns)>=2 else ""
+        strand = other_fields[columns[2]] if len(columns)>=3 else ""
+        otherfields = [other_fields[c] for c in columns[3:]]
+        return pybedtools.Interval(chrom=chrom,start=start,end=end,name=name,score=score,strand=strand,otherfields=otherfields)    
+    except Exception as e:
+        func_logger.error('Caught exception in worker thread')
 
-    name = other_fields[columns[0]] if columns else ""
-    score = other_fields[columns[1]] if len(columns)>=2 else ""
-    strand = other_fields[columns[2]] if len(columns)>=3 else ""
-    otherfields = [other_fields[c] for c in columns[3:]]
-    return pybedtools.Interval(chrom=chrom,start=start,end=end,name=name,score=score,strand=strand,otherfields=otherfields)    
+        # This prints the type, value, and stack trace of the
+        # current exception being handled.
+        traceback.print_exc()
+        print()
+        raise e
+
     
 def merge_intervals_bed(bedtool, overlap_ratio , c ,o):
     bedtool=bedtool.sort().cut([0,1,2]+(map(lambda x: int(x)-1,c.split(',')) if c else []))
@@ -526,17 +533,25 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
     other_bp_start, other_bp_end = map(int,feature.fields[3].split(',')[-1].split('-'))
     num_neigh_support = 0
     soft_clip_location = (feature.start+feature.end)/2
+    num_good_reads = 0
+    num_good_none_reads = 0
+    
     for aln in bam_handle.fetch(reference=feature.chrom, start=feature.start, end=feature.end):
-        if 49669385<soft_clip_location<49669785:
-            print aln,is_good_candidate_neighbour(aln, min_mapq=min_mapq,
-                                 min_soft_clip=min_soft_clip, max_nm=max_nm,
-                                 min_matches=min_matches,skip_soft_clip=skip_soft_clip)
+        #if 49669385<soft_clip_location<49669785:
+        #    print aln,is_good_candidate_neighbour(aln, min_mapq=min_mapq,
+        #                         min_soft_clip=min_soft_clip, max_nm=max_nm,
+        #                         min_matches=min_matches,skip_soft_clip=skip_soft_clip)
             
         if not is_good_candidate_neighbour(aln, min_mapq=min_mapq,
                                  min_soft_clip=min_soft_clip, max_nm=max_nm,
                                  min_matches=min_matches,skip_soft_clip=skip_soft_clip): continue
 
+        num_good_reads += 1
         svtype_neigh = infer_svtype(aln, isize_mean, isize_sd)
+        
+        if svtype_neigh == "NONE":
+            num_good_none_reads +=1
+        
         if svtype_neigh == "CTX;INS":
             # TODO : Should be fixed to handle CTX
             svtype_neigh = "INS"
@@ -545,8 +560,6 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
             # TODO : Should be fixed to handle ITX
             svtype_neigh = "DUP"
 
-        if 49669385<soft_clip_location<49669785:
-            print "AAA",svtype, svtype_neigh, aln.tid , aln.rnext, aln.tid != aln.rnext
 
         if svtype != svtype_neigh:
             continue
@@ -566,10 +579,15 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
         if not svtype == "INS":
             if abs(other_bp_neigh -(other_bp_start+other_bp_end)/2) > max_dist_other_bp:
                 continue
+
+
+        #if 49669385<soft_clip_location<49669785:
+        #    print "AAA",svtype, svtype_neigh, aln.tid , aln.rnext, aln.tid != aln.rnext, aln.pos, aln.aend, aln.cigar
+
         num_neigh_support +=1
         
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=feature.name, score=feature.score,
-                               otherfields=[feature.fields[6],str(num_neigh_support)])        
+                               otherfields=[feature.fields[6],str(num_neigh_support),str(num_good_reads),str(num_good_none_reads)])        
         
 
 
@@ -651,7 +669,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         for interval in m_bedtool:
             sv_type = interval.fields[6].split(',')[0]
             if len(set(interval.fields[6].split(',')))!=1:
-                print "More than one svtypes: ", interval
+                func_logger.warn("More than one svtypes: %s",(str(interval)))
             if  sv_type == "INS":
                 bp_merged_intervals.append(add_other_bp_fields(interval,0,0))
             else:
@@ -696,9 +714,12 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             filtered_bed)
         func_logger.info("%d filtered intervals" % (bedtool.count()))
 
+        thr_sv={"INS":0.05, "INV":0.01, "DEL":0.05, "DUP": 0.02}
         # Now filter based on coverage
         coverage_filtered_bed = os.path.join(workdir, "coverage_filtered_bp_merged.bed")
-        bedtool = bedtool.filter(lambda x: float(x.fields[6]) * min_support_frac <= float(x.score)).moveto(
+        #bedtool = bedtool.filter(lambda x: float(x.fields[6]) * min_support_frac <= float(x.score)).moveto(
+        #    coverage_filtered_bed)
+        bedtool = bedtool.filter(lambda x: (float(x.fields[6]) * thr_sv[x.fields[3].split(",")[1]] <= float(x.fields[8])) and float(x.fields[6])<1000).moveto(
             coverage_filtered_bed)
         func_logger.info("%d coverage filtered intervals" % (bedtool.count()))
 
