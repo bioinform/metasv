@@ -82,7 +82,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
         logger.error("Skipping read extraction since interval too close to chromosome beginning")
     else:
         # Read alignments from the interval in memory and build a dictionary to get mate instead of calling bammate.mate() function
-        if abs(chr_end-chr_start)>max_interval_len_truncation and sv_type in ['INV','DEL']:
+        if abs(chr_end-chr_start)>max_interval_len_truncation and sv_type in ["INV","DEL","DUP"]:
             # For large SVs, middle sequences has no effect on genotyping. So, we only extract reads around breakpoints to speed up
             truncate_start = chr_start + pad + truncation_pad_read_extract 
             truncate_end = chr_end -  (pad + truncation_pad_read_extract)
