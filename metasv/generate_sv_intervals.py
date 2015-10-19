@@ -195,7 +195,7 @@ def find_other_bp(aln, isize_mean, isize_sd, svtype, soft_clip_location, num_sd=
     min_isize = isize_mean - num_sd * isize_sd
     max_isize = isize_mean + num_sd * isize_sd
     soft_clip_tuple = find_softclip(aln)
-    if soft_clip_tuple is None:    
+    if not soft_clip_tuple:    
         return -1
     soft_clip, dist_L_end, dist_R_end = soft_clip_tuple 
     other_bp = -1        

@@ -78,57 +78,46 @@ def get_interval_info(feature,pass_calls):
     index_to_use = 0
     is_pass = False
     svlen = -1
-    if "DEL" in sub_types:
-        index_to_use = sub_types.index("DEL")
-        svmethods_s = set(svmethods) - {"SC","AS"}
-        is_pass = len(svmethods_s) > 1
-        if "AS" in svmethods:
-            pos, end, svlen = map(int, feature.fields[6:9])
-            is_pass = svlen >= 100
-    elif "INV" in sub_types:
-        index_to_use = sub_types.index("INV")
-        svmethods_s = set(svmethods) - {"SC","AS"}
-        is_pass = len(svmethods_s) > 1
-        if "AS" in svmethods:
-            pos, end, svlen = map(int, feature.fields[6:9])
-            is_pass = svlen >= 100               
-    elif "DUP" in sub_types:
-        index_to_use = sub_types.index("DUP")
-        svmethods_s = set(svmethods) - {"SC","AS"}
-        is_pass = len(svmethods_s) > 1
-        if "AS" in svmethods:
-            pos, end, svlen = map(int, feature.fields[6:9])
-            is_pass = svlen >= 100               
-    elif "INS" in sub_types and ("SC" in svmethods or "AS" in svmethods):
-        # TODO: I think it should be sub_types.index
-        #index_to_use = [i for i,methods in enumerate(sub_methods) if ("SC" in methods) or ("AS" in svmethods)][0]
-        index_to_use = sub_types.index("INS")
-        pos, end, svlen = map(int, feature.fields[6:9])
-    elif "ITX" in sub_types:
-        index_to_use = sub_types.index("ITX")
-        svmethods_s = set(svmethods) - {"SC","AS"}
-        is_pass = len(svmethods_s) > 1
-        end = info["END"]
-    elif "CTX" in sub_types:
-        index_to_use = sub_types.index("CTX")
-        svmethods_s = set(svmethods) - {"SC","AS"}
-        is_pass = len(svmethods_s) > 1
-        end = info["END"]
-        
-    if pos < 1:
-        func_logger.info("Variant with pos < 1 encountered. Skipping! %s" % str(feature))
+    
+    sv_type = None
+    for sub_type in ["DEL","INV","DUP","ITX","CTX","INS"]:
+        if sub_type in sub_types:        
+            index_to_use = sub_types.index(sub_type)
+            sv_type = sub_type
+            break
+
+    if not sv_type:
+        func_logger.info("Unknown SV type! %s" % str(feature))
         return None
+                
+    if sv_type != "INS":
+        svmethods_s = set(svmethods) - {"SC","AS"}
+        is_pass = len(svmethods_s) > 1
+        if "AS" in svmethods:
+            pos, end, svlen = map(int, feature.fields[6:9])
+            is_pass = svlen >= 100        
+        if sv_type in ["ITX","CTX"]:
+            end = info["END"]        
 
-    if svlen < 0: svlen = sub_lengths[index_to_use]
-    if sub_types[index_to_use] == "DEL":
-        svlen = -svlen
-
-    sv_type = sub_types[index_to_use]
-    if sv_type == "INS":
+        if svlen < 0: svlen = sub_lengths[index_to_use]
+        if sv_type == "DEL":
+            svlen = -svlen
+    else:
+        if ("SC" in svmethods or "AS" in svmethods):
+            # TODO: I think it should be sub_types.index
+            #index_to_use = [i for i,methods in enumerate(sub_methods) if ("SC" in methods) or ("AS" in svmethods)][0]
+            pos, end, svlen = map(int, feature.fields[6:9])
+        if svlen < 0: svlen = sub_lengths[index_to_use]
         if pass_calls and end != pos + 1:
             return None
         end = pos
         is_pass = (int(feature.fields[8]) != -1) and (svlen == 0 or svlen >= 100)
+
+    if pos < 1:
+        func_logger.info("Variant with pos < 1 encountered. Skipping! %s" % str(feature))
+        return None
+
+
     info.update(
         {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
     sv_filter = "PASS" if is_pass else "LowQual"
