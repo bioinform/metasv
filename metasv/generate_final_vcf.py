@@ -149,6 +149,8 @@ def filter_confused_INS_calls(nonfilterd_bed, filterd_bed, wiggle=20):
 def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_template_file=vcf_template, sample=None, reference=None,
                               pass_calls=True):
     func_logger = logging.getLogger("%s" % (convert_metasv_bed_to_vcf.__name__))
+    if not os.path.exists(workdir):
+        os.makedirs(workdir)
 
     intervals = []
     if bedfile:
