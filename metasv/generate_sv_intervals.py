@@ -184,57 +184,9 @@ def infer_svtype(aln, isize_mean, isize_sd, num_sd=2):
         return "INS"
     return "NONE"
 
-def find_other_bp(aln, isize_mean, isize_sd, svtype, soft_clip_location, num_sd=2, min_dist_end=2):
-    min_isize = isize_mean - num_sd * isize_sd
-    max_isize = isize_mean + num_sd * isize_sd
-    soft_clip_tuple = find_softclip(aln)
-    if not soft_clip_tuple:    
-        return -1
-    soft_clip, dist_L_end, dist_R_end = soft_clip_tuple 
-    other_bp = -1        
-    if svtype == "INS":
-        if dist_L_end <= min_dist_end and aln.is_reverse:
-            other_bp = -2
-        elif dist_R_end <= min_dist_end and not aln.is_reverse:
-            other_bp = -2
-        return other_bp
-    elif svtype == "INV":
-        if dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos > aln.pnext:
-            other_bp = max(soft_clip_location - (abs(aln.tlen) - isize_mean + 2*dist_L_end),0)
-        elif dist_L_end <= min_dist_end and not aln.is_reverse and aln.pos > aln.pnext:
-            other_bp = max(soft_clip_location + (- abs(aln.tlen) + isize_mean - 2*soft_clip),0)
-        elif dist_L_end <= min_dist_end and aln.is_reverse and aln.pos <= aln.pnext:
-            other_bp = max(soft_clip_location + (abs(aln.tlen) - isize_mean + 2*dist_R_end),0)
-        elif dist_R_end <= min_dist_end and aln.is_reverse and aln.pos <= aln.pnext:
-            other_bp = max(soft_clip_location - (- abs(aln.tlen) + isize_mean - 2*soft_clip),0)
-        elif dist_L_end <= min_dist_end and aln.is_reverse and aln.pos > aln.pnext:
-            other_bp = max(soft_clip_location - (abs(aln.tlen) + isize_mean - 2*dist_R_end),0)
-        elif dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos <= aln.pnext:
-            other_bp = max(soft_clip_location + (abs(aln.tlen) + isize_mean - 2*dist_L_end),0)
-        #if other_bp == -1:
-        #    print aln, dist_L_end, dist_R_end, aln.is_reverse, aln.pos > aln.pnext, other_bp
-        return other_bp
-    elif svtype == "DEL":
-        if dist_L_end <= min_dist_end and aln.is_reverse and aln.pos > aln.pnext:
-            other_bp = max(soft_clip_location - (abs(aln.tlen) - isize_mean),0)
-        elif dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos <= aln.pnext:
-            other_bp = max(soft_clip_location + (abs(aln.tlen) - isize_mean),0)
-        #if other_bp == -1:
-        #    print aln, dist_L_end, dist_R_end, aln.is_reverse, aln.pos > aln.pnext, other_bp
-        return other_bp
-    elif svtype == "DUP":
-        if dist_L_end <= min_dist_end and aln.is_reverse and aln.pos <= aln.pnext:
-            other_bp = soft_clip_location + abs(aln.tlen) + isize_mean
-        elif dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos > aln.pnext:
-            other_bp = max(soft_clip_location - (abs(aln.tlen) + isize_mean),0)
-        #if other_bp == -1:
-        #    print aln, dist_L_end, dist_R_end, aln.is_reverse, aln.pos > aln.pnext, other_bp
-        return other_bp
-    return other_bp
-
-
-def find_other_bp_neigh(aln, isize_mean, isize_sd, svtype, skip_soft_clip, soft_clip, 
-                        dist_L_end, dist_R_end, soft_clip_location, wiggle, num_sd=2, min_dist_end=2):
+def find_other_bp(aln, isize_mean, isize_sd, svtype, soft_clip, dist_L_end, dist_R_end, 
+                  soft_clip_location, skip_soft_clip =False, skip_neigh=True, num_sd=2, 
+                  min_dist_end=2, wiggle= 20):
     min_isize = isize_mean - num_sd * isize_sd
     max_isize = isize_mean + num_sd * isize_sd
     other_bp = -1           
@@ -244,7 +196,7 @@ def find_other_bp_neigh(aln, isize_mean, isize_sd, svtype, skip_soft_clip, soft_
                 other_bp = -2
             elif dist_R_end <= min_dist_end and not aln.is_reverse:
                 other_bp = -2
-        else:
+        elif not skip_neigh:
             if not aln.is_reverse and aln.aend < (soft_clip_location + wiggle):
                 if aln.mate_is_unmapped or aln.tid != aln.rnext or (aln.pnext > (soft_clip_location - wiggle)):
                     other_bp = -2
@@ -266,7 +218,7 @@ def find_other_bp_neigh(aln, isize_mean, isize_sd, svtype, skip_soft_clip, soft_
                 other_bp = max(soft_clip_location - (abs(aln.tlen) + isize_mean - 2*dist_R_end),0)
             elif dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos <= aln.pnext:
                 other_bp = max(soft_clip_location + (abs(aln.tlen) + isize_mean - 2*dist_L_end),0)
-        else:
+        elif not skip_neigh:
             if not aln.is_reverse and aln.pos > aln.pnext and aln.aend < (soft_clip_location + wiggle):
                 other_bp = max(soft_clip_location - (abs(aln.tlen) - isize_mean + 2*(soft_clip_location-aln.pos)),0)
             elif not aln.is_reverse and aln.pos > aln.pnext and aln.pos > (soft_clip_location - wiggle):
@@ -286,7 +238,7 @@ def find_other_bp_neigh(aln, isize_mean, isize_sd, svtype, skip_soft_clip, soft_
                 other_bp = max(soft_clip_location - (abs(aln.tlen) - isize_mean),0)
             elif dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos <= aln.pnext:
                 other_bp = max(soft_clip_location + (abs(aln.tlen) - isize_mean),0)
-        else:
+        elif not skip_neigh:
             if aln.is_reverse and aln.pos > (soft_clip_location - wiggle):
                 other_bp = max(soft_clip_location - (abs(aln.tlen) - isize_mean),0)
             elif not aln.is_reverse and aln.aend < (soft_clip_location + wiggle):
@@ -298,7 +250,7 @@ def find_other_bp_neigh(aln, isize_mean, isize_sd, svtype, skip_soft_clip, soft_
                 other_bp = soft_clip_location + abs(aln.tlen) + isize_mean
             elif dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos > aln.pnext:
                 other_bp = max(soft_clip_location - (abs(aln.tlen) + isize_mean),0)
-        else:
+        elif not skip_neigh:
             if aln.is_reverse and aln.pos <= aln.pnext and aln.pos > (soft_clip_location - wiggle):
                 other_bp = soft_clip_location + abs(aln.tlen) + isize_mean
             elif not aln.is_reverse and aln.pos > aln.pnext and aln.pos < (soft_clip_location + wiggle):
@@ -554,9 +506,11 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
                 soft_clip_location = sum(get_interval(aln))/2
                 if abs(soft_clip_location -(feature.start+feature.end)/2) > max_dist_sc:
                     continue
-        other_bp_neigh = find_other_bp_neigh(aln,isize_mean, isize_sd, svtype_neigh,
-                                             skip_soft_clip, soft_clip, dist_L_end,
-                                             dist_R_end, soft_clip_location, wiggle = wiggle)
+        other_bp_neigh = find_other_bp(aln,isize_mean, isize_sd, svtype_neigh,
+                                             soft_clip, dist_L_end,
+                                             dist_R_end, soft_clip_location, 
+                                             skip_soft_clip=skip_soft_clip, 
+                                             skip_neigh=False, wiggle = wiggle)
         if other_bp_neigh == -1: continue        
         if not svtype == "INS":
             if abs(other_bp_neigh -(other_bp_start+other_bp_end)/2) > max_dist_other_bp:
@@ -612,7 +566,12 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                 # TODO : Should be fixed to handle ITX
                 svtype = "DUP"
 
-            other_bp = find_other_bp(aln,isize_mean, isize_sd, svtype, soft_clip_location)
+            soft_clip_tuple = find_softclip(aln)
+            if not soft_clip_tuple:    
+                continue
+            soft_clip, dist_L_end, dist_R_end = soft_clip_tuple 
+            other_bp = find_other_bp(aln,isize_mean, isize_sd, svtype, soft_clip, dist_L_end,
+                                                 dist_R_end, soft_clip_location)
             if other_bp == -1: continue
 
             name = "%d,%d,%s" % (soft_clip_location, other_bp, strand)
@@ -623,7 +582,6 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
             unmerged_intervals.append(
                 pybedtools.Interval(chromosome, interval[0], interval[1], name=name, score="1", strand=strand, otherfields=[svtype]))
-
 
         if not unmerged_intervals:
             sam_file.close()
