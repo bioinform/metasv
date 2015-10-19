@@ -185,11 +185,13 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_temp
     # The following are hacks to ensure sample name and contig names are put in the VCF header
     vcf_template_reader.samples = [sample]
     contigs = []
+    fasta_file = None
     if reference:
         contigs = fasta_utils.get_contigs(reference)
         contigs_order_dict = {contig.name: index for (index, contig) in enumerate(contigs)}
         vcf_template_reader.contigs = OrderedDict([(contig.name, (contig.name, contig.length)) for contig in contigs])
         vcf_template_reader.metadata["reference"] = reference
+        fasta_file = pysam.Fastafile(reference)
 
     vcf_template_reader.metadata["fileDate"] = str(datetime.date.today())
     vcf_template_reader.metadata["source"] = [" ".join(sys.argv)]
@@ -202,7 +204,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_temp
             info = json.loads(base64.b64decode(name_split[0]))
             sv_type = name_split[1]
             sv_id = "."
-            ref = "."
+            ref = fasta_file.fetch(interval.chrom, interval.start, interval.start + 1) if fasta_file else "."
             alt = [vcf.model._SV(sv_type)]
             qual = "."
             sv_filter = [interval.fields[7]]
