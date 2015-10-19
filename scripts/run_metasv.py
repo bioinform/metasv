@@ -89,10 +89,14 @@ if __name__ == "__main__":
                                   type=int, default=MIN_SUPPORT)
     insertion_parser.add_argument("--min_ins_support_frac",
                                   help="Minimum fraction of reads supporting insertion using soft-clips", type=float,
-                                  default=MIN_SUPPORT_FRAC)
+                                  default=MIN_SUPPORT_FRAC_INS)
     insertion_parser.add_argument("--max_ins_intervals", help="Maximum number of insertion intervals to generate",
                                   type=int,
                                   default=MAX_INTERVALS)
+    insertion_parser.add_argument("--mean_read_coverage", type=float, default=MEAN_READ_COVERAGE, help="Mean read coverage")
+    insertion_parser.add_argument("--max_ins_cov_frac", type=float, default=MAX_INS_COVERAGE_FRAC, help="Maximum read coverage around the insertion breakpoint.")
+
+
 
     as_parser = parser.add_argument_group("Assembly options")
     as_parser.add_argument("--spades", help="Path to SPAdes executable", required=False)

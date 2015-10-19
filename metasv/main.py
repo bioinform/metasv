@@ -296,8 +296,10 @@ def run_metasv(args):
                                                           max_nm=args.max_nm, min_matches=args.min_matches,
                                                           isize_mean=args.isize_mean, isize_sd=args.isize_sd,                                                        
                                                           svs_to_softclip=args.svs_to_assemble,
-                                                          overlap_ratio=args.overlap_ratio
-                                                          )
+                                                          overlap_ratio=args.overlap_ratio,
+                                                          mean_read_length=args.mean_read_length,
+                                                          mean_read_coverage=args.mean_read_coverage, 
+                                                          max_ins_cov_frac=args.max_ins_cov_frac)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
         logger.info("Will run assembly now")
