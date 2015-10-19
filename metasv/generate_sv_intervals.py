@@ -597,7 +597,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                           pad=SC_PAD, min_support=MIN_SUPPORT, max_isize=1000000000,
                           min_support_frac=MIN_SUPPORT_FRAC, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES, 
                           isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
-                          overlap_ratio=OVERLAP_RATIO):
+                          overlap_ratio=OVERLAP_RATIO,merge_max_dist=-int(1.5*SC_PAD)):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
@@ -606,6 +606,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
     func_logger.info("Generating candidate intervals from %s for chromsome %s" % (bam, chromosome))
     pybedtools.set_tempdir(workdir)
+
 
     unmerged_intervals = []
     start_time = time.time()
@@ -657,7 +658,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
         merged_bed = os.path.join(workdir, "merged.bed")
         m_bedtool=merge_for_each_sv(bedtool,c="4,5,6,7",o="collapse,sum,collapse,collapse",
-                                    svs_to_softclip=svs_to_softclip,d=-500,
+                                    svs_to_softclip=svs_to_softclip,d=merge_max_dist,
                                     reciprocal_for_2bp=False, sv_type_field = [6,0])
         m_bedtool = m_bedtool.moveto(merged_bed)
         func_logger.info("%d merged intervals" % (m_bedtool.count()))
@@ -673,7 +674,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             if  sv_type == "INS":
                 bp_merged_intervals.append(add_other_bp_fields(interval,0,0))
             else:
-                other_bp_bedtool=bedtool.filter(lambda x: x.name in interval.name and x.fields[6]==sv_type).each(partial(generate_other_bp_interval,pad=pad)).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=-500)
+                other_bp_bedtool=bedtool.filter(lambda x: x.name in interval.name and x.fields[6]==sv_type).each(partial(generate_other_bp_interval,pad=pad)).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist)
                 for intvl in other_bp_bedtool:
                     name_fields = intvl.name.split(',')
                     sv_length = [abs(int(name_fields[3*i])-int(name_fields[3*i+1])) for i in range(len(name_fields)/3)]
@@ -690,12 +691,12 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                             L_merged_other_bp=max(map(lambda x: int(x.split(',')[1]),L_bp_intvls))
                             R_merged_other_bp=max(map(lambda x: int(x.split(',')[1]),R_bp_intvls))
                             L_other_end=max(map(lambda x: x.split(',')[1],L_bp_intvls))
-                            bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in L_bp_intvls and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=-500).each(partial(add_other_bp_fields, start=max(L_merged_other_bp-pad,0), end=L_merged_other_bp+pad)).intervals)
-                            bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in R_bp_intvls and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=-500).each(partial(add_other_bp_fields, start=max(R_merged_other_bp-pad,0), end=R_merged_other_bp+pad)).intervals)
+                            bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in L_bp_intvls and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist).each(partial(add_other_bp_fields, start=max(L_merged_other_bp-pad,0), end=L_merged_other_bp+pad)).intervals)
+                            bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in R_bp_intvls and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist).each(partial(add_other_bp_fields, start=max(R_merged_other_bp-pad,0), end=R_merged_other_bp+pad)).intervals)
                         else:
-                            bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in intvl.name and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=-500).each(partial(add_other_bp_fields, start=intvl.start, end=intvl.end)).intervals)
+                            bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in intvl.name and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist).each(partial(add_other_bp_fields, start=intvl.start, end=intvl.end)).intervals)
                     else: 
-                        bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in intvl.name and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=-500).each(partial(add_other_bp_fields, start=intvl.start, end=intvl.end)).intervals)
+                        bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in intvl.name and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist).each(partial(add_other_bp_fields, start=intvl.start, end=intvl.end)).intervals)
         
         bp_merged_bed = os.path.join(workdir, "bp_merged.bed")
         bedtool=pybedtools.BedTool(bp_merged_intervals).sort().moveto(bp_merged_bed)       
@@ -714,13 +715,16 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             filtered_bed)
         func_logger.info("%d filtered intervals" % (bedtool.count()))
 
-        thr_sv={"INS":0.05, "INV":0.01, "DEL":0.05, "DUP": 0.02}
+        thr_sv={"INS":0.04, "INV":0.01, "DEL":0.04, "DUP": 0.01}
+        read_length=100
+        coverage=50
         # Now filter based on coverage
         coverage_filtered_bed = os.path.join(workdir, "coverage_filtered_bp_merged.bed")
         #bedtool = bedtool.filter(lambda x: float(x.fields[6]) * min_support_frac <= float(x.score)).moveto(
         #    coverage_filtered_bed)
-        bedtool = bedtool.filter(lambda x: (float(x.fields[6]) * thr_sv[x.fields[3].split(",")[1]] <= float(x.fields[8])) and float(x.fields[6])<1000).moveto(
-            coverage_filtered_bed)
+        bedtool = bedtool.filter(lambda x: (float(x.fields[6]) * thr_sv[x.fields[3].split(",")[1]] <= float(x.fields[8])) and 
+                                           (x.fields[3].split(",")[1]!="INS" or 
+                                           (float(x.fields[6])/abs(x.start-x.end+1)*read_length)<(1.5*coverage))).moveto(coverage_filtered_bed)
         func_logger.info("%d coverage filtered intervals" % (bedtool.count()))
 
         # For 2bp SVs, the interval will be the cover of two intervals on the BP
@@ -735,7 +739,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                       svs_to_softclip=svs_to_softclip,
                                       overlap_ratio=overlap_ratio,
                                       reciprocal_for_2bp=True, 
-                                      sv_type_field = [3,1], d=-500)
+                                      sv_type_field = [3,1], d=merge_max_dist)
         bedtool = bedtool.each(partial(fix_merged_fields,inter_tools=False)).each(partial(fine_tune_bps,pad=pad))
         bedtool = bedtool.filter(lambda x: x.score != "-1").sort().moveto(merged_full_coverage_filtered_bed)
         func_logger.info("%d merged full intervals" % (bedtool.count()))
@@ -787,6 +791,9 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         return None
 
 
+    merge_max_dist = -int(1.5 * pad)
+
+
     func_logger.info("SVs to soft-clip: %s" % (svs_to_softclip))
 
     pool = multiprocessing.Pool(num_threads)
@@ -801,7 +808,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         kwargs_dict = {"min_avg_base_qual": min_avg_base_qual, "min_mapq": min_mapq, "min_soft_clip": min_soft_clip,
                        "pad": pad, "min_support": min_support,
                        "min_support_frac": min_support_frac, "max_nm": max_nm, "min_matches": min_matches, 
-                       "isize_mean": isize_mean, "isize_sd": isize_sd, "svs_to_softclip": svs_to_softclip}
+                       "isize_mean": isize_mean, "isize_sd": isize_sd, "svs_to_softclip": svs_to_softclip, "merge_max_dist": merge_max_dist}
         pool.apply_async(generate_sc_intervals, args=args_list, kwds=kwargs_dict,
                          callback=partial(generate_sc_intervals_callback, result_list=bed_files))
 
@@ -852,7 +859,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         bedtool = bedtool.cat(sc_skip_bedtool, postmerge=False)
         bedtool = bedtool.sort()
         bedtool = merge_for_each_sv(bedtool,c="4",o="collapse",svs_to_softclip=svs_to_softclip,
-                                  overlap_ratio=overlap_ratio, reciprocal_for_2bp=True, d=-500)
+                                  overlap_ratio=overlap_ratio, reciprocal_for_2bp=True, d=merge_max_dist)
         bedtool = bedtool.each(partial(fix_merged_fields,inter_tools=True)).sort().moveto(interval_bed)
         bedtool = bedtool.cat(nonsc_skip_bedtool, postmerge=False).sort().moveto(interval_bed)
         func_logger.info("After merging with %s %d features" % (skip_bed, bedtool.count()))
