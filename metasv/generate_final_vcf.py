@@ -120,6 +120,8 @@ def get_interval_info(feature,pass_calls):
 
     info.update(
         {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
+    if "IMPRECISE" in info:
+        info["IMPRECISE"] = True
     sv_filter = "PASS" if is_pass else "LowQual"
     interval_info={"pos": pos, "end": end, "info": info, "sv_type": sv_type, "genotype": genotype,
                    "sv_length": abs(svlen), "svmethods": svmethods, "sv_filter": sv_filter}    
