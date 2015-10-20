@@ -302,17 +302,17 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
     else:
         pass
     # Add some features to an info dict
-    info = defaultdict(float)
+    info = defaultdict(int)
     info["BA_NUM_GOOD_REC"] = len(good_age_records)
     if not good_age_records:
         func_logger.warning("No good records found for getting breakpoints")
         return [], dict(info)
 
     for rec in good_age_records:
-        info["BA_FLANK_PERCENT"] = max(info["BA_FLANK_PERCENT"], rec.flank_percent)
-        info["BA_NFRAGS"] = max(info["BA_NFRAGS"], rec.nfrags)
-        info["BA_NUM_ALT"] = max(info["BA_NUM_ALT"], rec.n_alt)
-        info["BA_PERCENT_MATCH"] = max(info["BA_PERCENT_MATCH"], rec.percent)
+        info["BA_FLANK_PERCENT"] = int(max(info["BA_FLANK_PERCENT"], rec.flank_percent))
+        info["BA_NFRAGS"] = int(max(info["BA_NFRAGS"], rec.nfrags))
+        info["BA_NUM_ALT"] = int(max(info["BA_NUM_ALT"], rec.n_alt))
+        info["BA_PERCENT_MATCH"] = int(max(info["BA_PERCENT_MATCH"], rec.percent))
 
     func_logger.info("Found %d good records for getting breakpoints" % (len(good_age_records)))
     func_logger.info("Good records")

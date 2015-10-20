@@ -120,6 +120,8 @@ def get_interval_info(feature,pass_calls):
 
     info.update(
         {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
+    if "IMPRECISE" in info:
+        info["IMPRECISE"] = True
     sv_filter = "PASS" if is_pass else "LowQual"
     interval_info={"pos": pos, "end": end, "info": info, "sv_type": sv_type, "genotype": genotype,
                    "sv_length": abs(svlen), "svmethods": svmethods, "sv_filter": sv_filter}    
@@ -149,6 +151,8 @@ def filter_confused_INS_calls(nonfilterd_bed, filterd_bed, wiggle=20):
 def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_template_file=vcf_template, sample=None, reference=None,
                               pass_calls=True):
     func_logger = logging.getLogger("%s" % (convert_metasv_bed_to_vcf.__name__))
+    if not os.path.exists(workdir):
+        os.makedirs(workdir)
 
     intervals = []
     if bedfile:
@@ -185,11 +189,13 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_temp
     # The following are hacks to ensure sample name and contig names are put in the VCF header
     vcf_template_reader.samples = [sample]
     contigs = []
+    fasta_file = None
     if reference:
         contigs = fasta_utils.get_contigs(reference)
         contigs_order_dict = {contig.name: index for (index, contig) in enumerate(contigs)}
         vcf_template_reader.contigs = OrderedDict([(contig.name, (contig.name, contig.length)) for contig in contigs])
         vcf_template_reader.metadata["reference"] = reference
+        fasta_file = pysam.Fastafile(reference)
 
     vcf_template_reader.metadata["fileDate"] = str(datetime.date.today())
     vcf_template_reader.metadata["source"] = [" ".join(sys.argv)]
@@ -202,7 +208,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_temp
             info = json.loads(base64.b64decode(name_split[0]))
             sv_type = name_split[1]
             sv_id = "."
-            ref = "."
+            ref = fasta_file.fetch(interval.chrom, interval.start, interval.start + 1) if fasta_file else "."
             alt = [vcf.model._SV(sv_type)]
             qual = "."
             sv_filter = [interval.fields[7]]
