@@ -806,6 +806,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
 
     pybedtools.cleanup(remove_all=True)
 
+    aaaa[1111]=1
     return bedtool.fn
 
 
