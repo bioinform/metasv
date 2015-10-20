@@ -31,21 +31,53 @@
 ##INFO=<ID=SOURCES,Number=.,Type=String,Description="List of original raw SV calls as Toolname:Start:End:Size">
 ##INFO=<ID=NUM_SVMETHODS,Number=1,Type=Integer,Description="Number of methods supporting the event">
 ##INFO=<ID=NUM_SVTOOLS,Number=1,Type=Integer,Description="Number of SV callers supporting the event">
-##INFO=<ID=BA_FLANK_PERCENT,Number=1,Type=Integer,Description="Breakpoint assembly: percent of total length in flanks">
-##INFO=<ID=BA_NFRAGS,Number=1,Type=Integer,Description="Breakpoint assembly: Number of fragments in the alignment">
-##INFO=<ID=BA_NUM_ALT,Number=1,Type=Integer,Description="Breakpoint assembly: Number of alternative regions">
-##INFO=<ID=BA_NUM_BP,Number=1,Type=Integer,Description="Breakpoint assembly: Number of breakpoints">
-##INFO=<ID=BA_NUM_GOOD_REC,Number=1,Type=Integer,Description="Breakpoint assembly: Number of good records in assembly">
-##INFO=<ID=BA_PERCENT_MATCH,Number=1,Type=Integer,Description="Breakpoint assembly: percent of matching bases in alignment">
+##INFO=<ID=BA_FLANK_PERCENT,Number=1,Type=Float,Description="Breakpoint assembly: percent of total length in flanks">
+##INFO=<ID=BA_NFRAGS,Number=1,Type=Float,Description="Breakpoint assembly: Number of fragments in the alignment">
+##INFO=<ID=BA_NUM_ALT,Number=1,Type=Float,Description="Breakpoint assembly: Number of alternative regions">
+##INFO=<ID=BA_NUM_BP,Number=1,Type=Float,Description="Breakpoint assembly: Number of breakpoints">
+##INFO=<ID=BA_NUM_GOOD_REC,Number=1,Type=Float,Description="Breakpoint assembly: Number of good records in assembly">
+##INFO=<ID=BA_PERCENT_MATCH,Number=1,Type=Float,Description="Breakpoint assembly: percent of matching bases in alignment">
+##INFO=<ID=BA_BP_SCORE,Number=1,Type=Float,Description="Breakpoint assembly: breakpoint score">
 ##INFO=<ID=VT,Number=1,Type=String,Description="indicates what type of variant the line represents">
 ##INFO=<ID=SVMETHOD,Number=.,Type=String,Description="Type of approach used to detect SV: RP (read pair), RD (read depth), SR (split read), JT (junction) or AS (assembly)">
-##INFO=<ID=CHR2,Number=.,Type=String,Description="Chromosome for END coordinate in case of a translocation">
-##INFO=<ID=natorRD,Number=1,Type=Float,Description="CNVnator: Normalized RD">
-##INFO=<ID=natorP1,Number=1,Type=Float,Description="CNVnator: e-val by t-test">
-##INFO=<ID=natorP2,Number=1,Type=Float,Description="CNVnator: e-val by Gaussian tail">
-##INFO=<ID=natorP3,Number=1,Type=Float,Description="CNVnator: e-val by t-test (middle)">
-##INFO=<ID=natorP4,Number=1,Type=Float,Description="CNVnator: e-val by Gaussian tail (middle)">
-##INFO=<ID=natorQ0,Number=1,Type=Float,Description="CNVnator: Fraction of reads with 0 mapping quality">
+##INFO=<ID=CHR2,Number=1,Type=String,Description="Chromosome for END coordinate in case of a translocation">
+##INFO=<ID=BD_CHR1,Number=1,Type=String,Description="BreakDancer: chr1 field">
+##INFO=<ID=BD_POS1,Number=1,Type=Integer,Description="BreakDancer: pos1 field">
+##INFO=<ID=BD_ORI1,Number=1,Type=String,Description="BreakDancer: orientation1 field">
+##INFO=<ID=BD_CHR2,Number=1,Type=String,Description="BreakDancer: chr2 field">
+##INFO=<ID=BD_POS2,Number=1,Type=Integer,Description="BreakDancer: pos2 field">
+##INFO=<ID=BD_ORI2,Number=1,Type=String,Description="BreakDancer: orientation2 field">
+##INFO=<ID=BD_SCORE,Number=1,Type=Float,Description="BreakDancer: score field">
+##INFO=<ID=BD_SUPPORTING_READ_PAIRS,Number=1,Type=Integer,Description="BreakDancer: num_Reads field">
+##INFO=<ID=BS_START,Number=1,Type=Integer,Description="BreakSeq: start field">
+##INFO=<ID=BS_END,Number=1,Type=Integer,Description="BreakSeq: end field">
+##INFO=<ID=BS_SCORE,Number=1,Type=Integer,Description="BreakSeq: score field">
+##INFO=<ID=BS_FILTER,Number=1,Type=String,Description="BreakSeq: filter field">
+##INFO=<ID=BS_ABC_COUNTS,Number=3,Type=Integer,Description="BreakSeq: counts for various breakpoint types">
+##INFO=<ID=BS_PE_COUNT,Number=1,Type=Integer,Description="BreakSeq: paired support for the SV">
+##INFO=<ID=CN_NORMALIZED_RD,Number=1,Type=Float,Description="CNVnator: Normalized RD">
+##INFO=<ID=CN_EVAL1,Number=1,Type=Float,Description="CNVnator: e-val by t-test">
+##INFO=<ID=CN_EVAL2,Number=1,Type=Float,Description="CNVnator: e-val by Gaussian tail">
+##INFO=<ID=CN_EVAL3,Number=1,Type=Float,Description="CNVnator: e-val by t-test (middle)">
+##INFO=<ID=CN_EVAL4,Number=1,Type=Float,Description="CNVnator: e-val by Gaussian tail (middle)">
+##INFO=<ID=CN_Q0,Number=1,Type=Float,Description="CNVnator: Fraction of reads with 0 mapping quality">
+##INFO=<ID=PD_NUM_NT_ADDED,Number=.,Type=Integer,Description="Pindel: number of nucleotides added">
+##INFO=<ID=PD_NT_ADDED,Number=.,Type=String,Description="Pindel: sequenced of nucleotides added">
+##INFO=<ID=PD_BP_RANGE_START,Number=1,Type=Integer,Description="Pindel: breakpoint range start">
+##INFO=<ID=PD_BP_RANGE_END,Number=1,Type=Integer,Description="Pindel: breakpoint range end">
+##INFO=<ID=PD_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of reads supporting the SV">
+##INFO=<ID=PD_UNIQUE_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of uniquely mapped reads supporting the SV">
+##INFO=<ID=PD_UP_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of up reads supporting the SV">
+##INFO=<ID=PD_UP_UNIQUE_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of up uniquely mapped reads supporting the SV">
+##INFO=<ID=PD_DOWN_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of down reads supporting the SV">
+##INFO=<ID=PD_DOWN_UNIQUE_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of down uniquely mapped reads supporting the SV">
+##INFO=<ID=PD_SIMPLE_SCORE,Number=1,Type=Integer,Description="Pindel: simple score for the SV">
+##INFO=<ID=PD_SUM_MAPQ,Number=1,Type=Integer,Description="Pindel: sum of mapq of the supporting reads">
+##INFO=<ID=PD_NUM_SAMPLE,Number=1,Type=Integer,Description="Pindel: number of samples">
+##INFO=<ID=PD_NUM_SAMPLE_SUPP,Number=1,Type=Integer,Description="Pindel: number of supporting samples">
+##INFO=<ID=PD_NUM_SAMPLE_UNIQUE_SUPP,Number=1,Type=Integer,Description="Pindel: number of samples with unique supporting reads">
+##INFO=<ID=PD_HOMLEN,Number=1,Type=Integer,Description="Pindel: length of sequence homology around the breakpoints">
+##INFO=<ID=PD_HOMSEQ,Number=1,Type=String,Description="Pindel: homologous sequence around the breakpoints">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">
 ##FORMAT=<ID=CNQ,Number=1,Type=Float,Description="Copy number genotype quality for imprecise events">
