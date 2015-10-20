@@ -121,8 +121,11 @@ def merged_interval_features(feature, bam_handle):
     minus_support = len(locations) - plus_support
     locations_span = max(locations) - min(locations)
     interval_readcount = bam_handle.count(reference=feature.chrom, start=feature.start, end=feature.end)
-    info = {"plus_support":plus_support, "minus_support":minus_support, "locations_span":locations_span, "num_unique_locations":num_unique_locations,
-        "count_str": count_str, "coverage":interval_readcount, "other_bp_ends": other_bp_ends, "sc_bp_ends": "%s-%s"%(feature.start, feature.end)}
+    info = {"SC_PLUS_SUPPORT":plus_support, "SC_MINUS_SUPPORT":minus_support, 
+            "SC_LOCATIONS_SPAN":locations_span, "SC_NUM_UNIQUE_LOCATIONS":num_unique_locations,
+            "SC_COUNT_STR": count_str, "SC_COVERAGE":interval_readcount, "SC_OTHER_BP_ENDS": other_bp_ends, 
+            "SC_SC_BP_ENDS": "%s-%s"%(feature.start, feature.end),
+            "SC_NEIGH_SUPPORT": feature.fields[7] }
     name = "%s,%s,0,SC" % (
         base64.b64encode(json.dumps(info)), feature.fields[6].split(',')[0])
 
@@ -143,7 +146,7 @@ def add_other_bp_fields(feature,start,end):
 def get_full_interval(feature,pad):
     name_fields = feature.name.split(",")
     info = json.loads(base64.b64decode(name_fields[0]))
-    other_bp_ends=info["other_bp_ends"]
+    other_bp_ends=info["SC_OTHER_BP_ENDS"]
     start = feature.start
     end = feature.end
     sv_type = name_fields[1]
@@ -397,12 +400,18 @@ def fix_merged_fields(feature,inter_tools=True):
     sv_tools=set([])
     
     if not inter_tools:
-        info["SUBINTERVAL_INFOs"]=[]
-    for i in range(n):
+        info["SC_SUBINTERVAL_INFOs"]=[]
+    else:
+        sc_sub_intervals_info=[]
+    for i in range(n):    
         sub_interval=name_fields[i*4:(i+1)*4]
         sub_info=json.loads(base64.b64decode(sub_interval[0]))
         if not inter_tools:
-            info["SUBINTERVAL_INFOs"].append(sub_info)
+            info["SC_SUBINTERVAL_INFOs"].append(sub_info)
+        else:
+            info.update({k:v in sub_info.iteritems() if k not in ["SOURCES","SC_SUBINTERVAL_INFOs"]})
+            if "SC_SUBINTERVAL_INFOs" in sub_info:
+                sc_sub_intervals_info.extend(sub_info["SC_SUBINTERVAL_INFOs"])                
         sv_tools.update(set(map(lambda x: x.split('-')[-1],sub_info["SOURCES"].split(','))))
         if i==0:
             info["SOURCES"] = sub_info["SOURCES"]
@@ -410,6 +419,9 @@ def fix_merged_fields(feature,inter_tools=True):
             info["SOURCES"] += ","+sub_info["SOURCES"]
         sv_length = max(sv_length,int(sub_interval[2]))
 
+    if sc_sub_intervals_info:
+        for k in ["SC_PLUS_SUPPORT", "SC_MINUS_SUPPORT", "COVERAGE", "SC_NEIGH_SUPPORT"]:
+            info[k]=",".join(map(lambda x:"%s"%x[k],sc_sub_intervals_info))
     sv_methods=sorted(list(reduce(operator.add, [sv_sources_to_type[tool] for tool in list(sv_tools)])))
     info["NUM_SVMETHODS"] = len(sv_methods)
     info["NUM_SVTOOLS"] = len(sv_tools)
@@ -431,12 +443,12 @@ def fine_tune_bps(feature,pad):
     if sv_type  == "INS":
         return feature
     info = json.loads(base64.b64decode(name_fields[0]))
-    if "SUBINTERVAL_INFOs" in info:
+    if "SC_SUBINTERVAL_INFOs" in info:
         L_bps=[]
         R_bps=[]
-        for source in info["SUBINTERVAL_INFOs"]:
-            sc_bp=sum(map(lambda x:int(x),source['sc_bp_ends'].split('-')))/2
-            other_bp=sum(map(lambda x:int(x),source['other_bp_ends'].split('-')))/2
+        for source in info["SC_SUBINTERVAL_INFOs"]:
+            sc_bp=sum(map(lambda x:int(x),source['SC_SC_BP_ENDS'].split('-')))/2
+            other_bp=sum(map(lambda x:int(x),source['SC_OTHER_BP_ENDS'].split('-')))/2
             if abs(sc_bp-feature.start) < (abs(sc_bp-feature.end)) and abs(other_bp-feature.start) >= (abs(other_bp-feature.end)):
                 L_bps.append(sc_bp)
             elif abs(sc_bp-feature.start) >= (abs(sc_bp-feature.end)) and abs(other_bp-feature.start) < (abs(other_bp-feature.end)):
@@ -446,7 +458,6 @@ def fine_tune_bps(feature,pad):
             L_bp=sum(L_bps)/len(L_bps)
             R_bp=sum(R_bps)/len(R_bps)
             sv_length = R_bp-L_bp
-            info["original_full_bp_ends"]=[feature.start,feature.end]
             return pybedtools.Interval(feature.chrom, L_bp, R_bp, name="%s,%s,%d,%s" % (
                     base64.b64encode(json.dumps(info)), sv_type, sv_length,sv_methods),    score = feature.score , otherfields=feature.fields[6:])
         else:
