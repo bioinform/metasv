@@ -55,7 +55,7 @@ def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, m
 
     if not good_neigh_check:
         soft_clip_tuple = find_softclip(aln)
-        if soft_clip_tuple is None:
+        if not soft_clip_tuple:
             return False
         else:
             soft_clip, dist_L_end, dist_R_end = soft_clip_tuple
@@ -283,8 +283,8 @@ def blind_merge(intervals,cols,ops):
         if not intervals:
             return intervals
     
-        start = int(intervals[0].start)
-        end = int(intervals[0].end)
+        start = intervals[0].start
+        end = intervals[0].end
         chrom = intervals[0].chrom
         other_fields = {c:[intervals[0].fields[c-1]] if c<=len(intervals[0].fields) else [""]  for c,o in column_operations.iteritems()}
         for interval in intervals[1:]:
@@ -675,7 +675,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         # Now merge on full intervals
         merged_full_filtered_bed = os.path.join(workdir, "merged_full_filtered_bp_merged.bed")
         if bedtool.count()>0:
-            bedtool=merge_for_each_sv(bedtool,c="4,5,6,7",o="collapse,collapse,collapse,collapse",
+            bedtool=merge_for_each_sv(bedtool,c="4,5,6,7,9",o="collapse,collapse,collapse,collapse,collapse",
                                       svs_to_softclip=svs_to_softclip,
                                       overlap_ratio=overlap_ratio,
                                       reciprocal_for_2bp=True, 
@@ -781,10 +781,10 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     else:
         # Sample the top intervals
         top_fraction_cutoff = \
-            sorted([find_coverage_frac(interval.score, interval.fields[6]) for interval in bedtool], reverse=True)[
+            sorted([find_coverage_frac(interval.fields[8], interval.fields[6]) for interval in bedtool], reverse=True)[
                 max_intervals - 1]
         func_logger.info("Normalized read support threshold: %0.3f" % top_fraction_cutoff)
-        bedtool = bedtool.filter(lambda x: find_coverage_frac(x.score,x.fields[6]) >= top_fraction_cutoff).moveto(
+        bedtool = bedtool.filter(lambda x: find_coverage_frac(x.fields[8],x.fields[6]) >= top_fraction_cutoff).moveto(
             top_intervals_all_cols_file)
 
     # Filter out the extra column added to simplify life later on
