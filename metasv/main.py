@@ -299,6 +299,7 @@ def run_metasv(args):
                                                           overlap_ratio=args.overlap_ratio,
                                                           mean_read_length=args.mean_read_length,
                                                           mean_read_coverage=args.mean_read_coverage, 
+                                                          min_ins_cov_frac=args.min_ins_cov_frac,
                                                           max_ins_cov_frac=args.max_ins_cov_frac)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
@@ -343,7 +344,7 @@ def run_metasv(args):
 
         logger.info("Output final VCF file")
 
-        convert_metasv_bed_to_vcf(bedfile=genotyped_bed, vcf_out=final_vcf, workdir=args.workdir, sample=args.sample, pass_calls=False, reference=args.reference)
+        convert_metasv_bed_to_vcf(bedfile=genotyped_bed, vcf_out=final_vcf, workdir=args.workdir, sample=args.sample, pass_calls=False)
     else:
         shutil.copy(preasm_vcf, final_vcf)
         pysam.tabix_index(final_vcf, force=True, preset="vcf")
