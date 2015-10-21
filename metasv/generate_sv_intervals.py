@@ -521,6 +521,19 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
 
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
                                otherfields=feature.fields[6:]+[str(num_neigh_support)])        
+
+def filter_bad_dup_del_overlaps(feature):
+	start_del=feature.start
+	start_del=feature.start
+	
+    return feature
+
+def resolve_for_IDUP_ITX(bedtool,resolved_full_filtered_bed,wiggle=0):
+    del_bedtool=bedtool.filter(lambda x: x.fields[3].split(",")[1] == "DEL").sort()
+    dup_bedtool=bedtool.filter(lambda x: x.fields[3].split(",")[1] == "DUP").sort()
+    other_bedtool=bedtool.filter(lambda x: x.fields[3].split(",")[1] not in ["DEL","DUP"]).sort()
+    del_dup_bedtool=del_bedtool.window(dup_bedtool,w=wiggle).each(partial(filter_bad_dup_del_overlaps)).sort()
+    
         
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
                           min_soft_clip=SC_MIN_SOFT_CLIP,
@@ -642,14 +655,14 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         bedtool=pybedtools.BedTool(bp_merged_intervals).sort().moveto(bp_merged_bed)       
         func_logger.info("%d BP merged intervals" % (bedtool.count()))
 
-        filtered_bed = os.path.join(workdir, "filtered_bp_merged.bed")
+        filtered_bed = os.path.join(workdir, "filtered.bed")
         bedtool = bedtool.filter(lambda x: int(x.score) >= min_support).each(
             partial(merged_interval_features, bam_handle=sam_file)).moveto(
             filtered_bed)
         func_logger.info("%d filtered intervals" % (bedtool.count()))
         
         # Now filter based on coverage
-        coverage_filtered_bed = os.path.join(workdir, "coverage_filtered_bp_merged.bed")
+        coverage_filtered_bed = os.path.join(workdir, "coverage_filtered.bed")
         bedtool = bedtool.filter(lambda x: (x.fields[3].split(",")[1]!="INS" or 
                                            ((min_ins_cov_frac*mean_read_coverage)<=(float(x.fields[6])/abs(x.start-x.end+1)*mean_read_length)<=(max_ins_cov_frac*mean_read_coverage)))).moveto(coverage_filtered_bed)
         func_logger.info("%d coverage filtered intervals" % (bedtool.count()))
@@ -663,17 +676,17 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                      min_soft_clip=min_soft_clip, max_nm=max_nm, min_matches=min_matches,
                                      skip_soft_clip=False, isize_mean=isize_mean, min_isize=min_isize, max_isize=max_isize)).sort().moveto(coverage_filtered_bed)
 
-        neigh_coverage_filtered_bed = os.path.join(workdir, "neigh_filtered_bp_merged.bed")
+        neigh_coverage_filtered_bed = os.path.join(workdir, "neigh_filtered.bed")
         bedtool = bedtool.filter(lambda x: (float(x.fields[6]) * thr_sv[x.fields[3].split(",")[1]] <= float(x.fields[8]))).moveto(neigh_coverage_filtered_bed)
         func_logger.info("%d neighbour support filtered intervals" % (bedtool.count()))
 
         # For 2bp SVs, the interval will be the cover of two intervals on the BP
-        full_filtered_bed = os.path.join(workdir, "full_filtered_bp_merged.bed")
+        full_filtered_bed = os.path.join(workdir, "full_neigh_filtered.bed")
         bedtool = bedtool.each(partial(get_full_interval,pad=pad)).sort().moveto(full_filtered_bed)
         func_logger.info("%d full filtered intervals" % (bedtool.count()))
 
         # Now merge on full intervals
-        merged_full_filtered_bed = os.path.join(workdir, "merged_full_filtered_bp_merged.bed")
+        merged_full_filtered_bed = os.path.join(workdir, "merged_full.bed")
         if bedtool.count()>0:
             bedtool=merge_for_each_sv(bedtool,c="4,5,6,7,9",o="collapse,collapse,collapse,collapse,collapse",
                                       svs_to_softclip=svs_to_softclip,
@@ -683,6 +696,11 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         bedtool = bedtool.each(partial(fix_merged_fields,inter_tools=False)).each(partial(fine_tune_bps,pad=pad))
         bedtool = bedtool.filter(lambda x: x.score != "-1").sort().moveto(merged_full_filtered_bed)
         func_logger.info("%d merged full intervals" % (bedtool.count()))
+        
+        
+        resolved_full_filtered_bed = os.path.join(workdir, "resolved_merged_full.bed")
+        bedtool=resolve_for_IDUP_ITX(bedtool,resolved_full_filtered_bed)
+        func_logger.info("%d resolved full intervals" % (bedtool.count()))
 
         sam_file.close()
     except Exception as e:
@@ -698,7 +716,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
     pybedtools.cleanup(remove_all=True)
     func_logger.info("Generated intervals in %g seconds for region %s" % ((time.time() - start_time), chromosome))
 
-    return merged_full_filtered_bed
+    return resolved_full_filtered_bed
 
 
 def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_threads=1,
