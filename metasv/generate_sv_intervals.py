@@ -799,10 +799,10 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     else:
         # Sample the top intervals
         top_fraction_cutoff = \
-            sorted([find_coverage_frac(interval.fields[8], interval.fields[6]) for interval in bedtool], reverse=True)[
+            sorted([find_coverage_frac(interval.fields[7], interval.fields[6]) for interval in bedtool], reverse=True)[
                 max_intervals - 1]
         func_logger.info("Normalized read support threshold: %0.3f" % top_fraction_cutoff)
-        bedtool = bedtool.filter(lambda x: find_coverage_frac(x.fields[8],x.fields[6]) >= top_fraction_cutoff).moveto(
+        bedtool = bedtool.filter(lambda x: find_coverage_frac(x.fields[7],x.fields[6]) >= top_fraction_cutoff).moveto(
             top_intervals_all_cols_file)
 
     # Filter out the extra column added to simplify life later on
