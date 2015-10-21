@@ -524,10 +524,10 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
         
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
                           min_soft_clip=SC_MIN_SOFT_CLIP,
-                          pad=SC_PAD, min_support=MIN_SUPPORT, max_considered_isize=1000000000,
+                          pad=SC_PAD, min_support=MIN_SUPPORT, max_considered_isize=1000000000, 
                           min_support_frac=MIN_SUPPORT_FRAC_INS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES, 
                           isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
-                          overlap_ratio=OVERLAP_RATIO,merge_max_dist=-int(2*SC_PAD), 
+                          overlap_ratio=OVERLAP_RATIO,merge_max_dist=-int(1*SC_PAD), 
                           mean_read_length=MEAN_READ_LENGTH, mean_read_coverage=MEAN_READ_COVERAGE, 
                           min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,
                           num_sd = 2):
@@ -651,7 +651,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         # Now filter based on coverage
         coverage_filtered_bed = os.path.join(workdir, "coverage_filtered_bp_merged.bed")
         bedtool = bedtool.filter(lambda x: (x.fields[3].split(",")[1]!="INS" or 
-                                           ((min_ins_cov_frac*mean_read_coverage)<=float(x.fields[6])/abs(x.start-x.end+1)*mean_read_length)<=(max_ins_cov_frac*mean_read_coverage))).moveto(coverage_filtered_bed)
+                                           ((min_ins_cov_frac*mean_read_coverage)<=(float(x.fields[6])/abs(x.start-x.end+1)*mean_read_length)<=(max_ins_cov_frac*mean_read_coverage)))).moveto(coverage_filtered_bed)
         func_logger.info("%d coverage filtered intervals" % (bedtool.count()))
 
 
@@ -661,7 +661,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         # Add number of neighbouring reads that support SC
         bedtool=bedtool.each(partial(add_neighbour_support,bam_handle=sam_file, min_mapq=min_mapq, 
                                      min_soft_clip=min_soft_clip, max_nm=max_nm, min_matches=min_matches,
-                                     skip_soft_clip=False, isize_mean=isize_mean, min_isize=min_isize, max_isize=max_isize)).sort().moveto(filtered_bed)
+                                     skip_soft_clip=False, isize_mean=isize_mean, min_isize=min_isize, max_isize=max_isize)).sort().moveto(coverage_filtered_bed)
 
         neigh_coverage_filtered_bed = os.path.join(workdir, "neigh_filtered_bp_merged.bed")
         bedtool = bedtool.filter(lambda x: (float(x.fields[6]) * thr_sv[x.fields[3].split(",")[1]] <= float(x.fields[8]))).moveto(neigh_coverage_filtered_bed)
@@ -733,7 +733,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         return None
 
 
-    merge_max_dist = -int(2 * pad)
+    merge_max_dist = -int(1 * pad)
 
 
     func_logger.info("SVs to soft-clip: %s" % (svs_to_softclip))

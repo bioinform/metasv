@@ -135,7 +135,7 @@ def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
     methods = set(name_fields[3].split(";"))
     num_tools = int(info.get("NUM_SVTOOLS", 1))
     
-    if (("DUP" in name_fields[1]) or ("DEL" in name_fields[1])) and not "SC" in methods:
+    if (("DUP" in name_fields[1]) or ("DEL" in name_fields[1]) or ("INS" in name_fields[1])) and (not "SC" in methods):
     	return False
     
     if "SC" in methods:
