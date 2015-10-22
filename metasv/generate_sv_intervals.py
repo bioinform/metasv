@@ -526,11 +526,9 @@ def find_idup(feature,wiggle):
     start_del=int(feature.fields[n+1])
     end_del=int(feature.fields[n+2])
     if abs(start_del-end_del)>abs(start_dup-end_dup):
-        print 1,feature
         return None
     dist_ends=[abs(start_del-start_dup),abs(end_del-end_dup)]
     if min(dist_ends)>wiggle:
-        print 2,feature
         return None
     del_pos = start_del if dist_ends[0]>dist_ends[1] else end_del
     
@@ -549,7 +547,6 @@ def find_idup(feature,wiggle):
     
     name = "%s,IDUP,%s,SC" % (    
         base64.b64encode(json.dumps(info)), name_fields_dup[2])
-    print start_del,end_del
 
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, 
                                score="%s,%s"%(feature.score,feature.fields[n+4]),
@@ -578,17 +575,14 @@ def find_itx(feature,wiggle):
     del_interval2 = map(int,info_idup2["SC_DEL_INTERVAL_1"].split("-"))
     lr_1=1 if abs(del_pos1-del_interval1[0])<abs(del_pos1-del_interval1[1]) else 0
     lr_2=1 if abs(del_pos2-del_interval2[0])<abs(del_pos2-del_interval2[1]) else 0
-    if lr_1==lr_2:
+    if lr_1==lr_2 or lr_2<lr_1:
         return None
-    
-    interval1 = del_interval1 if lr_1==0 else del_interval2
-    interval2 = del_interval2 if lr_2==1 else del_interval1
-        
+           
     
     info = {"SC_SUBINTERVAL_INFOs": info_idup1["SC_SUBINTERVAL_INFOs"]+info_idup2["SC_SUBINTERVAL_INFOs"],
             "SOURCES": "%s,%s"%(info_idup1["SOURCES"],info_idup2["SOURCES"]), 
-            "NUM_SVMETHODS": 1, "NUM_SVTOOLS": 1, "SC_DEL_INTERVAL_1":"%d-%d"%(interval1[0],interval1[1]), 
-            "SC_DEL_INTERVAL_2":"%d-%d"%(interval2[0],interval2[1]),
+            "NUM_SVMETHODS": 1, "NUM_SVTOOLS": 1, "SC_DEL_INTERVAL_1":"%d-%d"%(del_interval1[0],del_interval1[1]), 
+            "SC_DEL_INTERVAL_2":"%d-%d"%(del_interval2[0],del_interval2[1]),
             "SC_DEL_POS": (del_pos1+del_pos2)/2}   
     name = "%s,ITX,%s,SC" % (    
         base64.b64encode(json.dumps(info)), name_fields_idup1[2])
@@ -605,10 +599,17 @@ def extract_del_interval(feature):
     return pybedtools.Interval(feature.chrom, start, end)
 
 def filter_itxs(feature):
-    info = json.loads(base64.b64decode(feature.name.split(",")[0]))
-    info["SC_DEL_INTERVAL_1"]
-    start,end=map(int,info["SC_DEL_INTERVAL_1"].split("-"))
-    return pybedtools.Interval(feature.chrom, start, end)
+    n=len(feature.fields)/2
+    info_idup = json.loads(base64.b64decode(feature.name.split(",")[0]))
+    info_itxs = json.loads(base64.b64decode(feature.fields[n+3].split(",")[0]))
+    del_interval_idup=map(int,info_idup["SC_DEL_INTERVAL_1"].split("-"))
+    del_interval_itx_1=map(int,info_itxs["SC_DEL_INTERVAL_1"].split("-"))
+    del_interval_itx_2=map(int,info_itxs["SC_DEL_INTERVAL_2"].split("-"))
+    if filter(lambda x:abs(x[0]-del_interval_idup[0])+abs(x[1]-del_interval_idup[1]) == 0 ,[del_interval_itx_1,del_interval_itx_2]):
+        return None
+    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=feature.name, 
+                               score=feature.score,
+                               otherfields=feature.fields[6:n])        
 
 
 def resolve_for_IDUP_ITX(bedtool,resolved_full_filtered_bed,pad=0,wiggle=10):
@@ -618,8 +619,8 @@ def resolve_for_IDUP_ITX(bedtool,resolved_full_filtered_bed,pad=0,wiggle=10):
     idup_bedtool=dup_bedtool.window(del_bedtool,w=wiggle).each(partial(find_idup,wiggle=wiggle)).sort()
     remained_dup_bedtool=dup_bedtool.subtract(idup_bedtool,A=True,f=0.95,r=True).sort()
     remained_del_bedtool=del_bedtool.subtract(idup_bedtool.each(partial(extract_del_interval)).sort(),A=True,f=0.95,r=True)
-    itx_bedtool=idup_bedtool.window(idup_bedtool,w=wiggle).moveto(resolved_full_filtered_bed+"1").each(partial(find_itx,wiggle=wiggle)).sort()
-    remained_idup_bedtool=idup_bedtool.window(itx_bedtool,A=True,f=0.95,r=True).each(partial(filter_itxs)).sort()
+    itx_bedtool=idup_bedtool.window(idup_bedtool,w=wiggle).each(partial(find_itx,wiggle=wiggle)).sort()
+    remained_idup_bedtool=idup_bedtool.window(itx_bedtool,w=wiggle).each(partial(filter_itxs)).sort()
     
     
     bedtool = other_bedtool.cat(remained_dup_bedtool, postmerge=False).sort().moveto(resolved_full_filtered_bed)
@@ -627,9 +628,7 @@ def resolve_for_IDUP_ITX(bedtool,resolved_full_filtered_bed,pad=0,wiggle=10):
     bedtool = bedtool.cat(remained_idup_bedtool, postmerge=False).sort().moveto(resolved_full_filtered_bed)
     bedtool = bedtool.cat(itx_bedtool, postmerge=False).sort().moveto(resolved_full_filtered_bed)
     return bedtool
-    
 
-        
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
                           min_soft_clip=SC_MIN_SOFT_CLIP,
                           pad=SC_PAD, min_support=MIN_SUPPORT, max_considered_isize=1000000000, 
