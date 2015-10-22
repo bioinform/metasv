@@ -266,17 +266,17 @@ def get_operator_fn(op):
 def blind_merge(intervals,cols,ops):
     func_logger = logging.getLogger("%s-%s" % (blind_merge.__name__, multiprocessing.current_process()))
     try:
-        columns=map(lambda x:int(x),cols.split(','))
+        columns=map(lambda x:int(x)+4,range(len(cols.split(","))))
         operations=ops.split(',')
         if columns and not operations:
             func_logger.error("Aborting!")
-            raise Exception("Bad column and operation combinations for merge: %s, %s\n" % (str(columns), operations))    
+            raise Exception("Bad column and operation combinations for merge: %s, %s\n" % (cols, ops))    
         if len(columns)>1 and len(operations)==1:
             operations=[ops for c in columns]
 
         if len(columns)!=len(operations):
             func_logger.error("Aborting!")
-            raise Exception("Bad column and operation combinations for merge: %s, %s\n" % (str(columns), operations))    
+            raise Exception("Bad column and operation combinations for merge: %s, %s\n" % (cols, ops))    
     
         column_operations={c:operations[i] for i,c in enumerate(columns)}    
     
