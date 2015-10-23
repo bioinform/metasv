@@ -519,115 +519,6 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
                                otherfields=feature.fields[6:]+[str(num_neigh_support)])        
 
-def find_idup(feature,wiggle):
-    n=len(feature.fields)/2   
-    start_dup=feature.start
-    end_dup=feature.end
-    start_del=int(feature.fields[n+1])
-    end_del=int(feature.fields[n+2])
-    if abs(start_del-end_del)>abs(start_dup-end_dup):
-        return None
-    dist_ends=[abs(start_del-start_dup),abs(end_del-end_dup)]
-    if min(dist_ends)>wiggle:
-        return None
-    del_pos = start_del if dist_ends[0]>dist_ends[1] else end_del
-    
-    name_fields_dup=feature.name.split(",")
-    name_fields_del=feature.fields[n+3].split(",")
-    
-    info_dup = json.loads(base64.b64decode(name_fields_dup[0]))
-    info_del = json.loads(base64.b64decode(name_fields_del[0]))
-    info_dup["SC_SUBINTERVAL_INFOs"]=map(lambda x: dict(x.items() + [("SV_TYPE","DUP")]),info_dup["SC_SUBINTERVAL_INFOs"])
-    info_del["SC_SUBINTERVAL_INFOs"]=map(lambda x: dict(x.items() + [("SV_TYPE","DEL")]),info_del["SC_SUBINTERVAL_INFOs"])
-    info = {"SC_SUBINTERVAL_INFOs": info_dup["SC_SUBINTERVAL_INFOs"]+info_del["SC_SUBINTERVAL_INFOs"],
-            "SOURCES": "%s,%s"%(info_dup["SOURCES"],info_del["SOURCES"]), 
-            "NUM_SVMETHODS": 1, "NUM_SVTOOLS": 1, "SC_DEL_INTERVAL_1":"%d-%d"%(start_del,end_del), 
-            "SC_DEL_POS": del_pos}
-
-    
-    name = "%s,IDUP,%s,SC" % (    
-        base64.b64encode(json.dumps(info)), name_fields_dup[2])
-
-    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, 
-                               score="%s,%s"%(feature.score,feature.fields[n+4]),
-                               otherfields=map(lambda x:"%s,%s"%(feature.fields[x],feature.fields[n+x]),range(6,n)))        
-
-
-def find_itx(feature,wiggle):
-    n=len(feature.fields)/2
-    start_idup1=feature.start
-    end_idup1=feature.end
-    start_idup2=int(feature.fields[n+1])
-    end_idup2=int(feature.fields[n+2])
-    dist_ends=[abs(start_idup1-start_idup2),abs(end_idup1-end_idup2)]
-    if min(dist_ends)>wiggle:
-        return None
-    name_fields_idup1=feature.name.split(",")
-    name_fields_idup2=feature.fields[n+3].split(",")
-    info_idup1 = json.loads(base64.b64decode(name_fields_idup1[0]))
-    info_idup2 = json.loads(base64.b64decode(name_fields_idup2[0]))
-    del_pos1 = info_idup1["SC_DEL_POS"]
-    del_pos2 = info_idup2["SC_DEL_POS"]
-    if abs(del_pos1-del_pos2)>wiggle:
-        return None
-
-    del_interval1 = map(int,info_idup1["SC_DEL_INTERVAL_1"].split("-"))
-    del_interval2 = map(int,info_idup2["SC_DEL_INTERVAL_1"].split("-"))
-    lr_1=1 if abs(del_pos1-del_interval1[0])<abs(del_pos1-del_interval1[1]) else 0
-    lr_2=1 if abs(del_pos2-del_interval2[0])<abs(del_pos2-del_interval2[1]) else 0
-    if lr_1==lr_2 or lr_2<lr_1:
-        return None
-           
-    
-    info = {"SC_SUBINTERVAL_INFOs": info_idup1["SC_SUBINTERVAL_INFOs"]+info_idup2["SC_SUBINTERVAL_INFOs"],
-            "SOURCES": "%s,%s"%(info_idup1["SOURCES"],info_idup2["SOURCES"]), 
-            "NUM_SVMETHODS": 1, "NUM_SVTOOLS": 1, "SC_DEL_INTERVAL_1":"%d-%d"%(del_interval1[0],del_interval1[1]), 
-            "SC_DEL_INTERVAL_2":"%d-%d"%(del_interval2[0],del_interval2[1]),
-            "SC_DEL_POS": (del_pos1+del_pos2)/2}   
-    name = "%s,ITX,%s,SC" % (    
-        base64.b64encode(json.dumps(info)), name_fields_idup1[2])
-    
-    
-    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, 
-                               score="%s,%s"%(feature.score,feature.fields[n+4]),
-                               otherfields=map(lambda x:"%s,%s"%(feature.fields[x],feature.fields[n+x]),range(6,n)))        
-
-
-def extract_del_interval(feature):
-    info = json.loads(base64.b64decode(feature.name.split(",")[0]))
-    start,end=map(int,info["SC_DEL_INTERVAL_1"].split("-"))
-    return pybedtools.Interval(feature.chrom, start, end)
-
-def filter_itxs(feature):
-    n=len(feature.fields)/2
-    info_idup = json.loads(base64.b64decode(feature.name.split(",")[0]))
-    info_itxs = json.loads(base64.b64decode(feature.fields[n+3].split(",")[0]))
-    del_interval_idup=map(int,info_idup["SC_DEL_INTERVAL_1"].split("-"))
-    del_interval_itx_1=map(int,info_itxs["SC_DEL_INTERVAL_1"].split("-"))
-    del_interval_itx_2=map(int,info_itxs["SC_DEL_INTERVAL_2"].split("-"))
-    if filter(lambda x:abs(x[0]-del_interval_idup[0])+abs(x[1]-del_interval_idup[1]) == 0 ,[del_interval_itx_1,del_interval_itx_2]):
-        return None
-    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=feature.name, 
-                               score=feature.score,
-                               otherfields=feature.fields[6:n])        
-
-
-def resolve_for_IDUP_ITX(bedtool,resolved_full_filtered_bed,pad=0,wiggle=10):
-    del_bedtool=bedtool.filter(lambda x: x.fields[3].split(",")[1] == "DEL").sort()
-    dup_bedtool=bedtool.filter(lambda x: x.fields[3].split(",")[1] == "DUP").sort()
-    other_bedtool=bedtool.filter(lambda x: x.fields[3].split(",")[1] not in ["DEL","DUP"]).sort()
-    idup_bedtool=dup_bedtool.window(del_bedtool,w=wiggle).each(partial(find_idup,wiggle=wiggle)).sort()
-    remained_dup_bedtool=dup_bedtool.subtract(idup_bedtool,A=True,f=0.95,r=True).sort()
-    remained_del_bedtool=del_bedtool.subtract(idup_bedtool.each(partial(extract_del_interval)).sort(),A=True,f=0.95,r=True)
-    itx_bedtool=idup_bedtool.window(idup_bedtool,w=wiggle).each(partial(find_itx,wiggle=wiggle)).sort()
-    remained_idup_bedtool=idup_bedtool.window(itx_bedtool,w=wiggle).each(partial(filter_itxs)).sort()
-    
-    
-    bedtool = other_bedtool.cat(remained_dup_bedtool, postmerge=False).sort().moveto(resolved_full_filtered_bed)
-    bedtool = bedtool.cat(remained_del_bedtool, postmerge=False).sort().moveto(resolved_full_filtered_bed)
-    bedtool = bedtool.cat(remained_idup_bedtool, postmerge=False).sort().moveto(resolved_full_filtered_bed)
-    bedtool = bedtool.cat(itx_bedtool, postmerge=False).sort().moveto(resolved_full_filtered_bed)
-    return bedtool
 
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
                           min_soft_clip=SC_MIN_SOFT_CLIP,
@@ -791,11 +682,6 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         bedtool = bedtool.filter(lambda x: x.score != "-1").sort().moveto(merged_full_filtered_bed)
         func_logger.info("%d merged full intervals" % (bedtool.count()))
         
-        
-        resolved_full_filtered_bed = os.path.join(workdir, "resolved_merged_full.bed")
-        bedtool=resolve_for_IDUP_ITX(bedtool,resolved_full_filtered_bed)
-        func_logger.info("%d resolved full intervals" % (bedtool.count()))
-
         sam_file.close()
     except Exception as e:
         func_logger.error('Caught exception in worker thread')
@@ -810,7 +696,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
     pybedtools.cleanup(remove_all=True)
     func_logger.info("Generated intervals in %g seconds for region %s" % ((time.time() - start_time), chromosome))
 
-    return resolved_full_filtered_bed
+    return merged_full_filtered_bed
 
 
 def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_threads=1,
@@ -885,7 +771,8 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         bedtool = bedtool.cat(pybedtools.BedTool(bed_file), postmerge=False)
 
     bedtool = bedtool.sort().moveto(os.path.join(workdir, "all_intervals.bed"))
-
+	
+    aaa[1111]
     func_logger.info("Selecting the top %d intervals based on normalized read support" % max_intervals)
     top_intervals_all_cols_file = os.path.join(workdir, "top_intervals_all_cols.bed")
     if bedtool.count() <= max_intervals:
