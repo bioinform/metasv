@@ -78,6 +78,9 @@
 ##INFO=<ID=PD_NUM_SAMPLE_UNIQUE_SUPP,Number=1,Type=Integer,Description="Pindel: number of samples with unique supporting reads">
 ##INFO=<ID=PD_HOMLEN,Number=1,Type=Integer,Description="Pindel: length of sequence homology around the breakpoints">
 ##INFO=<ID=PD_HOMSEQ,Number=1,Type=String,Description="Pindel: homologous sequence around the breakpoints">
+##INFO=<ID=SC_READ_SUPPORT,Number=1,Type=Integer,Description="Soft-Clip: Number of soft-clip supporting reads">
+##INFO=<ID=SC_NEIGH_SUPPORT,Number=1,Type=Integer,Description="Soft-Clip: Number of reads near the soft-clip location that support SV event">
+##INFO=<ID=SC_COVERAGE,Number=1,Type=Integer,Description="Soft-Clip: Read coverage in the soft-clip location">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">
 ##FORMAT=<ID=CNQ,Number=1,Type=Float,Description="Copy number genotype quality for imprecise events">
