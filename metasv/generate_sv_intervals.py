@@ -172,74 +172,86 @@ def infer_svtype(aln, min_isize, max_isize):
 def find_other_bp(aln, isize_mean, svtype, soft_clip, dist_L_end, dist_R_end, 
                   soft_clip_location, skip_soft_clip =False, skip_neigh=True,  
                   min_dist_end=2, wiggle= 20):
-    other_bp = -1           
+    if (skip_soft_clip and soft_clip>0) or (skip_neigh and soft_clip<=0):
+        return None
+        
+    other_bp = None      
+    if soft_clip>0:
+        is_left = dist_L_end <= min_dist_end
+        is_right = dist_R_end <= min_dist_end
+    else:
+        is_left = aln.pos > (soft_clip_location - wiggle)
+        is_right = aln.aend < (soft_clip_location + wiggle)
+    
+    is_first_pair = aln.pos <= aln.pnext
+    isize_diff = abs(aln.tlen) - isize_mean
+    isize_sum = abs(aln.tlen) + isize_mean
+    
+         
     if svtype == "INS":
-        if not skip_soft_clip and soft_clip>0:
-            if dist_L_end <= min_dist_end and aln.is_reverse:
-                other_bp = -2
-            elif dist_R_end <= min_dist_end and not aln.is_reverse:
-                other_bp = -2
-        elif not skip_neigh:
-            if not aln.is_reverse and aln.aend < (soft_clip_location + wiggle):
+        if soft_clip>0:
+            if (is_left and aln.is_reverse) or (is_right and not aln.is_reverse): 
+                return 1
+        else:
+            if not aln.is_reverse and is_right:
                 if aln.mate_is_unmapped or aln.tid != aln.rnext or (aln.pnext > (soft_clip_location - wiggle)):
-                    other_bp = -2
-            elif aln.is_reverse and aln.pos > (soft_clip_location - wiggle):
+                    return 1
+            elif aln.is_reverse and is_left:
                 if aln.mate_is_unmapped or aln.tid != aln.rnext or ((aln.pnext+aln.rlen) < (soft_clip_location + wiggle)):
-                    other_bp = -2
-        return other_bp
+                    return 1
     elif svtype == "INV":
-        if not skip_soft_clip and soft_clip>0:
-            if dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos > aln.pnext:
-                other_bp = max(soft_clip_location - (abs(aln.tlen) - isize_mean + 2*dist_L_end),0)
-            elif dist_L_end <= min_dist_end and not aln.is_reverse and aln.pos > aln.pnext:
-                other_bp = max(soft_clip_location + (- abs(aln.tlen) + isize_mean - 2*soft_clip),0)
-            elif dist_L_end <= min_dist_end and aln.is_reverse and aln.pos <= aln.pnext:
-                other_bp = max(soft_clip_location + (abs(aln.tlen) - isize_mean + 2*dist_R_end),0)
-            elif dist_R_end <= min_dist_end and aln.is_reverse and aln.pos <= aln.pnext:
-                other_bp = max(soft_clip_location - (- abs(aln.tlen) + isize_mean - 2*soft_clip),0)
-            elif dist_L_end <= min_dist_end and aln.is_reverse and aln.pos > aln.pnext:
-                other_bp = max(soft_clip_location - (abs(aln.tlen) + isize_mean - 2*dist_R_end),0)
-            elif dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos <= aln.pnext:
-                other_bp = max(soft_clip_location + (abs(aln.tlen) + isize_mean - 2*dist_L_end),0)
-        elif not skip_neigh:
-            if not aln.is_reverse and aln.pos > aln.pnext and aln.aend < (soft_clip_location + wiggle):
-                other_bp = max(soft_clip_location - (abs(aln.tlen) - isize_mean + 2*(soft_clip_location-aln.pos)),0)
-            elif not aln.is_reverse and aln.pos > aln.pnext and aln.pos > (soft_clip_location - wiggle):
-                other_bp = max(soft_clip_location + (- abs(aln.tlen) + isize_mean + 2*(aln.pos-soft_clip_location)),0)
-            elif aln.is_reverse and aln.pos <= aln.pnext and aln.pos > (soft_clip_location - wiggle):
-                other_bp = max(soft_clip_location + (abs(aln.tlen) - isize_mean + 2*(aln.aend-soft_clip_location)),0)
-            elif aln.is_reverse and aln.pos <= aln.pnext and aln.aend < (soft_clip_location + wiggle):
-                other_bp = max(soft_clip_location - (- abs(aln.tlen) + isize_mean + 2*(soft_clip_location-aln.aend)),0)
-            elif aln.is_reverse and aln.pos > aln.pnext and aln.pos > (soft_clip_location - wiggle):
-                other_bp = max(soft_clip_location - (abs(aln.tlen) + isize_mean - 2*(aln.aend-soft_clip_location)),0)
-            elif not aln.is_reverse and aln.pos <= aln.pnext and aln.aend < (soft_clip_location + wiggle):
-                other_bp = max(soft_clip_location + (abs(aln.tlen) + isize_mean - 2*(soft_clip_location-aln.pos)),0)
-        return other_bp
+        if soft_clip>0:
+            if is_right and not aln.is_reverse and not is_first_pair:
+                other_bp = soft_clip_location - (isize_diff + 2*dist_L_end)
+            elif is_left and not aln.is_reverse and not is_first_pair:
+                other_bp = soft_clip_location + (-isize_diff - 2*soft_clip)
+            elif is_left and aln.is_reverse and is_first_pair:
+                other_bp = soft_clip_location + (isize_diff + 2*dist_R_end)
+            elif is_right and aln.is_reverse and is_first_pair:
+                other_bp = soft_clip_location - (-isize_diff - 2*soft_clip)
+            elif is_left and aln.is_reverse and not is_first_pair:
+                other_bp = soft_clip_location - (isize_sum - 2*dist_R_end)
+            elif is_right and not aln.is_reverse and is_first_pair:
+                other_bp = soft_clip_location + (isize_sum - 2*dist_L_end)
+        else:
+            if not aln.is_reverse and not is_first_pair and is_right:
+                other_bp = soft_clip_location - (isize_diff + 2*(soft_clip_location-aln.pos))
+            elif not aln.is_reverse and not is_first_pair and is_left:
+                other_bp = soft_clip_location + (-isize_diff + 2*(aln.pos-soft_clip_location))
+            elif aln.is_reverse and is_first_pair and is_left:
+                other_bp = soft_clip_location + (isize_diff + 2*(aln.aend-soft_clip_location))
+            elif aln.is_reverse and is_first_pair and is_right:
+                other_bp = soft_clip_location - (-isize_diff + 2*(soft_clip_location-aln.aend))
+            elif aln.is_reverse and not is_first_pair and is_left:
+                other_bp = soft_clip_location - (isize_sum - 2*(aln.aend-soft_clip_location))
+            elif not aln.is_reverse and is_first_pair and is_right:
+                other_bp = soft_clip_location + (isize_sum - 2*(soft_clip_location-aln.pos))
     elif svtype == "DEL":
-        if not skip_soft_clip and soft_clip>0:
-            if dist_L_end <= min_dist_end and aln.is_reverse and aln.pos > aln.pnext:
-                other_bp = max(soft_clip_location - (abs(aln.tlen) - isize_mean),0)
-            elif dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos <= aln.pnext:
-                other_bp = max(soft_clip_location + (abs(aln.tlen) - isize_mean),0)
-        elif not skip_neigh:
-            if aln.is_reverse and aln.pos > (soft_clip_location - wiggle):
-                other_bp = max(soft_clip_location - (abs(aln.tlen) - isize_mean),0)
-            elif not aln.is_reverse and aln.aend < (soft_clip_location + wiggle):
-                other_bp = max(soft_clip_location + (abs(aln.tlen) - isize_mean),0)
-        return other_bp
+        if soft_clip>0:
+            if is_left and aln.is_reverse and not is_first_pair:
+                other_bp = soft_clip_location - isize_diff
+            elif is_right and not aln.is_reverse and is_first_pair:
+                other_bp = soft_clip_location + isize_diff
+        else:
+            if aln.is_reverse and is_left:
+                other_bp = soft_clip_location - isize_diff
+            elif not aln.is_reverse and is_right:
+                other_bp = soft_clip_location + isize_diff
     elif svtype == "DUP":
-        if not skip_soft_clip and soft_clip>0:
-            if dist_L_end <= min_dist_end and aln.is_reverse and aln.pos <= aln.pnext:
-                other_bp = soft_clip_location + abs(aln.tlen) + isize_mean
-            elif dist_R_end <= min_dist_end and not aln.is_reverse and aln.pos > aln.pnext:
-                other_bp = max(soft_clip_location - (abs(aln.tlen) + isize_mean),0)
-        elif not skip_neigh:
-            if aln.is_reverse and aln.pos <= aln.pnext and aln.pos > (soft_clip_location - wiggle):
-                other_bp = soft_clip_location + abs(aln.tlen) + isize_mean
-            elif not aln.is_reverse and aln.pos > aln.pnext and aln.pos < (soft_clip_location + wiggle):
-                other_bp = max(soft_clip_location - (abs(aln.tlen) + isize_mean),0)        
-        return other_bp
-    return -1
+        if soft_clip>0:
+            if is_left and aln.is_reverse and is_first_pair:
+                other_bp = soft_clip_location + isize_sum
+            elif is_right and not aln.is_reverse and not is_first_pair:
+                other_bp = soft_clip_location - isize_sum
+        else:
+            if aln.is_reverse and is_first_pair and is_left:
+                other_bp = soft_clip_location + isize_sum
+            elif not aln.is_reverse and not is_first_pair and aln.pos < (soft_clip_location + wiggle):
+                other_bp = soft_clip_location - isize_sum       
+    if not other_bp is None:
+        return max(other_bp,0)
+    else:
+        return None
 
 
 def check_overlap(start,end,chrom,interval,overlap_ratio=OVERLAP_RATIO):
@@ -256,18 +268,11 @@ def check_overlap(start,end,chrom,interval,overlap_ratio=OVERLAP_RATIO):
     else:
         return False, start,end
 
-def get_operator_fn(op):
-    return {
-        'sum' : sum,
-        'min' : min,
-        'max' : max,
-        }[op]
-
 def blind_merge(intervals,cols,ops):
     func_logger = logging.getLogger("%s-%s" % (blind_merge.__name__, multiprocessing.current_process()))
     try:
         columns=map(lambda x:int(x)+4,range(len(cols.split(","))))
-        operations=ops.split(',')
+        operations=ops.split(',')    
         if columns and not operations:
             func_logger.error("Aborting!")
             raise Exception("Bad column and operation combinations for merge: %s, %s\n" % (cols, ops))    
@@ -292,19 +297,17 @@ def blind_merge(intervals,cols,ops):
             end = max(end, int(interval.end))
             for c in column_operations: 
                 other_fields[c].append(interval.fields[c-1])
+        operation_function={"collapse":(lambda x: ",".join(x)), 
+                            "sum": "%s"%(lambda x:sum(map(lambda y:int(y) if y else 0,x))),
+                            "min": "%s"%(lambda x:min(map(lambda y:int(y) if y else 0,x))),
+                            "max": "%s"%(lambda x:max(map(lambda y:int(y) if y else 0,x))),
+                            "first": "%s"%(lambda x:x[0]),
+                            "last": "%s"%(lambda x:x[-1]),
+                            "distinct": (lambda x:",".join(set(x))),
+                            "count": (lambda x:len(x))}
         for c,o in column_operations.iteritems():
-            if o == "collapse":
-                other_fields[c] = ",".join(other_fields[c])
-            elif o in  ["sum", "min", "max"]:
-                other_fields[c] = "%s"%get_operator_fn(o)(map(lambda x:int(x) if x else 0,other_fields[c]))
-            elif o == "first":
-                other_fields[c] = other_fields[c][0]
-            elif o == "last":
-                other_fields[c] = other_fields[c][-1]
-            elif o == "distinct":
-                other_fields[c] = ",".join(set(other_fields[c]))
-            elif o == "count":
-                other_fields[c] = len(other_fields[c])
+            if o in operation_function:
+                other_fields[c] = operation_function[o](other_fields[c])
             else:
                 func_logger.error("Aborting!")
                 raise Exception("Not supported operation: %s\n" % (o))    
@@ -506,7 +509,7 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
                                              dist_R_end, soft_clip_location, 
                                              skip_soft_clip=skip_soft_clip, 
                                              skip_neigh=False, wiggle = wiggle)
-        if other_bp_neigh == -1: continue        
+        if other_bp_neigh is None: continue        
         if not svtype == "INS":
             if abs(other_bp_neigh -(other_bp_start+other_bp_end)/2) > max_dist_other_bp:
                 continue
@@ -572,7 +575,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             soft_clip, dist_L_end, dist_R_end = soft_clip_tuple 
             other_bp = find_other_bp(aln,isize_mean, svtype, soft_clip, dist_L_end,
                                                  dist_R_end, soft_clip_location)
-            if other_bp == -1: continue
+            if other_bp is None: continue
 
             name = "%d,%d,%s" % (soft_clip_location, other_bp, strand)
             if ignore_none and svtype == "NONE":
