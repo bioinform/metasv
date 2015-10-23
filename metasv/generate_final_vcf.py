@@ -200,7 +200,7 @@ def find_itx(feature,wiggle):
 
 
 def extract_del_interval(feature):
-    start,end=map(int,feature.fields[7])
+    start,end=map(int,feature.fields[7].split("-"))
     return pybedtools.Interval(feature.chrom, start, end)
 
 def filter_itxs(feature):
