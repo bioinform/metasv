@@ -95,7 +95,7 @@ def merged_interval_features(feature, bam_handle):
     plus_support = len([i for i in support_list[2:-1:3] if i == "+"])
     minus_support = len(locations) - plus_support
     locations_span = max(locations) - min(locations)
-    interval_readcount = bam_handle.count(reference=feature.chrom, start=feature.start, end=feature.end)
+    interval_readcount = bam_handle.count(reference=str(feature.chrom), start=feature.start, end=feature.end)
     info = {"plus_support":plus_support, "minus_support":minus_support, "locations_span":locations_span, "num_unique_locations":num_unique_locations,
         "count_str": count_str, "coverage":interval_readcount, "other_bp_ends": other_bp_ends, "sc_bp_ends": "%s-%s"%(feature.start, feature.end)}
     name = "%s,%s,0,SC" % (
@@ -139,7 +139,7 @@ def get_full_interval(feature,pad):
     
 
 def coverage_filter(feature, bam_handle, min_support_frac=MIN_SUPPORT_FRAC):
-    total_count = bam_handle.count(reference=feature.chrom, start=feature.start, end=feature.end)
+    total_count = bam_handle.count(reference=str(feature.chrom), start=feature.start, end=feature.end)
     return float(feature.score) >= min_support_frac * float(total_count)
 
 
