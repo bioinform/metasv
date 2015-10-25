@@ -104,6 +104,8 @@ if __name__ == "__main__":
     as_parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
     as_parser.add_argument("--svs_to_assemble", nargs="+", help="SVs to assemble", default=SVS_ASSEMBLY_SUPPORTED,
                            choices=SVS_ASSEMBLY_SUPPORTED)
+    as_parser.add_argument("--svs_to_softclip", nargs="+", help="SVs to soft-clip", default=SVS_SOFTCLIP_SUPPORTED,
+                           choices=SVS_SOFTCLIP_SUPPORTED)
     as_parser.add_argument("--extraction_max_read_pairs", type=int, default=EXTRACTION_MAX_READ_PAIRS,
                            help="Maximum number of pairs to extract for assembly")
     as_parser.add_argument("--spades_max_interval_size", type=int, default=SPADES_MAX_INTERVAL_SIZE,
@@ -142,4 +144,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     args.svs_to_assemble = set(args.svs_to_assemble) & set(args.svs_to_report)
+    args.svs_to_softclip = set(args.svs_to_softclip) & set(args.svs_to_report)
     sys.exit(run_metasv(args))

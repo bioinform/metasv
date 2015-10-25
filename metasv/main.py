@@ -295,7 +295,7 @@ def run_metasv(args):
                                                           min_soft_clip=args.min_soft_clip,
                                                           max_nm=args.max_nm, min_matches=args.min_matches,
                                                           isize_mean=args.isize_mean, isize_sd=args.isize_sd,                                                        
-                                                          svs_to_softclip=args.svs_to_assemble,
+                                                          svs_to_softclip=args.svs_to_softclip,
                                                           overlap_ratio=args.overlap_ratio,
                                                           mean_read_length=args.mean_read_length,
                                                           mean_read_coverage=args.mean_read_coverage, 
