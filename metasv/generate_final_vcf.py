@@ -111,7 +111,7 @@ def get_interval_info(feature,pass_calls):
         if pass_calls and end != pos + 1:
             return None
         end = pos
-        is_pass = (int(feature.fields[8]) != -1) and (svlen == 0 or svlen >= 100)
+        is_pass = (int(feature.fields[8]) != -1) and (svlen == 0 or svlen >= 100) and (("SC" in svmethods or "AS" in svmethods) or (len(set(svmethods) - {"SC","AS"})>1))
 
     if pos < 1:
         func_logger.info("Variant with pos < 1 encountered. Skipping! %s" % str(feature))

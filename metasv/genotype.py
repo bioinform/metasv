@@ -87,20 +87,17 @@ def parse_interval(interval):
 
     index_to_use = 0
     svlen = -1
-    if "DEL" in sub_types:
-        index_to_use = sub_types.index("DEL")
-    elif "INV" in sub_types:
-        index_to_use = sub_types.index("INV")
-    elif "INS" in sub_types and "SC" in sub_methods:
-        index_to_use = sub_methods.index("SC")
-        pos = int(interval.fields[6])
-        end = int(interval.fields[7])
-        svlen = int(interval.fields[8])
+    for sub_type in ["DEL","INV","DUP","ITX","CTX","INS"]:
+        if sub_type in sub_types:        
+            index_to_use = sub_types.index(sub_type)
+            break
+    sv_type = sub_types[index_to_use]
+    if (("SC" in sub_methods[index_to_use] and sv_type == "INS") or ("AS" in sub_methods[index_to_use])):
+        pos, end, svlen = map(int, interval.fields[6:9])
 
     if svlen < 0: svlen = sub_lengths[index_to_use]
     if sub_types[index_to_use] == "DEL":
         svlen = -svlen
-    sv_type = sub_types[index_to_use]
 
     return chrom, pos, end, sv_type, svlen
 
