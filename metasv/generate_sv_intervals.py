@@ -661,7 +661,10 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
         neigh_coverage_filtered_bed = os.path.join(workdir, "neigh_filtered.bed")
         bedtool = bedtool.filter(lambda x: ((float(x.fields[6]) * thr_sv[x.fields[3].split(",")[1]] 
-                                             <= float(x.fields[8])) and (float(x.fields[8])>=min_support_ins))).moveto(neigh_coverage_filtered_bed)
+                                             <= float(x.fields[8])) and 
+                                             ((float(x.fields[8])>=min_support_ins) or 
+                                             (x.fields[3].split(",")[1]!="INS")))).moveto(
+                                             neigh_coverage_filtered_bed)
         func_logger.info("%d neighbour support filtered intervals" % (bedtool.count()))
 
         # For 2bp SVs, the interval will be the cover of two intervals on the BP
