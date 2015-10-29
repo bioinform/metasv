@@ -473,7 +473,7 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
                           min_matches=SC_MIN_MATCHES,skip_soft_clip=False, 
                           isize_mean=ISIZE_MEAN,
                           min_isize=ISIZE_MEAN-2*ISIZE_SD, max_isize=ISIZE_MEAN+2*ISIZE_SD, 
-                          max_dist_sc= 100, max_dist_other_bp = 500, wiggle = 20):
+                          max_dist_sc= 250, max_dist_other_bp = 500, wiggle = 20):
     name_fields = feature.name.split(",")
     svtype = name_fields[1]
     sv_methods = name_fields[3]
@@ -532,8 +532,8 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
 
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
                           min_soft_clip=SC_MIN_SOFT_CLIP,
-                          pad=SC_PAD, min_support=MIN_SUPPORT, max_considered_isize=1000000000, 
-                          min_support_frac=MIN_SUPPORT_FRAC_INS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES, 
+                          pad=SC_PAD, min_support_ins=MIN_SUPPORT_INS, max_considered_isize=1000000000, 
+                          min_support_frac_ins=MIN_SUPPORT_FRAC_INS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES, 
                           isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
                           overlap_ratio=OVERLAP_RATIO,merge_max_dist=-int(1*SC_PAD), 
                           mean_read_length=MEAN_READ_LENGTH, mean_read_coverage=MEAN_READ_COVERAGE, 
@@ -639,7 +639,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         func_logger.info("%d BP merged intervals" % (bedtool.count()))
 
         filtered_bed = os.path.join(workdir, "filtered.bed")
-        bedtool = bedtool.filter(lambda x: int(x.score) >= min_support).each(
+        bedtool = bedtool.filter(lambda x: int(x.score) >= MIN_SUPPORT_SC_ONLY).each(
             partial(merged_interval_features, bam_handle=sam_file)).moveto(
             filtered_bed)
         func_logger.info("%d filtered intervals" % (bedtool.count()))
@@ -651,7 +651,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         func_logger.info("%d coverage filtered intervals" % (bedtool.count()))
 
 
-        thr_sv={"INS":MIN_SUPPORT_FRAC_INS, "INV":MIN_SUPPORT_FRAC_INV, 
+        thr_sv={"INS":min_support_frac_ins, "INV":MIN_SUPPORT_FRAC_INV, 
                 "DEL":MIN_SUPPORT_FRAC_DEL, "DUP": MIN_SUPPORT_FRAC_DUP}
 
         # Add number of neighbouring reads that support SC
@@ -660,7 +660,8 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                      skip_soft_clip=False, isize_mean=isize_mean, min_isize=min_isize, max_isize=max_isize)).sort().moveto(coverage_filtered_bed)
 
         neigh_coverage_filtered_bed = os.path.join(workdir, "neigh_filtered.bed")
-        bedtool = bedtool.filter(lambda x: (float(x.fields[6]) * thr_sv[x.fields[3].split(",")[1]] <= float(x.fields[8]))).moveto(neigh_coverage_filtered_bed)
+        bedtool = bedtool.filter(lambda x: ((float(x.fields[6]) * thr_sv[x.fields[3].split(",")[1]] 
+                                             <= float(x.fields[8])) and (float(x.fields[8])>=min_support_ins))).moveto(neigh_coverage_filtered_bed)
         func_logger.info("%d neighbour support filtered intervals" % (bedtool.count()))
 
         # For 2bp SVs, the interval will be the cover of two intervals on the BP
@@ -701,7 +702,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
                                    min_avg_base_qual=SC_MIN_AVG_BASE_QUAL,
                                    min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP,
                                    pad=SC_PAD,
-                                   min_support=MIN_SUPPORT, min_support_frac=MIN_SUPPORT_FRAC_INS, 
+                                   min_support_ins=MIN_SUPPORT_INS, min_support_frac_ins=MIN_SUPPORT_FRAC_INS, 
                                    max_intervals=MAX_INTERVALS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES, 
                                    isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD,
                                    svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
@@ -744,8 +745,8 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
 
         args_list = [bam, chromosome, process_workdir]
         kwargs_dict = {"min_avg_base_qual": min_avg_base_qual, "min_mapq": min_mapq, "min_soft_clip": min_soft_clip,
-                       "pad": pad, "min_support": min_support,
-                       "min_support_frac": min_support_frac, "max_nm": max_nm, "min_matches": min_matches, 
+                       "pad": pad, "min_support_ins": min_support_ins,
+                       "min_support_frac_ins": min_support_frac_ins, "max_nm": max_nm, "min_matches": min_matches, 
                        "isize_mean": isize_mean, "isize_sd": isize_sd, "svs_to_softclip": svs_to_softclip, 
                        "merge_max_dist": merge_max_dist, "mean_read_length": mean_read_length,
                        "mean_read_coverage": mean_read_coverage, "min_ins_cov_frac": min_ins_cov_frac,
@@ -833,8 +834,8 @@ if __name__ == "__main__":
     parser.add_argument("--isize_mean", help="Insert-size mean", default=ISIZE_MEAN, type=float)
     parser.add_argument("--isize_sd", help="Insert-size s.d.", default=ISIZE_SD, type=float)
     parser.add_argument("--pad", help="Padding on both sides of the candidate locations", default=SC_PAD, type=int)
-    parser.add_argument("--min_support", help="Minimum supporting reads", default=MIN_SUPPORT, type=int)
-    parser.add_argument("--min_support_frac", help="Minimum fraction of total reads for interval",
+    parser.add_argument("--min_support_ins", help="Minimum read support for calling insertions using soft-clips (including neighbors)", default=MIN_SUPPORT_INS, type=int)
+    parser.add_argument("--min_support_frac_ins", help="Minimum fraction of reads supporting insertion using soft-clips (including neighbors)",
                         default=MIN_SUPPORT_FRAC_INS, type=float)
     parser.add_argument("--skip_bed", help="BED regions with which no overlap should happen", type=file)
     parser.add_argument("--max_intervals",
@@ -856,8 +857,8 @@ if __name__ == "__main__":
     parallel_generate_sc_intervals(args.bams, args.chromosomes, args.skip_bed, args.workdir,
                                    num_threads=args.num_threads, min_avg_base_qual=args.min_avg_base_qual,
                                    min_mapq=args.min_mapq, min_soft_clip=args.min_soft_clip,
-                                   pad=args.pad, min_support=args.min_support,
-                                   min_support_frac=args.min_support_frac, max_intervals=args.max_intervals,
+                                   pad=args.pad, min_support_ins=args.min_support_ins,
+                                   min_support_frac_ins=args.min_support_frac_ins, max_intervals=args.max_intervals,
                                    max_nm=args.max_nm, min_matches=args.min_matches, isize_mean=args.isize_mean, 
                                    isize_sd=args.isize_sd, svs_to_softclip=args.svs_to_softclip, 
                                    overlap_ratio=args.overlap_ratio, mean_read_length=args.mean_read_length,

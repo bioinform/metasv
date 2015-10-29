@@ -84,11 +84,11 @@ if __name__ == "__main__":
     insertion_parser.add_argument("--min_soft_clip", help="Minimum soft-clip", default=SC_MIN_SOFT_CLIP, type=int)
     insertion_parser.add_argument("--max_nm", help="Maximum number of edits", default=SC_MAX_NM, type=int)
     insertion_parser.add_argument("--min_matches", help="Mininum number of matches", default=SC_MIN_MATCHES, type=int)
-    insertion_parser.add_argument("--min_ins_support",
-                                  help="Minimum read support for calling insertions using soft-clips",
-                                  type=int, default=MIN_SUPPORT)
-    insertion_parser.add_argument("--min_ins_support_frac",
-                                  help="Minimum fraction of reads supporting insertion using soft-clips", type=float,
+    insertion_parser.add_argument("--min_support_ins",
+                                  help="Minimum read support for calling insertions using soft-clips (including neighbors)",
+                                  type=int, default=MIN_SUPPORT_INS)
+    insertion_parser.add_argument("--min_support_frac_ins",
+                                  help="Minimum fraction of reads supporting insertion using soft-clips (including neighbors)", type=float,
                                   default=MIN_SUPPORT_FRAC_INS)
     insertion_parser.add_argument("--max_ins_intervals", help="Maximum number of insertion intervals to generate",
                                   type=int,

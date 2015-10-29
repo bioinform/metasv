@@ -116,8 +116,12 @@ def run_spades_single_callback(result, result_list):
 
 def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
                         svs_to_assemble=SVS_ASSEMBLY_SUPPORTED, assembly_max_tools=ASSEMBLY_MAX_TOOLS):
-    if interval.length > max_interval_size: 
-        logger.info("Will not assemble (%s). Too large interval length: %d > %d" % (interval.name, interval.length,max_interval_size))
+
+    name_fields = interval.name.split(",")
+    max_interval_size_sv = max_interval_size if "INS" in name_fields[1] else SPADES_MAX_INTERVAL_SIZE_2BP
+
+    if (interval.length > max_interval_size_sv) : 
+        logger.info("Will not assemble (%s). Too large interval length: %d > %d" % (interval.name, interval.length,max_interval_size_sv))
         return False
 
     # TODO: fix this later to make MetaSV do the right thing
@@ -127,7 +131,6 @@ def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
             should_assemble = True
     if not should_assemble: return False
 
-    name_fields = interval.name.split(",")
     try:
         info = json.loads(base64.b64decode(name_fields[0]))
     except TypeError:
@@ -136,7 +139,7 @@ def should_be_assembled(interval, max_interval_size=SPADES_MAX_INTERVAL_SIZE,
     num_tools = int(info.get("NUM_SVTOOLS", 1))
     
     if (("DUP" in name_fields[1]) or ("DEL" in name_fields[1]) or ("INS" in name_fields[1])) and (not "SC" in methods):
-    	return False
+        return False
     
     if "SC" in methods:
         methods.discard("SC")
