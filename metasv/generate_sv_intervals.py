@@ -638,7 +638,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                         if L_bp_intvls and R_bp_intvls:
                             L_merged_other_bp=max(map(lambda x: int(x.split(',')[1]),L_bp_intvls))
                             R_merged_other_bp=max(map(lambda x: int(x.split(',')[1]),R_bp_intvls))
-                            L_other_ed=max(map(lambda x: x.split(',')[1],L_bp_intvls))
+                            L_other_end=max(map(lambda x: x.split(',')[1],L_bp_intvls))
                             bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in L_bp_intvls and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist).each(partial(add_other_bp_fields, start=max(L_merged_other_bp-pad,0), end=L_merged_other_bp+pad)).saveas().intervals)
                             bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in R_bp_intvls and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist).each(partial(add_other_bp_fields, start=max(R_merged_other_bp-pad,0), end=R_merged_other_bp+pad)).saveas().intervals)
                         else:
