@@ -145,8 +145,14 @@ def filter_confused_INS_calls(nonfilterd_bed, filterd_bed, wiggle=20):
     bedtool_bp_nonINS=pybedtools.BedTool(nonINS_bp_intervals) 
     bad_INS=bedtool_INS.window(bedtool_bp_nonINS,w=wiggle)
 
-    bedtool_filtered=bedtool_INS.window(bad_INS,w=wiggle,v=True).saveas(filterd_bed)
-    bedtool_filtered =bedtool_filtered.cat(bedtool_others,postmerge=False).sort().saveas(filterd_bed)
+    bedtool_filtered=bedtool_INS.window(bad_INS,w=wiggle,v=True).saveas()
+    if len(bedtool_filtered) == 0:
+        bedtool_others.saveas(filterd_bed)
+    elif len(bedtool_others) == 0:
+        bedtool_filtered.saveas(filterd_bed)
+    else:
+        bedtool_filtered =bedtool_filtered.cat(bedtool_others,postmerge=False).sort().saveas(filterd_bed)
+
     return filterd_bed
 
 

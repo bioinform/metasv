@@ -25,7 +25,7 @@ def count_reads_supporting_ref(chrom, start, end, bam_handle, isize_min, isize_m
     total_reads = 0
     window_start = max(0, start - window)
     window_end = end + window
-    for aln in bam_handle.fetch(chrom, window_start, window_end):
+    for aln in bam_handle.fetch(str(chrom), window_start, window_end):
         if aln.is_duplicate or not aln.is_paired:
             continue
         total_reads += 1
