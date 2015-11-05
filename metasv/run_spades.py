@@ -55,7 +55,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
     merged_contigs = open(os.path.join(work, "merged.fa"), "w")
     spades_log_fd = open(os.path.join(work, "spades.log"), "w")
 
-    extract_fns = [extract_pairs.all_pair, extract_pairs.non_perfect]
+    extract_fns = [extract_pairs.all_pair_hq, extract_pairs.non_perfect_hq]
 
     try:
         for interval in intervals:
