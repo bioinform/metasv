@@ -244,12 +244,16 @@ def resolve_for_IDP_ITX(vcf_records,pad=0,wiggle=10):
     remained_dup_bedtool=dup_bedtool.subtract(idp_bedtool,A=True,f=0.95,r=True).sort()
     remained_del_bedtool=del_bedtool.subtract(idp_bedtool.each(partial(extract_del_interval)).sort(),A=True,f=0.95,r=True)
     itx_bedtool=idp_bedtool.window(idp_bedtool,w=wiggle).each(partial(find_itx,wiggle=wiggle)).sort()
-    remained_idp_bedtool=idp_bedtool.window(itx_bedtool,w=wiggle).each(partial(filter_itxs)).sort() 
+    remained_idp_bedtool_1=idp_bedtool.window(itx_bedtool,w=wiggle).each(partial(filter_itxs)).sort() 
+    remained_idp_bedtool_2=idp_bedtool.window(itx_bedtool,w=wiggle,,c=True).filter(lambda x:x.fields[-1]=="0").cut(range(idp_bedtool.field_count())).sort()
     vcf_records = other_records + [dup_records[int(x.name.split("_")[-1])] for x in remained_dup_bedtool] + \
                                   [del_records[int(x.name.split("_")[-1])] for x in remained_del_bedtool] + \
                                   [merge_idp_itx(dup_records[int(x.name.split(",")[0].split("_")[-1])],
                                              [del_records[int(x.name.split(",")[1].split("_")[-1])]],
-                                             x.fields[6],x.fields[7],"IDP") for x in remained_idp_bedtool] + \
+                                             x.fields[6],x.fields[7],"IDP") for x in remained_idp_bedtool_1] + \
+                                  [merge_idp_itx(dup_records[int(x.name.split(",")[0].split("_")[-1])],
+                                             [del_records[int(x.name.split(",")[1].split("_")[-1])]],
+                                             x.fields[6],x.fields[7],"IDP") for x in remained_idp_bedtool_2] + \
                                   [merge_idp_itx(dup_records[int(x.name.split(",")[0].split("_")[-1])],
                                              [del_records[int(x.name.split(",")[1].split("_")[-1])],
                                              del_records[int(x.name.split(",")[2].split("_")[-1])]],
