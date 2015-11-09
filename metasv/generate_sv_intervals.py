@@ -535,6 +535,21 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
                                otherfields=feature.fields[6:]+[str(num_neigh_support)])        
 
 
+def filter_low_frac_support(feature,thr_sv):
+    sv_type = feature.fields[3].split(",")[1]
+    neigh_support = float(feature.fields[8])
+    coverage = float(feature.fields[6]) 
+    if (coverage * thr_sv[sv_type]) > neigh_support:
+        return None
+    return feature
+def filter_low_neigh_read_support_INS(feature,min_support_ins):
+    sv_type = feature.fields[3].split(",")[1]
+    neigh_support = float(feature.fields[8])
+    if sv_type == "INS" and neigh_support<min_support_ins:
+        return None
+    return feature    
+
+
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
                           min_soft_clip=SC_MIN_SOFT_CLIP,
                           pad=SC_PAD, min_support_ins=MIN_SUPPORT_INS, max_considered_isize=1000000000, 
@@ -665,11 +680,9 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                      skip_soft_clip=False, isize_mean=isize_mean, min_isize=min_isize, max_isize=max_isize)).sort().moveto(coverage_filtered_bed)
 
         neigh_coverage_filtered_bed = os.path.join(workdir, "neigh_filtered.bed")
-        bedtool = bedtool.filter(lambda x: ((float(x.fields[6]) * thr_sv[x.fields[3].split(",")[1]] 
-                                             <= float(x.fields[8])) and 
-                                             ((float(x.fields[8])>=min_support_ins) or 
-                                             (x.fields[3].split(",")[1]!="INS")))).moveto(
-                                             neigh_coverage_filtered_bed)
+        bedtool = bedtool.each(partial(filter_low_frac_support,thr_sv=thr_sv)).each(
+                               partial(filter_low_neigh_read_support_INS,min_support_ins=min_support_ins)).sort().moveto(
+                               neigh_coverage_filtered_bed)
         func_logger.info("%d neighbour support filtered intervals" % (bedtool.count()))
 
         # For 2bp SVs, the interval will be the cover of two intervals on the BP
