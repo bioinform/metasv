@@ -349,3 +349,26 @@ def merge_intervals(interval_list):
     merged_intervals.append(current_merged_interval)
     merged_intervals.sort()
     return merged_intervals
+
+
+def merge_intervals_recursively(interval_list,overlap_ratio):
+    merged_intervals = merge_intervals(interval_list)
+
+    # Intervals which overlap well with merged_intervals
+    intervals1 = []
+    # Intervals which do not overlap well with merged_intervals.
+    # Used to filter out small intervals which got merged with large intervals
+    intervals2 = []
+    for interval in interval_list:
+        if interval_overlaps_interval_list(interval, merged_intervals, overlap_ratio,overlap_ratio ):
+            intervals2.append(interval)
+        else:
+            intervals1.append(interval)
+    if len(intervals1)==0:
+        return merged_intervals
+    if len(intervals2)==0:
+        intervals1.sort()
+        return intervals1
+    final_merged = merge_intervals_recursively(intervals1,overlap_ratio) + merge_intervals_recursively(intervals2,overlap_ratio)
+    final_merged.sort()
+    return final_merged

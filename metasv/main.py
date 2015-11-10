@@ -3,7 +3,7 @@ import shutil
 
 from defaults import *
 from vcf_utils import *
-from sv_interval import SVInterval, get_gaps_file, interval_overlaps_interval_list, merge_intervals
+from sv_interval import SVInterval, get_gaps_file, interval_overlaps_interval_list, merge_intervals, merge_intervals_recursively
 from pindel_reader import PindelReader
 from breakdancer_reader import BreakDancerReader
 from breakseq_reader import BreakSeqReader
@@ -209,21 +209,7 @@ def run_metasv(args):
 
         # Do the inter-tool merging
         logger.info("Inter-tool Merging SVs of type %s" % sv_type)
-        merged_intervals = merge_intervals(tool_merged_intervals[sv_type])
-
-        # Intervals which overlap well with merged_intervals
-        intervals1 = []
-        # Intervals which do not overlap well with merged_intervals.
-        # Used to filter out small intervals which got merged with large intervals
-        intervals2 = []
-
-        logger.info("Checking overlaps SVs of type %s" % sv_type)
-        for interval in tool_merged_intervals[sv_type]:
-            if interval_overlaps_interval_list(interval, merged_intervals, args.overlap_ratio, args.overlap_ratio):
-                intervals2.append(interval)
-            else:
-                intervals1.append(interval)
-        final_intervals.extend(merge_intervals(intervals1) + merge_intervals(intervals2))
+        final_intervals.extend(merge_intervals_recursively(tool_merged_intervals[sv_type],args.overlap_ratio))
 
     final_chr_intervals = {contig.name: [] for contig in contigs}
     for interval in final_intervals:
