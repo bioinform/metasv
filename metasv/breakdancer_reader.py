@@ -150,7 +150,7 @@ class BreakDancerRecord:
                               self.pos2,  # fudge
                               name=self.name,
                               sv_type=self.sv_type,
-                              length=self.sv_len,
+                              length=0,
                               sources=breakdancer_source,
                               cipos=[0, 0],
                               info=self.info,
@@ -174,7 +174,8 @@ class BreakDancerRecord:
         elif self.sv_type == "INS":
             info["END"] = self.pos1
         elif self.sv_type == "ITX" or self.sv_type == "CTX":
-            info["END"] = self.pos2
+            info["END"] = self.pos1
+            info["POS2"] = self.pos2
         else:
             return None
 
