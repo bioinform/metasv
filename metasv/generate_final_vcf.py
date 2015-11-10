@@ -171,7 +171,7 @@ def find_idp(feature,wiggle):
         return None
     del_pos = start_del if dist_ends[0]>dist_ends[1] else end_del
     name = "%s,%s" % (feature.name,feature.fields[n+3])
-    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name,
+    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
                                otherfields=["%d"%del_pos, "%d-%d"%(start_del,end_del)])        
 
 
@@ -199,7 +199,7 @@ def find_itx(feature,wiggle):
     del_id_2=feature.name.split(",")[-1]
     name = "%s,%s" % (feature.name,del_id_2)
     
-    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name,
+    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
                                otherfields=["%d"%((del_pos1+del_pos2)/2), 
                                "%d-%d,%d-%d"%(del_interval1[0],del_interval1[1],
                                               del_interval2[0],del_interval2[1])])        
@@ -252,13 +252,13 @@ def merge_idp_itx(record_dup,records_del,del_pos,del_interval,svtype):
     return record_dup
 
 def resolve_for_IDP_ITX(vcf_records,pad=0,wiggle=10):
-    del_records = filter(lambda x: (x.INFO["SVTYPE"] == "DEL") and (x.FILTER[0] != "LowQual"),vcf_records)
-    dup_records = filter(lambda x: (x.INFO["SVTYPE"] == "DUP") and (x.FILTER[0] != "LowQual"),vcf_records)
-    other_records = filter(lambda x: (x.INFO["SVTYPE"] not in ["DEL","DUP"]) or x.FILTER[0] == "LowQual",vcf_records)
+    del_records = filter(lambda x: (x.INFO["SVTYPE"] == "DEL") ,vcf_records)
+    dup_records = filter(lambda x: (x.INFO["SVTYPE"] == "DUP") ,vcf_records)
+    other_records = filter(lambda x: (x.INFO["SVTYPE"] not in ["DEL","DUP"]),vcf_records)
     del_bedtool = pybedtools.BedTool([pybedtools.Interval(x.CHROM, x.POS, (x.start+abs(x.INFO["SVLEN"])),
-                                      name="DEL_%d"%i) for i,x in enumerate(del_records)])     
+                                      name="DEL_%d"%i,score=x.FILTER[0]) for i,x in enumerate(del_records)])     
     dup_bedtool = pybedtools.BedTool([pybedtools.Interval(x.CHROM, x.POS, (x.start+abs(x.INFO["SVLEN"])),
-                                      name="DUP_%d"%i) for i,x in enumerate(dup_records)])     
+                                      name="DUP_%d"%i,score=x.FILTER[0]) for i,x in enumerate(dup_records)])     
     idp_bedtool=dup_bedtool.window(del_bedtool,w=wiggle).each(partial(find_idp,wiggle=wiggle)).sort()
     remained_dup_bedtool=dup_bedtool.subtract(idp_bedtool,A=True,f=0.95,r=True).sort()
     remained_del_bedtool=del_bedtool.subtract(idp_bedtool.each(partial(extract_del_interval)).sort(),A=True,f=0.95,r=True)
@@ -269,6 +269,8 @@ def resolve_for_IDP_ITX(vcf_records,pad=0,wiggle=10):
     if len(remained_idp_bedtool_2)>0:
         remained_idp_bedtool_2=remained_idp_bedtool_2.cut(range(idp_bedtool.field_count())).sort()
 
+	print remained_idp_bedtool_1,remained_idp_bedtool_2,itx_bedtool
+	
     vcf_records = other_records + [dup_records[int(x.name.split("_")[-1])] for x in remained_dup_bedtool] + \
                                   [del_records[int(x.name.split("_")[-1])] for x in remained_del_bedtool] + \
                                   [merge_idp_itx(dup_records[int(x.name.split(",")[0].split("_")[-1])],
