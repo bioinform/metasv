@@ -122,8 +122,15 @@ def generate_other_bp_interval(feature,pad):
     return pybedtools.Interval(feature.chrom, max(other_bp-pad,0),other_bp+pad, name=feature.name, score=feature.score, strand=feature.strand, otherfields=[feature.fields[6]])
 
 
-def add_other_bp_fields(feature,start,end):
-    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name='%s,%d-%d'%(feature.name,start,end), score=feature.score,
+def add_other_bp_fields(feature,pad):
+    name_fields=feature.name.split(",")
+    sv_type = feature.fields[6].split(',')[0]    
+    if sv_type=="INS":
+        other_bp_field= "0-0"
+    else:
+        other_bps = map(lambda x:int(name_fields[3*x+1]), range(len(name_fields)/3))
+        other_bp_field="%d-%d"%(max(min(other_bps)-pad,0),max(other_bps)+pad)
+    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name='%s,%s'%(feature.name,other_bp_field), score=feature.score,
                                otherfields=feature.fields[6:])
 
 
@@ -413,9 +420,6 @@ def fix_merged_fields(feature,inter_tools=True):
     info["NUM_SVMETHODS"] = len(sv_methods)
     info["NUM_SVTOOLS"] = len(sv_tools)
     
-    if not inter_tools:
-        info['SCORE'] = feature.score
-        
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name="%s,%s,%d,%s" % (
             base64.b64encode(json.dumps(info)), sv_type, sv_length,
             ";".join(sv_methods)),
@@ -474,7 +478,7 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
                           min_matches=SC_MIN_MATCHES,skip_soft_clip=False, 
                           isize_mean=ISIZE_MEAN,
                           min_isize=ISIZE_MEAN-2*ISIZE_SD, max_isize=ISIZE_MEAN+2*ISIZE_SD, 
-                          max_dist_sc= 100, max_dist_other_bp = 500, wiggle = 20):
+                          max_dist_sc= 250, max_dist_other_bp = 500, wiggle = 20):
     name_fields = feature.name.split(",")
     svtype = name_fields[1]
     sv_methods = name_fields[3]
@@ -529,11 +533,27 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
 
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
                                otherfields=feature.fields[6:]+[str(num_neigh_support)])        
-        
+
+
+def filter_low_frac_support(feature,thr_sv):
+    sv_type = feature.fields[3].split(",")[1]
+    neigh_support = float(feature.fields[8])
+    coverage = float(feature.fields[6]) 
+    if (coverage * thr_sv[sv_type]) > neigh_support:
+        return None
+    return feature
+def filter_low_neigh_read_support_INS(feature,min_support_ins):
+    sv_type = feature.fields[3].split(",")[1]
+    neigh_support = float(feature.fields[8])
+    if sv_type == "INS" and neigh_support<min_support_ins:
+        return None
+    return feature    
+
+
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
                           min_soft_clip=SC_MIN_SOFT_CLIP,
-                          pad=SC_PAD, min_support=MIN_SUPPORT, max_considered_isize=1000000000, 
-                          min_support_frac=MIN_SUPPORT_FRAC_INS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES, 
+                          pad=SC_PAD, min_support_ins=MIN_SUPPORT_INS, max_considered_isize=1000000000, 
+                          min_support_frac_ins=MIN_SUPPORT_FRAC_INS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES, 
                           isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
                           overlap_ratio=OVERLAP_RATIO,merge_max_dist=-int(1*SC_PAD), 
                           mean_read_length=MEAN_READ_LENGTH, mean_read_coverage=MEAN_READ_COVERAGE, 
@@ -602,68 +622,56 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         bedtool = pybedtools.BedTool(unmerged_intervals).sort().moveto(unmerged_bed)
         func_logger.info("%d candidate reads" % (bedtool.count()))
 
-
-
-        merged_bed = os.path.join(workdir, "merged.bed")
-        m_bedtool=merge_for_each_sv(bedtool,c="4,5,6,7",o="collapse,sum,collapse,collapse",
-                                    svs_to_softclip=svs_to_softclip,d=merge_max_dist,
-                                    reciprocal_for_2bp=False, sv_type_field = [6,0])
-        m_bedtool = m_bedtool.moveto(merged_bed)
-        func_logger.info("%d merged intervals" % (m_bedtool.count()))
-
-
-
-        # Check if the other break point also can be merged for the merged intervals (for 2bp SVs)
+        bedtool_lr={"L":bedtool.filter(lambda x: int(x.name.split(",")[0])<=int(x.name.split(",")[1])).sort(),
+                    "R":bedtool.filter(lambda x: int(x.name.split(",")[0])>int(x.name.split(",")[1])).sort()}
         bp_merged_intervals = []
-        for interval in m_bedtool:
-            sv_type = interval.fields[6].split(',')[0]
-            if len(set(interval.fields[6].split(',')))!=1:
-                func_logger.warn("More than one svtypes: %s",(str(interval)))
-            if  sv_type == "INS":
-                bp_merged_intervals.append(add_other_bp_fields(interval,0,0))
-            else:
-                other_bp_bedtool=bedtool.filter(lambda x: x.name in interval.name and x.fields[6]==sv_type).each(partial(generate_other_bp_interval,pad=pad)).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist)
-                for intvl in other_bp_bedtool:
-                    name_fields = intvl.name.split(',')
-                    sv_length = [abs(int(name_fields[3*i])-int(name_fields[3*i+1])) for i in range(len(name_fields)/3)]
-                    sv_length = sum(sv_length)/len(sv_length)
-                    if sv_length < pad:
-                        L_bp_intvls=[]
-                        R_bp_intvls=[]
-                        for i in range(len(name_fields)/3):
-                            if abs(int(name_fields[3*i])-(intvl.start+pad)) < abs(int(name_fields[3*i])-(intvl.end-pad)):
-                                L_bp_intvls.append(",".join(name_fields[3*i:3*(i+1)]))
-                            else:
-                                R_bp_intvls.append(",".join(name_fields[3*i:3*(i+1)]))
-                        if L_bp_intvls and R_bp_intvls:
-                            L_merged_other_bp=max(map(lambda x: int(x.split(',')[1]),L_bp_intvls))
-                            R_merged_other_bp=max(map(lambda x: int(x.split(',')[1]),R_bp_intvls))
-                            L_other_end=max(map(lambda x: x.split(',')[1],L_bp_intvls))
-                            bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in L_bp_intvls and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist).each(partial(add_other_bp_fields, start=max(L_merged_other_bp-pad,0), end=L_merged_other_bp+pad)).saveas().intervals)
-                            bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in R_bp_intvls and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist).each(partial(add_other_bp_fields, start=max(R_merged_other_bp-pad,0), end=R_merged_other_bp+pad)).saveas().intervals)
-                        else:
-                            bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in intvl.name and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist).each(partial(add_other_bp_fields, start=intvl.start, end=intvl.end)).saveas().intervals)
-                    else: 
-                        bp_merged_intervals.extend(bedtool.filter(lambda x: x.name in intvl.name and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist).each(partial(add_other_bp_fields, start=intvl.start, end=intvl.end)).saveas().intervals)
-        
+        for k_bt,bt in bedtool_lr.iteritems():
+            merged_bed = os.path.join(workdir, "merged_%s.bed"%k_bt)
+            m_bt=merge_for_each_sv(bt,c="4,5,6,7",o="collapse,sum,collapse,collapse",
+                                        svs_to_softclip=svs_to_softclip,d=merge_max_dist,
+                                        reciprocal_for_2bp=False, sv_type_field = [6,0])
+            m_bt = m_bt.moveto(merged_bed)
+            func_logger.info("%d merged intervals with left bp support" % (m_bt.count()))
+
+            # Check if the other break point also can be merged for the merged intervals (for 2bp SVs)
+            for interval in m_bt:
+                sv_type = interval.fields[6].split(',')[0]
+                if len(set(interval.fields[6].split(',')))!=1:
+                    func_logger.warn("More than one svtypes: %s",(str(interval)))
+                if  sv_type == "INS":
+                    bp_merged_intervals.append(interval)
+                else:
+                    name_fields_0 = interval.name.split(',')
+                    other_bps = map(lambda x:int(name_fields_0[3*x+1]), range(len(name_fields_0)/3))
+                    if (min(other_bps)+2*pad-max(other_bps))>(-merge_max_dist):
+                        bp_merged_intervals.append(interval)
+                        continue
+
+                    other_bp_bedtool=bt.filter(lambda x: x.name in interval.name and x.fields[6]==sv_type).each(partial(generate_other_bp_interval,pad=pad)).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist)
+                    if len(other_bp_bedtool)==1:
+                        bp_merged_intervals.append(interval)
+                    else:
+                        for intvl in other_bp_bedtool:
+                            bp_merged_intervals.extend(bt.filter(lambda x: x.name in intvl.name and x.fields[6]==sv_type).sort().merge(c="4,5,6,7", o="collapse,sum,collapse,collapse", d=merge_max_dist))
+                    
         bp_merged_bed = os.path.join(workdir, "bp_merged.bed")
-        bedtool=pybedtools.BedTool(bp_merged_intervals).sort().moveto(bp_merged_bed)       
+        bedtool=pybedtools.BedTool(bp_merged_intervals).each(partial(add_other_bp_fields,pad=pad)).sort().moveto(bp_merged_bed)       
         func_logger.info("%d BP merged intervals" % (bedtool.count()))
 
-        filtered_bed = os.path.join(workdir, "filtered_bp_merged.bed")
-        bedtool = bedtool.filter(lambda x: int(x.score) >= min_support).each(
+        filtered_bed = os.path.join(workdir, "filtered.bed")
+        bedtool = bedtool.filter(lambda x: int(x.score) >= MIN_SUPPORT_SC_ONLY).each(
             partial(merged_interval_features, bam_handle=sam_file)).moveto(
             filtered_bed)
         func_logger.info("%d filtered intervals" % (bedtool.count()))
         
         # Now filter based on coverage
-        coverage_filtered_bed = os.path.join(workdir, "coverage_filtered_bp_merged.bed")
+        coverage_filtered_bed = os.path.join(workdir, "coverage_filtered.bed")
         bedtool = bedtool.filter(lambda x: (x.fields[3].split(",")[1]!="INS" or 
                                            ((min_ins_cov_frac*mean_read_coverage)<=(float(x.fields[6])/abs(x.start-x.end+1)*mean_read_length)<=(max_ins_cov_frac*mean_read_coverage)))).moveto(coverage_filtered_bed)
         func_logger.info("%d coverage filtered intervals" % (bedtool.count()))
 
 
-        thr_sv={"INS":MIN_SUPPORT_FRAC_INS, "INV":MIN_SUPPORT_FRAC_INV, 
+        thr_sv={"INS":min_support_frac_ins, "INV":MIN_SUPPORT_FRAC_INV, 
                 "DEL":MIN_SUPPORT_FRAC_DEL, "DUP": MIN_SUPPORT_FRAC_DUP}
 
         # Add number of neighbouring reads that support SC
@@ -671,17 +679,19 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                      min_soft_clip=min_soft_clip, max_nm=max_nm, min_matches=min_matches,
                                      skip_soft_clip=False, isize_mean=isize_mean, min_isize=min_isize, max_isize=max_isize)).sort().moveto(coverage_filtered_bed)
 
-        neigh_coverage_filtered_bed = os.path.join(workdir, "neigh_filtered_bp_merged.bed")
-        bedtool = bedtool.filter(lambda x: (float(x.fields[6]) * thr_sv[x.fields[3].split(",")[1]] <= float(x.fields[8]))).moveto(neigh_coverage_filtered_bed)
+        neigh_coverage_filtered_bed = os.path.join(workdir, "neigh_filtered.bed")
+        bedtool = bedtool.each(partial(filter_low_frac_support,thr_sv=thr_sv)).each(
+                               partial(filter_low_neigh_read_support_INS,min_support_ins=min_support_ins)).sort().moveto(
+                               neigh_coverage_filtered_bed)
         func_logger.info("%d neighbour support filtered intervals" % (bedtool.count()))
 
         # For 2bp SVs, the interval will be the cover of two intervals on the BP
-        full_filtered_bed = os.path.join(workdir, "full_filtered_bp_merged.bed")
+        full_filtered_bed = os.path.join(workdir, "full_neigh_filtered.bed")
         bedtool = bedtool.each(partial(get_full_interval,pad=pad)).sort().moveto(full_filtered_bed)
         func_logger.info("%d full filtered intervals" % (bedtool.count()))
 
         # Now merge on full intervals
-        merged_full_filtered_bed = os.path.join(workdir, "merged_full_filtered_bp_merged.bed")
+        merged_full_filtered_bed = os.path.join(workdir, "merged_full.bed")
         if bedtool.count()>0:
             bedtool=merge_for_each_sv(bedtool,c="4,5,6,7,9",o="collapse,collapse,collapse,collapse,collapse",
                                       svs_to_softclip=svs_to_softclip,
@@ -691,7 +701,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         bedtool = bedtool.each(partial(fix_merged_fields,inter_tools=False)).each(partial(fine_tune_bps,pad=pad))
         bedtool = bedtool.filter(lambda x: x.score != "-1").sort().moveto(merged_full_filtered_bed)
         func_logger.info("%d merged full intervals" % (bedtool.count()))
-
+        
         sam_file.close()
     except Exception as e:
         func_logger.error('Caught exception in worker thread')
@@ -713,7 +723,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
                                    min_avg_base_qual=SC_MIN_AVG_BASE_QUAL,
                                    min_mapq=SC_MIN_MAPQ, min_soft_clip=SC_MIN_SOFT_CLIP,
                                    pad=SC_PAD,
-                                   min_support=MIN_SUPPORT, min_support_frac=MIN_SUPPORT_FRAC_INS, 
+                                   min_support_ins=MIN_SUPPORT_INS, min_support_frac_ins=MIN_SUPPORT_FRAC_INS, 
                                    max_intervals=MAX_INTERVALS, max_nm=SC_MAX_NM, min_matches=SC_MIN_MATCHES, 
                                    isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD,
                                    svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
@@ -756,8 +766,8 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
 
         args_list = [bam, chromosome, process_workdir]
         kwargs_dict = {"min_avg_base_qual": min_avg_base_qual, "min_mapq": min_mapq, "min_soft_clip": min_soft_clip,
-                       "pad": pad, "min_support": min_support,
-                       "min_support_frac": min_support_frac, "max_nm": max_nm, "min_matches": min_matches, 
+                       "pad": pad, "min_support_ins": min_support_ins,
+                       "min_support_frac_ins": min_support_frac_ins, "max_nm": max_nm, "min_matches": min_matches, 
                        "isize_mean": isize_mean, "isize_sd": isize_sd, "svs_to_softclip": svs_to_softclip, 
                        "merge_max_dist": merge_max_dist, "mean_read_length": mean_read_length,
                        "mean_read_coverage": mean_read_coverage, "min_ins_cov_frac": min_ins_cov_frac,
@@ -784,7 +794,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         bedtool = bedtool.cat(pybedtools.BedTool(bed_file), postmerge=False)
 
     bedtool = bedtool.sort().moveto(os.path.join(workdir, "all_intervals.bed"))
-
+    
     func_logger.info("Selecting the top %d intervals based on normalized read support" % max_intervals)
     top_intervals_all_cols_file = os.path.join(workdir, "top_intervals_all_cols.bed")
     if bedtool.count() <= max_intervals:
@@ -850,8 +860,8 @@ if __name__ == "__main__":
     parser.add_argument("--isize_mean", help="Insert-size mean", default=ISIZE_MEAN, type=float)
     parser.add_argument("--isize_sd", help="Insert-size s.d.", default=ISIZE_SD, type=float)
     parser.add_argument("--pad", help="Padding on both sides of the candidate locations", default=SC_PAD, type=int)
-    parser.add_argument("--min_support", help="Minimum supporting reads", default=MIN_SUPPORT, type=int)
-    parser.add_argument("--min_support_frac", help="Minimum fraction of total reads for interval",
+    parser.add_argument("--min_support_ins", help="Minimum read support for calling insertions using soft-clips (including neighbors)", default=MIN_SUPPORT_INS, type=int)
+    parser.add_argument("--min_support_frac_ins", help="Minimum fraction of reads supporting insertion using soft-clips (including neighbors)",
                         default=MIN_SUPPORT_FRAC_INS, type=float)
     parser.add_argument("--skip_bed", help="BED regions with which no overlap should happen", type=file)
     parser.add_argument("--max_intervals",
@@ -873,8 +883,8 @@ if __name__ == "__main__":
     parallel_generate_sc_intervals(args.bams, args.chromosomes, args.skip_bed, args.workdir,
                                    num_threads=args.num_threads, min_avg_base_qual=args.min_avg_base_qual,
                                    min_mapq=args.min_mapq, min_soft_clip=args.min_soft_clip,
-                                   pad=args.pad, min_support=args.min_support,
-                                   min_support_frac=args.min_support_frac, max_intervals=args.max_intervals,
+                                   pad=args.pad, min_support_ins=args.min_support_ins,
+                                   min_support_frac_ins=args.min_support_frac_ins, max_intervals=args.max_intervals,
                                    max_nm=args.max_nm, min_matches=args.min_matches, isize_mean=args.isize_mean, 
                                    isize_sd=args.isize_sd, svs_to_softclip=args.svs_to_softclip, 
                                    overlap_ratio=args.overlap_ratio, mean_read_length=args.mean_read_length,

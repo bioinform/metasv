@@ -32,9 +32,15 @@ def write_read(fd, aln):
     fd.write("@%s/%d\n%s\n+\n%s\n" % (aln.qname, end_id, sequence, quality))
 
 
-def all_pair(aln, mate):
+def is_hq(aln, chr_tid, chr_start, chr_end):
+    return aln.is_unmapped or aln.mapq>0 or (not (aln.tid==chr_tid and  chr_start<=aln.pos<=chr_end))
+
+def all_pair(aln, mate, chr_tid, chr_start, chr_end):
     return True
 
+
+def all_pair_hq(aln, mate, chr_tid, chr_start, chr_end):
+    return  is_hq(aln, chr_tid, chr_start, chr_end) and is_hq(mate, chr_tid, chr_start, chr_end)
 
 def get_nm(aln):
     nm_str = aln.opt("NM")
@@ -44,16 +50,21 @@ def perfect_aln(aln):
     return not aln.is_unmapped and aln.is_proper_pair and len(aln.cigar) == 1 and get_nm(aln) <= EXTRACTION_MAX_NM
 
 
-def non_perfect(aln, mate):
+def non_perfect(aln, mate, chr_tid, chr_start, chr_end):
     return not (perfect_aln(aln) and perfect_aln(mate))
 
 
-def discordant(aln, mate, isize_min=300, isize_max=400):
+def non_perfect_hq(aln, mate, chr_tid, chr_start, chr_end):
+    return (not (perfect_aln(aln) and perfect_aln(mate))) and is_hq(aln, chr_tid, chr_start, chr_end) and is_hq(mate, chr_tid, chr_start, chr_end)
+
+
+
+def discordant(aln, mate, chr_tid, chr_start, chr_end, isize_min=300, isize_max=400):
     if aln.tlen == 0: return True
     return not (isize_min <= abs(aln.tlen) <= isize_max)
 
 
-def discordant_with_normal_orientation(aln, mate, isize_min=300, isize_max=400):
+def discordant_with_normal_orientation(aln, mate, chr_tid, chr_start, chr_end, isize_min=300, isize_max=400):
     if aln.tlen == 0: return True
     if aln.is_reverse and mate.is_reverse or not aln.is_reverse and not mate.is_reverse: return False
     return not (isize_min <= abs(aln.tlen) <= isize_max)
@@ -78,6 +89,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
     start_time = time.time()
 
     bam = pysam.Samfile(bamname, "rb")
+    chr_tid = bam.gettid(chr_name)
     if chr_start < 0:
         logger.error("Skipping read extraction since interval too close to chromosome beginning")
     else:
@@ -123,7 +135,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
             extract_fn_names]
     for first, second in aln_pairs:
         for fn_index, extract_fn in enumerate(extract_fns):
-            if extract_fn(first, second):
+            if extract_fn(first, second,chr_tid,chr_start,chr_end):
                 write_read(ends[fn_index][0], first)
                 write_read(ends[fn_index][1], second)
 
