@@ -11,7 +11,6 @@ from functools import partial
 import pybedtools
 import pysam
 import vcf
-import copy
 import fasta_utils
 
 mydir = os.path.dirname(os.path.realpath(__file__))
