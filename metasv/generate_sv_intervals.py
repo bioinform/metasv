@@ -466,7 +466,7 @@ def add_INS_padding(feature,pad):
          feature.end+pad, name=feature.name, score = feature.score) if sv_type  == "INS" else feature
     
 def find_coverage_frac(score,coverage):
-    scores = map(lambda x: float(x),score.split(","))
+    scores = map(lambda x: float(x.split(";")[0]),score.split(","))
     coverages = map(lambda x: float(x),coverage.split(","))
     return sum(map(lambda k, v: k/v , scores, coverages))/len(scores)
     
@@ -539,7 +539,7 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
         strand = "-" if aln.is_reverse else "+"
         if not svtype == "NONE":
             num_neigh_support +=1
-            if strand == "+"
+            if strand == "+":
                 plus_support +=1
             else:
                 minus_support +=1
@@ -558,20 +558,24 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
                                    strand=feature.strand, otherfields=feature.fields[6:]+[neigh_svs])      
 
 
-def filter_low_frac_support(feature,thr_sv):
+def filter_low_frac_support(feature,thr_sv,plus_minus_thr_scale):
     sv_type = feature.fields[3].split(",")[1]
-    neigh_support = float(feature.fields[8])
+    neigh_support, plus_support, minus_support = map(int,feature.fields[8].split(";"))
     coverage = float(feature.fields[6]) 
     if (coverage * thr_sv[sv_type]) > neigh_support:
         return None
-    return feature
-def filter_low_neigh_read_support_INS(feature,min_support_ins):
-    sv_type = feature.fields[3].split(",")[1]
-    neigh_support = float(feature.fields[8])
-    if sv_type == "INS" and neigh_support<min_support_ins:
+    if sv_type == "INS" and ((coverage * thr_sv[svtype] * plus_minus_thr_scale) 
+                                                > min(plus_support,minus_support)):
         return None
-    return feature    
-
+    return feature
+def filter_low_neigh_read_support_INS(feature,min_support_ins,plus_minus_thr_scale):
+    sv_type = feature.fields[3].split(",")[1]
+    neigh_support, plus_support, minus_support = map(int,feature.fields[8].split(";"))
+    if sv_type == "INS" and (neigh_support<min_support_ins 
+                            or min(plus_support,minus_support) 
+                              <(min_support_ins * plus_minus_thr_scale)):
+        return None
+    return feature  
 
 def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG_BASE_QUAL, min_mapq=SC_MIN_MAPQ,
                           min_soft_clip=SC_MIN_SOFT_CLIP,
@@ -707,6 +711,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                             or (coverage * thr_sv[svtype] * none_thr_scale) > neigh_support
                                             or (coverage * thr_sv[svtype] * none_thr_scale * plus_minus_thr_scale) 
                                                 > min(plus_support,minus_support)):
+                        continue
                     for j in range(neigh_support):
                         other_bp, strand=svs_fields[1+(j*2):3+(j*2)]
                         name = "%d,%s,%s" % (soft_clip_location, other_bp, strand)
@@ -778,8 +783,11 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                      skip_soft_clip=False, isize_mean=isize_mean, min_isize=min_isize, max_isize=max_isize)).sort().moveto(coverage_filtered_bed)
 
         neigh_coverage_filtered_bed = os.path.join(workdir, "neigh_filtered.bed")
-        bedtool = bedtool.each(partial(filter_low_frac_support,thr_sv=thr_sv)).each(
-                               partial(filter_low_neigh_read_support_INS,min_support_ins=min_support_ins)).sort().moveto(
+        bedtool = bedtool.each(partial(filter_low_frac_support,thr_sv=thr_sv,
+                               plus_minus_thr_scale=plus_minus_thr_scale)).each(
+                               partial(filter_low_neigh_read_support_INS,
+                               min_support_ins=min_support_ins,
+                               plus_minus_thr_scale=plus_minus_thr_scale)).sort().moveto(
                                neigh_coverage_filtered_bed)
         func_logger.info("%d neighbour support filtered intervals" % (bedtool.count()))
 
