@@ -492,6 +492,8 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
         svtype="NONE"
         
     num_neigh_support = 0
+    plus_support = 0
+    minus_support = 0
     neigh_support_sv={k:[] for k in SVS_SOFTCLIP_SUPPORTED}
     soft_clip_location = (feature.start+feature.end)/2
     for aln in bam_handle.fetch(reference=str(feature.chrom), start=feature.start, end=feature.end):
@@ -534,16 +536,20 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
             if abs(other_bp_neigh -(other_bp_start+other_bp_end)/2) > max_dist_other_bp:
                 continue
 
+        strand = "-" if aln.is_reverse else "+"
         if not svtype == "NONE":
             num_neigh_support +=1
+            if strand == "+"
+                plus_support +=1
+            else:
+                minus_support +=1
         else:
-            strand = "-" if aln.is_reverse else "+"
             neigh_support_sv[svtype_neigh].append("%d;%s"%(other_bp_neigh,strand))
     if not svtype == "NONE":
         info.update({"SC_NEIGH_SUPPORT": num_neigh_support})
         name = "%s,%s,%d,%s"%(base64.b64encode(json.dumps(info)),svtype,sv_length,sv_methods)
         return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
-                                   otherfields=feature.fields[6:]+[str(num_neigh_support)])        
+                                   otherfields=feature.fields[6:]+["%s;%s;%s"%(num_neigh_support,plus_support,minus_support)])        
     else:
         neigh_svs=",".join([";".join([sv]+ns) for sv,ns in neigh_support_sv.iteritems() if ns])
         if not neigh_svs:
@@ -575,7 +581,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                           overlap_ratio=OVERLAP_RATIO,merge_max_dist=-int(1*SC_PAD), 
                           mean_read_length=MEAN_READ_LENGTH, mean_read_coverage=MEAN_READ_COVERAGE, 
                           min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,
-                          num_sd = 2):
+                          num_sd = 2, plus_minus_thr_scale=0.4, none_thr_scale=1.5):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
@@ -690,11 +696,17 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                     soft_clip_location = (interval.start+interval.end)/2
         
                     neigh_support = (len(svs_fields)-1)/2
+                    plus_support=len(filter(lambda x:x=="+",svs_fields[2::2]))
+                    minus_support=len(filter(lambda x:x=="-",svs_fields[2::2]))
                     coverage = float(interval.fields[6]) 
-                    if (coverage * thr_sv[svtype]) > neigh_support:
+                    if svtype != "INS" and (coverage * thr_sv[svtype]) > neigh_support:
                         continue
-                    if svtype == "INS" and neigh_support<min_support_ins:
-                        continue
+                    if svtype == "INS" and (neigh_support<(min_support_ins * none_thr_scale) 
+                                            or min(plus_support,minus_support)
+                                                <(min_support_ins * none_thr_scale * plus_minus_thr_scale)
+                                            or (coverage * thr_sv[svtype] * none_thr_scale) > neigh_support
+                                            or (coverage * thr_sv[svtype] * none_thr_scale * plus_minus_thr_scale) 
+                                                > min(plus_support,minus_support)):
                     for j in range(neigh_support):
                         other_bp, strand=svs_fields[1+(j*2):3+(j*2)]
                         name = "%d,%s,%s" % (soft_clip_location, other_bp, strand)
