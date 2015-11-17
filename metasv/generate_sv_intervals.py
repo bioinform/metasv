@@ -505,6 +505,7 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
     neigh_support_sv={k:[] for k in SVS_SOFTCLIP_SUPPORTED}
     soft_clip_location = (feature.start+feature.end)/2
     for aln in bam_handle.fetch(reference=str(feature.chrom), start=feature.start, end=feature.end):
+        soft_clip_location = (feature.start+feature.end)/2
         if not is_good_candidate(aln, min_mapq=min_mapq,
                                  min_soft_clip=min_soft_clip, max_nm=max_nm,
                                  min_matches=min_matches,skip_soft_clip=skip_soft_clip, 
