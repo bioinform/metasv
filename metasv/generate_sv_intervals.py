@@ -571,18 +571,23 @@ def filter_low_frac_support(feature,thr_sv,plus_minus_thr_scale):
     sv_type = feature.fields[3].split(",")[1]
     neigh_support, plus_support, minus_support = map(int,feature.fields[8].split(";"))
     coverage = float(feature.fields[6]) 
-    if (coverage * thr_sv[sv_type]) > neigh_support:
+    sc_read_support= float(interval.fields[4])
+    low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else 2
+    if (coverage * thr_sv[sv_type] * low_supp_scale) > neigh_support:
         return None
-    if sv_type == "INS" and ((coverage * thr_sv[svtype] * plus_minus_thr_scale) 
+    if sv_type == "INS" and ((coverage * thr_sv[sv_type] * low_supp_scale * plus_minus_thr_scale) 
                                                 > min(plus_support,minus_support)):
         return None
     return feature
 def filter_low_neigh_read_support_INS(feature,min_support_ins,plus_minus_thr_scale):
     sv_type = feature.fields[3].split(",")[1]
     neigh_support, plus_support, minus_support = map(int,feature.fields[8].split(";"))
-    if sv_type == "INS" and (neigh_support<min_support_ins 
+    sc_read_support= float(interval.fields[4])
+    low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else 2
+    
+    if sv_type == "INS" and (neigh_support< (min_support_ins * low_supp_scale)
                             or min(plus_support,minus_support) 
-                              <(min_support_ins * plus_minus_thr_scale)):
+                              <(min_support_ins * low_supp_scale * plus_minus_thr_scale)):
         return None
     return feature  
 
@@ -680,7 +685,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             bedtool_none=bedtool_none.merge(c="4,5,6,7",o="collapse,sum,collapse,collapse", d=merge_max_dist).sort().moveto(merged_none_bed)
             func_logger.info("%d merged NONE intervals" % (bedtool_none.count()))
             filtered_none_bed = os.path.join(workdir, "filtered_none.bed")
-            bedtool_none = bedtool_none.filter(lambda x: int(x.score) >= MIN_SUPPORT_SC_ONLY).each(
+            bedtool_none = bedtool_none.filter(lambda x: int(x.score) >= 0).each(
                         partial(merged_interval_features, bam_handle=sam_file,find_svtype=True)).moveto(
                 filtered_none_bed)
             func_logger.info("%d filtered NONE intervals" % (bedtool_none.count()))
@@ -712,13 +717,17 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                     plus_support=len(filter(lambda x:x=="+",svs_fields[2::2]))
                     minus_support=len(filter(lambda x:x=="-",svs_fields[2::2]))
                     coverage = float(interval.fields[6]) 
-                    if svtype != "INS" and (coverage * thr_sv[svtype]) > neigh_support:
+                    sc_read_support= float(interval.fields[4])
+                    low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else 2
+
+                    if svtype != "INS" and (coverage * thr_sv[svtype]  * low_supp_scale) > neigh_support:
                         continue
-                    if svtype == "INS" and (neigh_support<(min_support_ins * none_thr_scale) 
+        
+                    if svtype == "INS" and (neigh_support<(min_support_ins * low_supp_scale * none_thr_scale) 
                                             or min(plus_support,minus_support)
-                                                <(min_support_ins * none_thr_scale * plus_minus_thr_scale)
-                                            or (coverage * thr_sv[svtype] * none_thr_scale) > neigh_support
-                                            or (coverage * thr_sv[svtype] * none_thr_scale * plus_minus_thr_scale) 
+                                                <(min_support_ins * low_supp_scale * none_thr_scale * plus_minus_thr_scale)
+                                            or (coverage * thr_sv[svtype]  * low_supp_scale * none_thr_scale) > neigh_support
+                                            or (coverage * thr_sv[svtype]  * low_supp_scale * none_thr_scale * plus_minus_thr_scale) 
                                                 > min(plus_support,minus_support)):
                         continue
                     for j in range(neigh_support):
@@ -774,7 +783,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         func_logger.info("%d BP merged intervals" % (bedtool.count()))
 
         filtered_bed = os.path.join(workdir, "filtered.bed")
-        bedtool = bedtool.filter(lambda x: int(x.score) >= MIN_SUPPORT_SC_ONLY).each(
+        bedtool = bedtool.filter(lambda x: int(x.score) >= 0).each(
             partial(merged_interval_features, bam_handle=sam_file)).moveto(
             filtered_bed)
         func_logger.info("%d filtered intervals" % (bedtool.count()))
