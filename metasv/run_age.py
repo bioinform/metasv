@@ -39,7 +39,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                    age=None, truncation_pad_read_age = AGE_TRUNCATION_PAD,
                    max_interval_len_truncation_age = AGE_MAX_INTERVAL_TRUNCATION,
                    dist_to_expected_bp = AGE_DIST_TO_BP, min_del_subalign_len = MIN_DEL_SUBALIGN_LENGTH, 
-                   min_inv_subalign_len = MIN_INV_SUBALIGN_LENGTH,
+                   min_inv_subalign_len = MIN_INV_SUBALIGN_LENGTH, age_window = AGE_WINDOW_SIZE,
                    age_workdir=None, timeout=AGE_TIMEOUT, keep_temp=False, myid=0):
     thread_logger = logging.getLogger("%s-%s" % (run_age_single.__name__, multiprocessing.current_process()))
 
@@ -171,7 +171,8 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 breakpoints, info_dict = process_age_records(unique_age_records, sv_type=sv_type, 
                                                              pad=pad, dist_to_expected_bp=dist_to_expected_bp,
                                                              min_del_subalign_len=min_del_subalign_len,
-                                                             min_inv_subalign_len=min_inv_subalign_len)
+                                                             min_inv_subalign_len=min_inv_subalign_len,
+                                                             age_window=age_window)
                 bedtools_fields = matching_interval.fields
                 if len(breakpoints) == 1 and sv_type == "INS":
                     bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1]])
@@ -217,7 +218,8 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_
                      timeout=AGE_TIMEOUT, keep_temp=False, assembly_tool="spades", chrs=[], nthreads=1,
                      min_contig_len=AGE_MIN_CONTIG_LENGTH,
                      max_region_len=AGE_MAX_REGION_LENGTH, sv_types=[], 
-                     min_del_subalign_len=MIN_DEL_SUBALIGN_LENGTH, min_inv_subalign_len=MIN_INV_SUBALIGN_LENGTH):
+                     min_del_subalign_len=MIN_DEL_SUBALIGN_LENGTH, min_inv_subalign_len=MIN_INV_SUBALIGN_LENGTH,
+                     age_window = AGE_WINDOW_SIZE):
     func_logger = logging.getLogger("%s-%s" % (run_age_parallel.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(age_workdir):
@@ -275,7 +277,8 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_
         kwargs_dict = {"intervals_bed": intervals_bed, "region_list": region_sublist, "contig_dict": contig_dict,
                        "reference": reference, "assembly": assembly, "pad": pad, "age": age, "age_workdir": age_workdir,
                        "timeout": timeout, "keep_temp": keep_temp, "myid": i, 
-                       "min_del_subalign_len": min_del_subalign_len, "min_inv_subalign_len": min_inv_subalign_len}
+                       "min_del_subalign_len": min_del_subalign_len, "min_inv_subalign_len": min_inv_subalign_len,
+                       "age_window" : age_window}
         pool.apply_async(run_age_single, args=[], kwds=kwargs_dict,
                          callback=partial(run_age_single_callback, result_list=breakpoints_beds))
 
@@ -324,6 +327,8 @@ if __name__ == "__main__":
                         default=MIN_DEL_SUBALIGN_LENGTH)
     parser.add_argument("--min_inv_subalign_len", help="Minimum length of inversion sub-alginment", type=int,
                         default=MIN_INV_SUBALIGN_LENGTH)
+    parser.add_argument("--age_window", help="Window size for AGE to merge nearby breakpoints", type=int,
+                        default=AGE_WINDOW_SIZE)
     parser.add_argument("--intervals_bed", help="BED file for assembly", type=file, required=True)
 
     args = parser.parse_args()
@@ -332,4 +337,5 @@ if __name__ == "__main__":
                      pad=args.pad, age=args.age.name, age_workdir=args.work, timeout=args.timeout,
                      keep_temp=args.keep_temp, assembly_tool=args.assembly_tool, chrs=args.chrs, nthreads=args.nthreads,
                      min_contig_len=args.min_contig_len, max_region_len=args.max_region_len, sv_types=args.sv_types, 
-                     min_del_subalign_len=args.min_del_subalign_len, min_inv_subalign_len=args.min_inv_subalign_len)
+                     min_del_subalign_len=args.min_del_subalign_len, min_inv_subalign_len=args.min_inv_subalign_len,
+                     age_window = args.age_window)
