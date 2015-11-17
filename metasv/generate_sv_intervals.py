@@ -465,6 +465,14 @@ def add_INS_padding(feature,pad):
     return pybedtools.Interval(feature.chrom, max(feature.start-pad,0),
          feature.end+pad, name=feature.name, score = feature.score) if sv_type  == "INS" else feature
     
+    
+def remove_INS_padding(feature,pad):
+    name_fields = feature.name.split(",")
+    sv_type = name_fields[1]
+    return pybedtools.Interval(feature.chrom, feature.start+pad,
+         min(feature.end-pad,0), name=feature.name, score = feature.score) if sv_type  == "INS" else feature
+    
+    
 def find_coverage_frac(score,coverage):
     scores = map(lambda x: float(x.split(";")[0]),score.split(","))
     coverages = map(lambda x: float(x),coverage.split(","))
@@ -939,6 +947,8 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
         func_logger.info("After merging with %s %d features" % (skip_bed, bedtool.count()))
     else:
         bedtool = bedtool.saveas(interval_bed)
+
+    bedtool = bedtool.each(partial(remove_INS_padding,pad=pad)).saveas(interval_bed)
 
     pybedtools.cleanup(remove_all=True)
 
