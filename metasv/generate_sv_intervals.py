@@ -398,7 +398,10 @@ def fix_merged_fields(feature,inter_tools=True):
         sub_interval=name_fields[i*4:(i+1)*4]
         sub_info=json.loads(base64.b64decode(sub_interval[0]))
         if not inter_tools:
-            info["SC_SUBINTERVAL_INFOs"].append(sub_info)
+            if "SC_SUBINTERVAL_INFOs" not in sub_info:
+                info["SC_SUBINTERVAL_INFOs"].append(sub_info)
+            else:
+                info["SC_SUBINTERVAL_INFOs"].extend(sub_info["SC_SUBINTERVAL_INFOs"])                
         else:
             info.update({k:v for k,v in sub_info.iteritems() if k not in ["SOURCES","SC_SUBINTERVAL_INFOs"]})
             if "SC_SUBINTERVAL_INFOs" in sub_info:
@@ -459,7 +462,7 @@ def fine_tune_bps(feature,pad):
     else:
         return feature
 
-def find_other_bp_interval(feature,pad=pad):
+def find_other_bp_interval(feature,pad):
     name_fields = feature.name.split(",")
     sv_type = name_fields[1]
     sv_methods = name_fields[3]
@@ -832,8 +835,6 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         func_logger.info("%d full filtered intervals" % (bedtool.count()))
 
         # Now merge on full intervals
-        full_filtered_bed = os.path.join(workdir, "full_neigh_filtered.bed")
-        bedtool=pybedtools.BedTool(full_filtered_bed)
         merged_full_filtered_bed = os.path.join(workdir, "merged_full.bed")
         if bedtool.count()>0:
             bedtool=merge_for_each_sv(bedtool,c="4,5,6,7,9",o="collapse,collapse,collapse,collapse,collapse",

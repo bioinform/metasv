@@ -41,6 +41,7 @@
 ##INFO=<ID=VT,Number=1,Type=String,Description="indicates what type of variant the line represents">
 ##INFO=<ID=SVMETHOD,Number=.,Type=String,Description="Type of approach used to detect SV: RP (read pair), RD (read depth), SR (split read), JT (junction) or AS (assembly)">
 ##INFO=<ID=CHR2,Number=1,Type=String,Description="Chromosome for END coordinate in case of a translocation">
+##INFO=<ID=POS2,Number=1,Type=String,Description="The new position of the translocated or duplicated region. Used of ITX, CTX, and IDP SVs">
 ##INFO=<ID=BD_CHR1,Number=1,Type=String,Description="BreakDancer: chr1 field">
 ##INFO=<ID=BD_POS1,Number=1,Type=Integer,Description="BreakDancer: pos1 field">
 ##INFO=<ID=BD_ORI1,Number=1,Type=String,Description="BreakDancer: orientation1 field">
@@ -81,6 +82,8 @@
 ##INFO=<ID=SC_READ_SUPPORT,Number=1,Type=Integer,Description="Soft-Clip: Number of soft-clip supporting reads">
 ##INFO=<ID=SC_NEIGH_SUPPORT,Number=1,Type=Integer,Description="Soft-Clip: Number of reads near the soft-clip location that support SV event">
 ##INFO=<ID=SC_COVERAGE,Number=1,Type=Integer,Description="Soft-Clip: Read coverage in the soft-clip location">
+##INFO=<ID=IDP_INTERVALS,Number=1,Type=String,Description="Intervals used to merge into interspersed duplication">
+##INFO=<ID=ITX_INTERVALS,Number=1,Type=String,Description="Intervals used to merge into intra-chromosomal translocation">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">
 ##FORMAT=<ID=CNQ,Number=1,Type=Float,Description="Copy number genotype quality for imprecise events">
@@ -94,6 +97,7 @@
 ##ALT=<ID=DEL:ME:L1,Description="Deletion of L1 element">
 ##ALT=<ID=DUP,Description="Duplication">
 ##ALT=<ID=DUP:TANDEM,Description="Tandem Duplication">
+##ALT=<ID=IDP,Description="Interspersed Duplication">
 ##ALT=<ID=INS,Description="Insertion of novel sequence">
 ##ALT=<ID=INS:ME:ALU,Description="Insertion of ALU element">
 ##ALT=<ID=INS:ME:L1,Description="Insertion of L1 element">
