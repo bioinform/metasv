@@ -442,22 +442,39 @@ def fine_tune_bps(feature,pad):
             sc_bp=sum(map(lambda x:int(x),source['SC_SC_BP_ENDS'].split('-')))/2
             other_bp=sum(map(lambda x:int(x),source['SC_OTHER_BP_ENDS'].split('-')))/2
             if abs(sc_bp-feature.start) < (abs(sc_bp-feature.end)) and abs(other_bp-feature.start) >= (abs(other_bp-feature.end)):
-                L_bps.append(sc_bp)
+                L_bps.append([sc_bp,other_bp])
             elif abs(sc_bp-feature.start) >= (abs(sc_bp-feature.end)) and abs(other_bp-feature.start) < (abs(other_bp-feature.end)):
-                R_bps.append(sc_bp)
-    
+                R_bps.append([sc_bp,other_bp])
         if L_bps and R_bps:
-            L_bp=sum(L_bps)/len(L_bps)
-            R_bp=sum(R_bps)/len(R_bps)
+            L_bp=sum(map(lambda x:x[0],L_bps))/len(L_bps)
+            R_bp=sum(map(lambda x:x[0],R_bps))/len(R_bps)
             sv_length = R_bp-L_bp
             return pybedtools.Interval(feature.chrom, L_bp, R_bp, name="%s,%s,%d,%s" % (
                     base64.b64encode(json.dumps(info)), sv_type, sv_length,sv_methods),    score = feature.score , otherfields=feature.fields[6:])
+        elif L_bps or R_bps:
+            return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=feature.name,
+                                       score = "-1", otherfields=feature.fields[6:])
         else:
-            #will be omitted
-            return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=feature.name,    score = "-1", otherfields=feature.fields[6:])
+            return None
     else:
         return feature
-    
+
+def find_other_bp_interval(feature,pad=pad):
+    name_fields = feature.name.split(",")
+    sv_type = name_fields[1]
+    sv_methods = name_fields[3]
+    sv_length = int(name_fields[2])
+    info = json.loads(base64.b64decode(name_fields[0]))
+
+    other_bps=map(lambda y: map(int,y['SC_OTHER_BP_ENDS'].split('-')),info["SC_SUBINTERVAL_INFOs"])
+    start_interval=min(map(lambda x:x[0],other_bps))
+    end_interval=max(map(lambda x:x[1],other_bps))
+    soft_clip_location = (start_interval+end_interval)/2
+    sc_bp=feature.start if abs(soft_clip_location-feature.start)>abs(soft_clip_location-feature.end) else feature.end
+    other_bp_field="%d-%d"%(max(sc_bp-pad,0),sc_bp+pad)
+    name="%d,%d,+,%s"%(soft_clip_location,sc_bp,other_bp_field)
+    return pybedtools.Interval(feature.chrom, start_interval, end_interval, name=name, score="1",
+                               otherfields=[sv_type])    
         
 def add_INS_padding(feature,pad):
     name_fields = feature.name.split(",")
@@ -470,7 +487,7 @@ def remove_INS_padding(feature,pad):
     name_fields = feature.name.split(",")
     sv_type = name_fields[1]
     return pybedtools.Interval(feature.chrom, feature.start+pad,
-         min(feature.end-pad,0), name=feature.name, score = feature.score) if sv_type  == "INS" else feature
+         max(feature.end-pad,0), name=feature.name, score = feature.score) if sv_type  == "INS" else feature
     
     
 def find_coverage_frac(score,coverage):
@@ -571,7 +588,7 @@ def filter_low_frac_support(feature,thr_sv,plus_minus_thr_scale):
     sv_type = feature.fields[3].split(",")[1]
     neigh_support, plus_support, minus_support = map(int,feature.fields[8].split(";"))
     coverage = float(feature.fields[6]) 
-    sc_read_support= float(interval.fields[4])
+    sc_read_support= float(feature.fields[4])
     low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else 2
     if (coverage * thr_sv[sv_type] * low_supp_scale) > neigh_support:
         return None
@@ -582,7 +599,7 @@ def filter_low_frac_support(feature,thr_sv,plus_minus_thr_scale):
 def filter_low_neigh_read_support_INS(feature,min_support_ins,plus_minus_thr_scale):
     sv_type = feature.fields[3].split(",")[1]
     neigh_support, plus_support, minus_support = map(int,feature.fields[8].split(";"))
-    sc_read_support= float(interval.fields[4])
+    sc_read_support= float(feature.fields[4])
     low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else 2
     
     if sv_type == "INS" and (neigh_support< (min_support_ins * low_supp_scale)
@@ -815,6 +832,8 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         func_logger.info("%d full filtered intervals" % (bedtool.count()))
 
         # Now merge on full intervals
+        full_filtered_bed = os.path.join(workdir, "full_neigh_filtered.bed")
+        bedtool=pybedtools.BedTool(full_filtered_bed)
         merged_full_filtered_bed = os.path.join(workdir, "merged_full.bed")
         if bedtool.count()>0:
             bedtool=merge_for_each_sv(bedtool,c="4,5,6,7,9",o="collapse,collapse,collapse,collapse,collapse",
@@ -822,10 +841,39 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                       overlap_ratio=overlap_ratio,
                                       reciprocal_for_2bp=True, 
                                       sv_type_field = [3,1], d=merge_max_dist)
-        bedtool = bedtool.each(partial(fix_merged_fields,inter_tools=False)).each(partial(fine_tune_bps,pad=pad))
-        bedtool = bedtool.filter(lambda x: x.score != "-1").sort().moveto(merged_full_filtered_bed)
-        func_logger.info("%d merged full intervals" % (bedtool.count()))
+        bedtool = bedtool.each(partial(fix_merged_fields,inter_tools=False)).each(partial(fine_tune_bps,pad=pad)).sort()
+        func_logger.info("%d merged intervals" % (bedtool.count()))
         
+        # Recover 2-BP intervals with only 1-end SC
+        bedtool_1end = bedtool.filter(lambda x: x.score == "-1").sort()
+        bedtool = bedtool.filter(lambda x: x.score != "-1").sort()
+        func_logger.info("%d fine intervals" % (bedtool.count()))
+        func_logger.info("%d 2-BP intervals with 1-end SC" % (bedtool_1end.count()))
+        if bedtool_1end.count()>0:
+            bedtool_1end_resolved = bedtool_1end.each(partial(find_other_bp_interval,pad=pad)).sort()
+            bedtool_1end_resolved=bedtool_1end_resolved.each(partial(merged_interval_features,bam_handle=sam_file)).each(
+                                                        partial(add_neighbour_support,bam_handle=sam_file, min_mapq=min_mapq, 
+                                                            min_soft_clip=min_soft_clip, max_nm=max_nm, min_matches=min_matches, 
+                                                            isize_mean=isize_mean, min_isize=min_isize, max_isize=max_isize)).each(
+                                                        partial(filter_low_frac_support,thr_sv=thr_sv,
+                                                                plus_minus_thr_scale=plus_minus_thr_scale)).each(partial(
+                                                        get_full_interval,pad=pad)).cut([0,1,2,3,4,5,6,8]).sort()
+
+            func_logger.info("%d recovered 2-BP intervals with 1-end SC" % (bedtool_1end_resolved.count()))
+            if bedtool_1end_resolved.count()>0:
+                bedtool_1end_resolved = bedtool_1end_resolved.cat(bedtool_1end, postmerge=False).sort()
+                bedtool_1end_resolved=merge_for_each_sv(bedtool_1end_resolved,c="4,5,6,7,8",o="collapse,collapse,collapse,collapse,collapse",
+                                          svs_to_softclip=svs_to_softclip,
+                                          overlap_ratio=overlap_ratio,
+                                          reciprocal_for_2bp=True, 
+                                          sv_type_field = [3,1], d=merge_max_dist)
+                bedtool_1end_resolved = bedtool_1end_resolved.each(partial(fix_merged_fields,inter_tools=False)).each(partial(fine_tune_bps,pad=pad))
+                bedtool_1end_resolved = bedtool_1end_resolved.filter(lambda x: x.score != "-1").sort()
+                bedtool = bedtool.cat(bedtool_1end_resolved, postmerge=False).sort()
+
+        bedtool=bedtool.moveto(merged_full_filtered_bed)
+        func_logger.info("%d merged full intervals" % (bedtool.count()))
+
         sam_file.close()
     except Exception as e:
         func_logger.error('Caught exception in worker thread')
@@ -958,7 +1006,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     else:
         bedtool = bedtool.saveas(interval_bed)
 
-    bedtool = bedtool.each(partial(remove_INS_padding,pad=pad)).saveas(interval_bed)
+    bedtool = bedtool.each(partial(remove_INS_padding,pad=pad)).sort().saveas(interval_bed)
 
     pybedtools.cleanup(remove_all=True)
 
