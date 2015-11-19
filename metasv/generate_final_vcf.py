@@ -265,20 +265,35 @@ def merge_idp_itx(fasta_file,record_dup,records_del,del_pos,del_interval,score,s
 
     return vcf_record
 
-def resolve_for_IDP_ITX(vcf_records,fasta_file,pad=0,wiggle=10):
+def resolve_for_IDP_ITX_CTX(vcf_records,fasta_file,pad=0,wiggle=10):
     del_records = filter(lambda x: (x.INFO["SVTYPE"] == "DEL") ,vcf_records)
     dup_records = filter(lambda x: (x.INFO["SVTYPE"] == "DUP") ,vcf_records)    
-    other_records = filter(lambda x: (x.INFO["SVTYPE"] not in ["DEL","DUP"]),vcf_records)
-    del_bedtool = pybedtools.BedTool([pybedtools.Interval(x.CHROM, x.POS, (x.start+abs(x.INFO["SVLEN"])),
+    INS_records = filter(lambda x: (x.INFO["SVTYPE"] == "INS") ,vcf_records)    
+    other_records = filter(lambda x: (x.INFO["SVTYPE"] not in ["DEL","DUP","INS"]),vcf_records)
+    del_bedtool = pybedtools.BedTool([pybedtools.Interval(x.CHROM, x.POS, (x.POS+abs(x.INFO["SVLEN"])),
                                       name="DEL_%d"%i,score=x.FILTER[0]) for i,x in enumerate(del_records)])     
-    dup_bedtool = pybedtools.BedTool([pybedtools.Interval(x.CHROM, x.POS, (x.start+abs(x.INFO["SVLEN"])),
+    dup_bedtool = pybedtools.BedTool([pybedtools.Interval(x.CHROM, x.POS, (x.POS+abs(x.INFO["SVLEN"])),
                                       name="DUP_%d"%i,score=x.FILTER[0]) for i,x in enumerate(dup_records)])     
+    ins_bedtool = pybedtools.BedTool([pybedtools.Interval(x.CHROM, x.POS, (x.POS+1)),
+                                      name="INS_%d"%i,score=x.FILTER[0],otherfield=[x.INFO["SC_CHR2_STR"] if 
+                                      "SC_CHR2_STR" in x.INFO else "."]) 
+                                      for i,x in enumerate(ins_bedtool)])     
+    chr2_ins_bedtool = ins_bedtool.each(partial(build_chr2_ins)).sort()
+    
+    
     idp_bedtool=dup_bedtool.window(del_bedtool,w=wiggle).each(partial(find_idp,wiggle=wiggle)).sort()
     remained_dup_bedtool=dup_bedtool.subtract(idp_bedtool,A=True,f=0.95,r=True).sort()
     remained_del_bedtool=del_bedtool.subtract(idp_bedtool.each(partial(extract_del_interval)).sort(),A=True,f=0.95,r=True)
     itx_bedtool=idp_bedtool.window(idp_bedtool,w=wiggle).each(partial(find_itx,wiggle=wiggle)).sort()
     remained_idp_bedtool_1=idp_bedtool.window(itx_bedtool,w=wiggle).each(partial(filter_itxs)).sort() 
     remained_idp_bedtool_2=idp_bedtool.window(itx_bedtool,w=wiggle,c=True).filter(lambda x:x.fields[-1]=="0").sort()
+
+
+    ctx_bedtool=remained_del_bedtool.window(chr2_ins_bedtool,w=wiggle).each(partial(find_ctx,wiggle=wiggle)).sort()
+    remained_del_bedtool=remained_del_bedtool.subtract(ins_bedtool,A=True,f=0.95,r=True).sort()
+	remove_ins_bedtool=ctx_bedtool.each(partial(get_ins_orig_interval)).sort()
+    remained_ins_bedtool=remained_del_bedtool.subtract(ins_bedtool,A=True,f=0.95,r=True).sort()
+	
 
     if len(remained_idp_bedtool_2)>0:
         remained_idp_bedtool_2=remained_idp_bedtool_2.cut(range(idp_bedtool.field_count())).sort()
@@ -395,7 +410,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_temp
     else:
         vcf_records.sort(key=lambda x: (x.CHROM, x.POS))
 
-    resolved_vcf_records = resolve_for_IDP_ITX(vcf_records,fasta_file)
+    resolved_vcf_records = resolve_for_IDP_ITX_CTX(vcf_records,fasta_file)
 
     for vcf_record in resolved_vcf_records:
         vcf_writer.write_record(vcf_record)

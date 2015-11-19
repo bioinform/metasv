@@ -416,6 +416,11 @@ def fix_merged_fields(feature,inter_tools=True):
     if sc_sub_intervals_info:
         for k in ["SC_COVERAGE", "SC_NEIGH_SUPPORT"]:
             info[k]=",".join(map(lambda x:"%s"%x[k],sc_sub_intervals_info))
+        if sv_type=="INS":
+            chr2_str=",".join(map(lambda x:"%s"%x[k],filter(lambda y: "SC_CHR2_STR" in y,sc_sub_intervals_info)))
+            if chr2_str:
+                info["SC_CHR2_STR"]=chr2_str
+                          
         info["SC_READ_SUPPORT"]=",".join(map(lambda x:"%s"%(x["SC_PLUS_SUPPORT"]+x["SC_MINUS_SUPPORT"]),sc_sub_intervals_info))
 
     sv_methods=sorted(list(reduce(operator.add, [sv_sources_to_type[tool] for tool in list(sv_tools)])))
@@ -499,8 +504,6 @@ def find_coverage_frac(score,coverage):
     return sum(map(lambda k, v: k/v , scores, coverages))/len(scores)
     
     
-        
-
 def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
                       min_soft_clip=SC_MIN_SOFT_CLIP, max_nm=SC_MAX_NM, 
                       min_matches=SC_MIN_MATCHES,skip_soft_clip=False, 
@@ -523,9 +526,10 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
     plus_support = 0
     minus_support = 0
     neigh_support_sv={k:[] for k in SVS_SOFTCLIP_SUPPORTED}
+    chr2_count={}
     soft_clip_location = (feature.start+feature.end)/2
     for aln in bam_handle.fetch(reference=str(feature.chrom), start=feature.start, end=feature.end):
-        soft_clip_location = (feature.start+feature.end)/2
+        soft_clip_location = (feature.start+feature.end)/2        
         if not is_good_candidate(aln, min_mapq=min_mapq,
                                  min_soft_clip=min_soft_clip, max_nm=max_nm,
                                  min_matches=min_matches,skip_soft_clip=skip_soft_clip, 
@@ -574,11 +578,23 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
                 minus_support +=1
         else:
             neigh_support_sv[svtype_neigh].append("%d;%s"%(other_bp_neigh,strand))
+
+        if svtype == "INS":
+            chr2=aln.rnext if not aln.mate_is_unmapped else "-1"
+            pnext="%d"%aln.pnext if not aln.mate_is_unmapped else "-1"
+            if chr2 not in chr2_count:
+                chr2_count[chr2]=[]
+            chr2_count[chr2].append(pnext)
     if not svtype == "NONE":
         info.update({"SC_NEIGH_SUPPORT": num_neigh_support})
+        if svtype == "INS": 
+            chr2_str=map(lambda x: "%s;%s"%(x[0],";".join(x[1])),chr2_count.items())
+            info.update({"SC_CHR2_STR": chr2_str})
         name = "%s,%s,%d,%s"%(base64.b64encode(json.dumps(info)),svtype,sv_length,sv_methods)
         return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
-                                   otherfields=feature.fields[6:]+["%s;%s;%s"%(num_neigh_support,plus_support,minus_support)])        
+                                   otherfields=feature.fields[6:]+["%s;%s;%s"%(num_neigh_support,
+                                                                               plus_support,
+                                                                               minus_support)])        
     else:
         neigh_svs=",".join([";".join([sv]+ns) for sv,ns in neigh_support_sv.iteritems() if ns])
         if not neigh_svs:
