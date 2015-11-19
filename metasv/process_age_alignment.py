@@ -355,17 +355,17 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
             func_logger.info("False deletion interval %s" % (str(breakpoints)))
             return [], dict(info)
     elif sv_type == "INS":
-        if len(breakpoints) == 1:
+        if len(breakpoints) == 1:    
 #             if sv_region.pos2 - sv_region.pos1 <= 20:
 #                 info["BA_BP_SCORE"] = abs(breakpoints[0][0] - sv_region.pos1)
 #                 if abs(breakpoints[0][0] - sv_region.pos1) > 20:
 #                     return [], dict(info)
 #             else:
-			diff1 = breakpoints[0][0] - (sv_region.pos1+pad_ins)
-			diff2 = (sv_region.pos2-pad_ins) - breakpoints[0][0]
-			info["BA_BP_SCORE"] = min(abs(diff1), abs(diff2 ))
-			if not  min(abs(diff1), abs(diff2 )) <=  100 :
-				return [], dict(info)
+            diff1 = breakpoints[0][0] - (sv_region.pos1+pad_ins)
+            diff2 = (sv_region.pos2-pad_ins) - breakpoints[0][0]
+            info["BA_BP_SCORE"] = min(abs(diff1), abs(diff2 ))
+            if not  min(abs(diff1), abs(diff2 )) <=  100 :
+                return [], dict(info)
             func_logger.info("True insertion interval %s" % (str(breakpoints)))
         else:
             return [], dict(info)
