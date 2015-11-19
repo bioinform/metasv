@@ -207,6 +207,27 @@ def find_itx(feature,wiggle):
                                               del_interval2[0],del_interval2[1])])        
 
 
+def build_chr2_ins(feature):
+	sc_chr2_str=feature.fields[6]
+	if sc_chr2_str==".":
+		return None
+	sub_str=map(lambda y: y[0] not in ["-1",feature.chrom],map(lambda x:[x.split(";")[0],map(int,x.split(";")[1:])],sc_chr2_str.split(",")))
+	if not sub_str:
+		return None
+	chr2_dict={]
+	for chr2,poses in sub_str:
+		if chr2 not in chr2_dict:
+			chr2_dict[chr2]=[]
+		chr2_dict[chr2].extend(poses)
+	chr2_dict={k:sorted(v) for k,v in chr2_dict.iteritems()}
+	 
+	
+    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=score,
+                               otherfields=["%d"%((del_pos1+del_pos2)/2), 
+                               "%d-%d,%d-%d"%(del_interval1[0],del_interval1[1],
+                                              del_interval2[0],del_interval2[1])])        
+
+
 def extract_del_interval(feature):
     start,end=map(int,feature.fields[7].split("-"))
     return pybedtools.Interval(feature.chrom, start, end)
@@ -265,6 +286,7 @@ def merge_idp_itx(fasta_file,record_dup,records_del,del_pos,del_interval,score,s
 
     return vcf_record
 
+
 def resolve_for_IDP_ITX_CTX(vcf_records,fasta_file,pad=0,wiggle=10):
     del_records = filter(lambda x: (x.INFO["SVTYPE"] == "DEL") ,vcf_records)
     dup_records = filter(lambda x: (x.INFO["SVTYPE"] == "DUP") ,vcf_records)    
@@ -290,9 +312,9 @@ def resolve_for_IDP_ITX_CTX(vcf_records,fasta_file,pad=0,wiggle=10):
 
 
     ctx_bedtool=remained_del_bedtool.window(chr2_ins_bedtool,w=wiggle).each(partial(find_ctx,wiggle=wiggle)).sort()
-    remained_del_bedtool=remained_del_bedtool.subtract(ins_bedtool,A=True,f=0.95,r=True).sort()
-	remove_ins_bedtool=ctx_bedtool.each(partial(get_ins_orig_interval)).sort()
-    remained_ins_bedtool=remained_del_bedtool.subtract(ins_bedtool,A=True,f=0.95,r=True).sort()
+    remained_del_bedtool=remained_del_bedtool.subtract(ctx_bedtool,A=True,f=0.95,r=True).sort()
+	removed_ins_bedtool=ctx_bedtool.each(partial(get_ins_orig_interval)).sort()
+    remained_ins_bedtool=ins_bedtool.subtract(removed_ins_bedtool,A=True,f=0.95,r=True).sort()
 	
 
     if len(remained_idp_bedtool_2)>0:

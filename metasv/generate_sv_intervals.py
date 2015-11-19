@@ -417,7 +417,7 @@ def fix_merged_fields(feature,inter_tools=True):
         for k in ["SC_COVERAGE", "SC_NEIGH_SUPPORT"]:
             info[k]=",".join(map(lambda x:"%s"%x[k],sc_sub_intervals_info))
         if sv_type=="INS":
-            chr2_str=",".join(map(lambda x:"%s"%x[k],filter(lambda y: "SC_CHR2_STR" in y,sc_sub_intervals_info)))
+            chr2_str=",".join(map(lambda x:"%s"%x["SC_CHR2_STR"],filter(lambda y: "SC_CHR2_STR" in y,sc_sub_intervals_info)))
             if chr2_str:
                 info["SC_CHR2_STR"]=chr2_str
                           
@@ -588,7 +588,7 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
     if not svtype == "NONE":
         info.update({"SC_NEIGH_SUPPORT": num_neigh_support})
         if svtype == "INS": 
-            chr2_str=map(lambda x: "%s;%s"%(x[0],";".join(x[1])),chr2_count.items())
+            chr2_str=",".join(map(lambda x: "%s;%s"%(x[0],";".join(x[1])),chr2_count.items()))
             info.update({"SC_CHR2_STR": chr2_str})
         name = "%s,%s,%d,%s"%(base64.b64encode(json.dumps(info)),svtype,sv_length,sv_methods)
         return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=feature.score,
