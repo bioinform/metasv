@@ -580,7 +580,7 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
             neigh_support_sv[svtype_neigh].append("%d;%s"%(other_bp_neigh,strand))
 
         if svtype == "INS":
-            chr2=aln.rnext if not aln.mate_is_unmapped else "-1"
+            chr2=bam_handle.getrname(aln.rnext) if not aln.mate_is_unmapped else "-1"
             pnext=aln.pnext if not aln.mate_is_unmapped else -1
             if chr2 not in chr2_count:
                 chr2_count[chr2]=[]
