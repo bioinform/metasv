@@ -207,26 +207,28 @@ def find_itx(feature,wiggle):
                                               del_interval2[0],del_interval2[1])])        
 
 
-def build_chr2_ins(feature):
+def build_chr2_ins(feature,thr_top=0.3,read_length=100):
 	sc_chr2_str=feature.fields[6]
 	if sc_chr2_str==".":
-		return None
-	sub_str=map(lambda y: y[0] not in ["-1",feature.chrom],map(lambda x:[x.split(";")[0],map(int,x.split(";")[1:])],sc_chr2_str.split(",")))
-	if not sub_str:
-		return None
-	chr2_dict={]
+		return []
+	sub_str=map(lambda x:[x.split(";")[0],map(int,x.split(";")[1:])],sc_chr2_str.split(","))
+	chr2_dict={}
 	for chr2,poses in sub_str:
 		if chr2 not in chr2_dict:
 			chr2_dict[chr2]=[]
 		chr2_dict[chr2].extend(poses)
-	chr2_dict={k:sorted(v) for k,v in chr2_dict.iteritems()}
-	 
-	
-    return pybedtools.Interval(feature.chrom, feature.start, feature.end, name=name, score=score,
-                               otherfields=["%d"%((del_pos1+del_pos2)/2), 
-                               "%d-%d,%d-%d"%(del_interval1[0],del_interval1[1],
-                                              del_interval2[0],del_interval2[1])])        
-
+	chr2_dict={k:[sum(map(lambda x:x[0],v)),min(map(lambda x:x[1],v)),max(map(lambda x:x[2],v))] for k,v in chr2_dict.iteritems()}
+	sorted_chr2=sorted(chr2_dict.iterms(),key=lambda x: x[1][0],reverse=True)
+	n_reads=sum(map(lambda x:x[1][0],sorted_chr2))
+	top_chr2s=filter(lambda x: x[1][0]>(thr_top*n_reads) and x[0] not in ["-1",feature.chrom],sorted_chr2)
+	if not top_chr2s:
+		return []	
+	ctx_intervals=[]
+	for chr,[cnt,start,end] in top_chr2s:
+		ctx_intervals.append(pybedtools.Interval(chr2, start, end+read_length/2, 
+		                       name=feature.name))
+	return ctx_intervals
+		                
 
 def extract_del_interval(feature):
     start,end=map(int,feature.fields[7].split("-"))
