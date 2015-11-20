@@ -495,7 +495,7 @@ def remove_INS_padding(feature,pad):
     name_fields = feature.name.split(",")
     sv_type = name_fields[1]
     return pybedtools.Interval(feature.chrom, feature.start+pad,
-         max(feature.end-pad,0), name=feature.name, score = feature.score) if sv_type  == "INS" else feature
+         max(feature.end-pad,feature.start+pad+1), name=feature.name, score = feature.score) if sv_type  == "INS" else feature
     
     
 def find_coverage_frac(score,coverage):
