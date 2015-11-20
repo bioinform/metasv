@@ -221,7 +221,6 @@ def build_chr2_ins(feature,thr_top=0.15,read_length=100):
     chr2_dict={k:[sum(map(lambda x:x[0],v)),min(map(lambda x:x[1],v)),max(map(lambda x:x[2],v))] for k,v in chr2_dict.iteritems()}
     sorted_chr2=sorted(chr2_dict.items(),key=lambda x: x[1][0],reverse=True)
     n_reads=sum(map(lambda x:x[1][0],sorted_chr2))
-    print sorted_chr2,n_reads
     top_chr2s=filter(lambda x: x[1][0]>(thr_top*n_reads) and x[0] not in ["-1",feature.chrom],sorted_chr2)
     if not top_chr2s:
         return []    
@@ -262,7 +261,7 @@ def merge_idp_itx(fasta_file,record_dup,records_del,del_pos,del_interval,score,s
     info.update(record_dup.INFO)
     start = int(record_dup.POS)
     end = info["END"]
-    dup_interval="%d-%d"%(start,end)
+    dup_interval="%s-%d-%d"%(records_dup.CHROM,start,end)
     if svtype=="IDP":
         del_interval_ends=map(int,del_interval.split("-"))
         if abs(del_pos-del_interval_ends[0])<abs(del_pos-del_interval_ends[1]):
@@ -280,7 +279,7 @@ def merge_idp_itx(fasta_file,record_dup,records_del,del_pos,del_interval,score,s
 
     info["CHR2"]=record_dup.CHROM
     info["SVLEN"]= max(info["END"] - pos,0)
-    info["%s_INTERVALS"%svtype]="DUP-%s,"%dup_interval+",".join(map(lambda x:"DEL-%s"%x,del_interval.split(",")))
+    info["%s_INTERVALS"%svtype]="DUP-%s,"%dup_interval+",".join(map(lambda x:"DEL-%s-%s"%(record_dup.CHROM,x),del_interval.split(",")))
     info["SVTYPE"]=svtype
     info["SVMETHOD"]=list(set(reduce(lambda y,z:y+z,map(lambda x: x.INFO["SVMETHOD"]
                                                                    ,[record_dup]+records_del))))
@@ -300,6 +299,35 @@ def merge_idp_itx(fasta_file,record_dup,records_del,del_pos,del_interval,score,s
 
     return vcf_record
 
+def merge_ctx(fasta_file,record_del,record_ins,score):
+    info = {}
+    info.update(record_del.INFO)
+    start = int(record_del.POS)
+    end = info["END"]
+    del_interval="%s-%d-%d"%(record_del.CHROM,start,end)
+    ins_interval="%s-%d-%d"%(record_ins.CHROM,record_ins.POS,record_ins.POS)
+    pos = start
+    info["POS2"] = record_ins.POS
+    info["CHR2"]=record_ins.CHROM
+    info["CTX_INTERVALS"]="DEL-%s,INS-%s"%(del_interval,ins_interval)
+    info["SVTYPE"]="CTX"
+    info["SVMETHOD"]=list(set(reduce(lambda y,z:y+z,map(lambda x: x.INFO["SVMETHOD"]
+                                                                   ,[record_del,record_ins]))))
+    info["SOURCES"]=",".join(map(lambda x: x.INFO["SOURCES"],[record_del,record_ins]))
+    info["NUM_SVMETHODS"]=len(info["SVMETHOD"])
+    info["NUM_SVTOOLS"]=len(set(map(lambda x: x.split('-')[-1],info["SOURCES"].split(','))))
+    sv_id = "."
+    ref = fasta_file.fetch(record_del.CHROM, pos, pos + 1) if fasta_file else "."
+    alt = [vcf.model._SV("CTX")]
+    qual = "."
+    sv_filter = ["PASS"] if "LowQual" not in score else ["LowQual"]
+    sv_format = "GT"
+    sample_indexes = [0]
+    vcf_record = vcf.model._Record(record_del.CHROM, pos, sv_id, ref, alt, qual,
+                                   sv_filter, info, sv_format, sample_indexes)
+    vcf_record.samples = record_del.samples
+
+    return vcf_record
 
 def resolve_for_IDP_ITX_CTX(vcf_records,fasta_file,pad=0,wiggle=10,overlap_ratio=0.9):
     del_records = filter(lambda x: (x.INFO["SVTYPE"] == "DEL") ,vcf_records)
@@ -319,7 +347,6 @@ def resolve_for_IDP_ITX_CTX(vcf_records,fasta_file,pad=0,wiggle=10,overlap_ratio
         chr2_intervals.extend(build_chr2_ins(interval))
     
     chr2_ins_bedtool = pybedtools.BedTool(chr2_intervals).sort()
-    print "chr2_ins_bedtool",chr2_ins_bedtool
     
     idp_bedtool=dup_bedtool.window(del_bedtool,w=wiggle).each(partial(find_idp,wiggle=wiggle)).sort()
     remained_dup_bedtool=dup_bedtool.subtract(idp_bedtool,A=True,f=0.95,r=True).sort()
@@ -331,9 +358,8 @@ def resolve_for_IDP_ITX_CTX(vcf_records,fasta_file,pad=0,wiggle=10,overlap_ratio
 
     ctx_bedtool=remained_del_bedtool.intersect(chr2_ins_bedtool,r=True,f=overlap_ratio,wa=True,wb=True).each(
                                             partial(find_ctx,overlap_ratio=overlap_ratio)).sort()
+    print "ctx_bedtool",ctx_bedtool
     remained_del_bedtool=remained_del_bedtool.subtract(ctx_bedtool,A=True,f=0.95,r=True).sort()
-    #removed_ins_bedtool=ctx_bedtool.each(partial(get_ins_orig_interval,ins_records=ins_records)).sort()
-    #remained_ins_bedtool=ins_bedtool.window(removed_ins_bedtool,w=100,v=True).sort()
 
     if len(remained_idp_bedtool_2)>0:
         remained_idp_bedtool_2=remained_idp_bedtool_2.cut(range(idp_bedtool.field_count())).sort()
@@ -354,12 +380,12 @@ def resolve_for_IDP_ITX_CTX(vcf_records,fasta_file,pad=0,wiggle=10,overlap_ratio
     
     recoverd_dups=list(set([x.name for x in remained_dup_bedtool])|set(filter(lambda x: "DUP" in x,recoverd_pass_del_dup_ins)))
     recoverd_dels=list(set([x.name for x in remained_del_bedtool])|set(filter(lambda x: "DEL" in x,recoverd_pass_del_dup_ins)))
-    recoverd_ins=list(set([x.name for x in ins_bedtool])-(set(filter(lambda x: "INS" in x,removed_pass_del_dup_ins))))
+    recoverd_inss=list(set([x.name for x in ins_bedtool])-(set(filter(lambda x: "INS" in x,removed_pass_del_dup_ins))))
     
         
     vcf_records = other_records + [dup_records[int(x.split("_")[-1])] for x in recoverd_dups] + \
                                   [del_records[int(x.split("_")[-1])] for x in recoverd_dels] + \
-                                  [ins_records[int(x.split("_")[-1])] for x in recoverd_ins] + \
+                                  [ins_records[int(x.split("_")[-1])] for x in recoverd_inss] + \
                                   [merge_idp_itx(fasta_file,dup_records[int(x.name.split(",")[0].split("_")[-1])],
                                              [del_records[int(x.name.split(",")[1].split("_")[-1])]],
                                              int(x.fields[6]),x.fields[7],x.score,"IDP") for x in remained_idp_bedtool_1] + \
@@ -369,7 +395,10 @@ def resolve_for_IDP_ITX_CTX(vcf_records,fasta_file,pad=0,wiggle=10,overlap_ratio
                                   [merge_idp_itx(fasta_file,dup_records[int(x.name.split(",")[0].split("_")[-1])],
                                              [del_records[int(x.name.split(",")[1].split("_")[-1])],
                                              del_records[int(x.name.split(",")[2].split("_")[-1])]],
-                                             int(x.fields[6]),x.fields[7],x.score,"ITX") for x in itx_bedtool]
+                                             int(x.fields[6]),x.fields[7],x.score,"ITX") for x in itx_bedtool] + \
+                                  [merge_ctx(fasta_file,del_records[int(x.name.split(",")[0].split("_")[-1])],
+                                             ins_records[int(x.name.split(",")[1].split("_")[-1])],
+                                             x.score) for x in ctx_bedtool] 
 
 
                                          
