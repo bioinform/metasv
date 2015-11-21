@@ -261,7 +261,7 @@ def merge_idp_itx(fasta_file,record_dup,records_del,del_pos,del_interval,score,s
     info.update(record_dup.INFO)
     start = int(record_dup.POS)
     end = info["END"]
-    dup_interval="%s-%d-%d"%(records_dup.CHROM,start,end)
+    dup_interval="%s-%d-%d"%(record_dup.CHROM,start,end)
     if svtype=="IDP":
         del_interval_ends=map(int,del_interval.split("-"))
         if abs(del_pos-del_interval_ends[0])<abs(del_pos-del_interval_ends[1]):
