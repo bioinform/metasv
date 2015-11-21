@@ -705,9 +705,9 @@ def resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=SC_MIN_MAP
     return resolved_none_bed
 
 
-def get_bp_intervals(skip_bed,pad=SC_PAD):
+def get_bp_intervals(skip_bed,workdir,pad=SC_PAD):
     func_logger = logging.getLogger("%s-%s" % (get_bp_intervals.__name__, multiprocessing.current_process()))
-    if not skipbed:
+    if not skip_bed:
         return None
         
     skip_bedtool = pybedtools.BedTool(skip_bed)
@@ -717,11 +717,12 @@ def get_bp_intervals(skip_bed,pad=SC_PAD):
         svtype = name_fields[1]
         sv_methods = name_fields[3]
         sv_length = int(name_fields[2])
+        chromosome = interval.chrom
         info = json.loads(base64.b64decode(name_fields[0]))    
-        name="%d-%d,%s,%s,%s"%(feature.start,feature.end,svtype,sv_methods,sv_length)
-        intvls.append([chromosome,max(feature.start-pad,0),feature.start+pad,name])
-        if feature.end > feature.start+1:
-            intvls.append([chromosome,max(feature.end-pad,0),feature.end+pad,name])
+        name="%d-%d,%s,%s,%s"%(interval.start,interval.end,svtype,sv_methods,sv_length)
+        intvls.append([chromosome,max(interval.start-pad,0),interval.start+pad,name])
+        if interval.end > interval.start+1:
+            intvls.append([chromosome,max(interval.end-pad,0),interval.end+pad,name])
         if svtype=="ITX" and "POS2" in info:
             pos2=info["POS2"]
             intvls.append([chromosome,max(pos2-pad,0),pos2+pad,name])
@@ -1037,7 +1038,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
 
     pool = multiprocessing.Pool(num_threads)
 
-    unmerged_other_bed = get_bp_intervals(skip_bed,pad=pad)
+    unmerged_other_bed = get_bp_intervals(skip_bed,workdir,pad=pad)
 
 
     bed_files = []
