@@ -633,15 +633,18 @@ def resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=SC_MIN_MAP
                           isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD, svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
                           merge_max_dist=-int(1*SC_PAD), mean_read_length=MEAN_READ_LENGTH, 
                           mean_read_coverage=MEAN_READ_COVERAGE,min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, 
-                          max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,plus_minus_thr_scale=0.4, 
+                          max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,num_sd=2,plus_minus_thr_scale=0.4, 
                           none_thr_scale=1.5):
     func_logger = logging.getLogger("%s-%s" % (resolve_none_svs.__name__, multiprocessing.current_process()))
 
 
     thr_sv={"INS":min_support_frac_ins, "INV":MIN_SUPPORT_FRAC_INV, 
             "DEL":MIN_SUPPORT_FRAC_DEL, "DUP": MIN_SUPPORT_FRAC_DUP}
+    min_isize = isize_mean - num_sd * isize_sd
+    max_isize = isize_mean + num_sd * isize_sd
 
     bedtool_none=pybedtools.BedTool(unmerged_none_bed)
+    func_logger.info("%d unresolved intervals" % (bedtool_none.count()))        
     merged_none_bed = os.path.join(workdir, "merged_none.bed")
     bedtool_none=bedtool_none.merge(c="4,5,6,7",o="collapse,sum,collapse,collapse", d=merge_max_dist).sort().moveto(merged_none_bed)
     func_logger.info("%d merged unresolved intervals" % (bedtool_none.count()))
@@ -719,21 +722,24 @@ def get_bp_intervals(skip_bed,workdir,pad=SC_PAD):
         sv_length = int(name_fields[2])
         chromosome = interval.chrom
         info = json.loads(base64.b64decode(name_fields[0]))    
-        name="%d-%d,%s,%s,%s"%(interval.start,interval.end,svtype,sv_methods,sv_length)
-        intvls.append([chromosome,max(interval.start-pad,0),interval.start+pad,name])
+        name_s="%d,%d,+"%(interval.start,interval.end)
+        name_e="%d,%d,+"%(interval.end,interval.start)
+        intvls.append([chromosome,max(interval.start-pad,0),interval.start+pad,name_s])
         if interval.end > interval.start+1:
-            intvls.append([chromosome,max(interval.end-pad,0),interval.end+pad,name])
+            intvls.append([chromosome,max(interval.end-pad,0),interval.end+pad,name_e])
         if svtype=="ITX" and "POS2" in info:
             pos2=info["POS2"]
-            intvls.append([chromosome,max(pos2-pad,0),pos2+pad,name])
+            name_p="%d,%d,+"%(pos2,1)
+            intvls.append([chromosome,max(pos2-pad,0),pos2+pad,name_p])
         elif svtype=="CTX" and "POS2" in info and "CHR2" in info:
             pos2=info["POS2"]
-            intvls.append([info["CHR2"],max(pos2-pad,0),pos2+pad,name])
+            name_p="%d,%d,+"%(pos2,1)
+            intvls.append([info["CHR2"],max(pos2-pad,0),pos2+pad,name_p])
     
     intervals=[]
     for intvl in intvls:
         intervals.append(
-        pybedtools.Interval(intvl[0], intvl[1], intvl[2], name=intvl[3], score="1", otherfields=["NONE"]))
+        pybedtools.Interval(intvl[0], intvl[1], intvl[2], name=intvl[3], score="1", strand="+", otherfields=["NONE"]))
     
     if not intervals:
         func_logger.info("No candidate intervals in other methods")
@@ -842,34 +848,35 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             bedtool_none = pybedtools.BedTool(unmerged_none_intervals).sort().moveto(unmerged_none_bed)
             func_logger.info("%d candidate NONE reads" % (bedtool_none.count()))        
 
+        unmerged_other_bed_chr = os.path.join(workdir, "unmerged_other.bed")
         if unmerged_other_bed:
             func_logger.info("Gather intervals from breakpoints in other methods")
-            unmerged_other_bed_chr = unmerged_other_bed.filter(lambda x:x.chrom==chromosome).sort()
+            bedtool_unmerged_other = pybedtools.BedTool(unmerged_other_bed).filter(lambda x:x.chrom==chromosome).sort()
             func_logger.info("%d bps in other methods" % (bedtool_none.count()))        
-            if unmerged_other_bed_chr.count()>0:
-                unmerged_other_bed_chr=unmerged_other_bed_chr.subtract(unmerged_bed, A=True, f=0.5, r=True )
-                if unmerged_other_bed_chr.count()>0:
-                    func_logger.info("%d new bps in other methods" % (bedtool_none.count()))        
+            if bedtool_unmerged_other.count()>0:
+                bedtool_unmerged_other=bedtool_unmerged_other.subtract(unmerged_bed, A=True, f=0.5, r=True ).moveto(unmerged_other_bed_chr)
+                if bedtool_unmerged_other.count()>0:
+                    func_logger.info("%d new bps in other methods" % (bedtool_unmerged_other.count()))        
                     if unmerged_none_bed:
-                        unmerged_none_bed=unmerged_none_bed.cat(unmerged_other_bed_chr,postmerge=False).sort()
+                        bedtool_none=bedtool_none.cat(bedtool_unmerged_other,postmerge=False).sort().moveto(unmerged_none_bed)
                     else:
                         unmerged_none_bed=unmerged_other_bed_chr
-            get_bp_intervals(unmerged_other_bed,pad=pad)
 
 
         #Resolve NONE type SVs
         if unmerged_none_bed:
-            resolved_none_bed=resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=min_mapq,
+            resolved_none_bed=resolve_none_svs(sam_file, workdir, unmerged_none_bed, min_mapq=min_mapq,
                                       min_soft_clip=min_soft_clip, min_support_ins=min_support_ins, 
                                       min_support_frac_ins=min_support_frac_ins, max_nm=max_nm, min_matches=min_matches, 
                                       isize_mean=isize_mean, isize_sd=isize_sd, svs_to_softclip=svs_to_softclip,
                                       merge_max_dist=merge_max_dist, mean_read_length=mean_read_length, 
                                       mean_read_coverage=mean_read_coverage,min_ins_cov_frac=min_ins_cov_frac, 
-                                      max_ins_cov_frac=max_ins_cov_frac,plus_minus_thr_scale=plus_minus_thr_scale, 
+                                      max_ins_cov_frac=max_ins_cov_frac, num_sd=num_sd,
+                                      plus_minus_thr_scale=plus_minus_thr_scale, 
                                       none_thr_scale=none_thr_scale)
             if resolved_none_bed:
                 unmerged_all_bed = os.path.join(workdir, "unmerged_all.bed")
-                bedtool = bedtool.cat(bedtool_none,postmerge=False).sort().moveto(unmerged_all_bed)
+                bedtool = bedtool.cat(resolved_none_bed,postmerge=False).sort().moveto(unmerged_all_bed)
                 func_logger.info("%d candidate all reads" % (bedtool.count()))
 
 
