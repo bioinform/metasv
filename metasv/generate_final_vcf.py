@@ -207,7 +207,7 @@ def find_itx(feature,wiggle):
                                               del_interval2[0],del_interval2[1])])        
 
 
-def build_chr2_ins(feature,thr_top=0.15,read_length=100):
+def build_chr2_ins(feature,thr_top=0.15):
     sc_chr2_str=feature.fields[6]
     if sc_chr2_str==".":
         return []
@@ -226,7 +226,7 @@ def build_chr2_ins(feature,thr_top=0.15,read_length=100):
         return []    
     ctx_intervals=[]
     for chr2,[cnt,start,end] in top_chr2s:
-        ctx_intervals.append(pybedtools.Interval(chr2, start, end+read_length/2, 
+        ctx_intervals.append(pybedtools.Interval(chr2, start, end, 
                                name=feature.name,score=feature.score))
     return ctx_intervals
                         
@@ -358,7 +358,6 @@ def resolve_for_IDP_ITX_CTX(vcf_records,fasta_file,pad=0,wiggle=10,overlap_ratio
 
     ctx_bedtool=remained_del_bedtool.intersect(chr2_ins_bedtool,r=True,f=overlap_ratio,wa=True,wb=True).each(
                                             partial(find_ctx,overlap_ratio=overlap_ratio)).sort()
-    print "ctx_bedtool",ctx_bedtool
     remained_del_bedtool=remained_del_bedtool.subtract(ctx_bedtool,A=True,f=0.95,r=True).sort()
 
     if len(remained_idp_bedtool_2)>0:
