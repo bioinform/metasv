@@ -17,6 +17,8 @@ import pybedtools
 from defaults import *
 from sv_interval import *
 
+precise_methods = set(["AS", "SR", "JM"])
+
 
 def concatenate_files(files, output):
     with open(output, 'w') as outfile:
@@ -616,15 +618,15 @@ def filter_low_frac_support(feature,thr_sv,plus_minus_thr_scale):
                                                 > min(plus_support,minus_support)):
         return None
     return feature
-def filter_low_neigh_read_support_INS(feature,min_support_ins,plus_minus_thr_scale):
+def filter_low_neigh_read_support(feature,thr_sv_abs,plus_minus_thr_scale):
     sv_type = feature.fields[3].split(",")[1]
     neigh_support, plus_support, minus_support = map(int,feature.fields[8].split(";"))
     sc_read_support= float(feature.fields[4])
     low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else 1.2
     
-    if sv_type == "INS" and (neigh_support< (min_support_ins * low_supp_scale)
-                            or min(plus_support,minus_support) 
-                              <(min_support_ins * low_supp_scale * plus_minus_thr_scale)):
+    if (neigh_support< (thr_sv_abs[sv_type] * low_supp_scale)
+                            or ((sv_type=="INS") and (min(plus_support,minus_support) 
+                              <(thr_sv_abs[sv_type] * low_supp_scale * plus_minus_thr_scale)))):
         return None
     return feature  
 
@@ -635,12 +637,15 @@ def resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=SC_MIN_MAP
                           merge_max_dist=-int(1*SC_PAD), mean_read_length=MEAN_READ_LENGTH, 
                           mean_read_coverage=MEAN_READ_COVERAGE,min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, 
                           max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,num_sd=2,plus_minus_thr_scale=0.4, 
-                          none_thr_scale=1.2):
+                          none_thr_scale=1.3):
     func_logger = logging.getLogger("%s-%s" % (resolve_none_svs.__name__, multiprocessing.current_process()))
 
 
     thr_sv={"INS":min_support_frac_ins, "INV":MIN_SUPPORT_FRAC_INV, 
             "DEL":MIN_SUPPORT_FRAC_DEL, "DUP": MIN_SUPPORT_FRAC_DUP}
+    thr_sv_abs={"INS":min_support_ins, "INV":MIN_SUPPORT_INV, 
+            "DEL":MIN_SUPPORT_DEL, "DUP": MIN_SUPPORT_DUP}
+            
     min_isize = isize_mean - num_sd * isize_sd
     max_isize = isize_mean + num_sd * isize_sd
 
@@ -687,13 +692,12 @@ def resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=SC_MIN_MAP
             sc_read_support= float(interval.fields[4])
             low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else 1.2
 
-            if svtype != "INS" and (coverage * thr_sv[svtype]  * low_supp_scale) > neigh_support:
+            if (neigh_support<(thr_sv_abs[svtype] * low_supp_scale * none_thr_scale) 
+                or (coverage * thr_sv[svtype]  * low_supp_scale * none_thr_scale) > neigh_support) :
                 continue
 
-            if svtype == "INS" and (neigh_support<(min_support_ins * low_supp_scale * none_thr_scale) 
-                                    or min(plus_support,minus_support)
-                                        <(min_support_ins * low_supp_scale * none_thr_scale * plus_minus_thr_scale)
-                                    or (coverage * thr_sv[svtype]  * low_supp_scale * none_thr_scale) > neigh_support
+            if svtype == "INS" and (min(plus_support,minus_support) 
+                                    <(thr_sv_abs[svtype] * low_supp_scale * none_thr_scale * plus_minus_thr_scale)
                                     or (coverage * thr_sv[svtype]  * low_supp_scale * none_thr_scale * plus_minus_thr_scale) 
                                         > min(plus_support,minus_support)):
                 continue
@@ -710,7 +714,7 @@ def resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=SC_MIN_MAP
     return resolved_none_bed
 
 
-def get_bp_intervals(skip_bed,workdir,pad=SC_PAD):
+def get_bp_intervals(skip_bed,workdir,assembly_max_tools=ASSEMBLY_MAX_TOOLS,pad=SC_PAD):
     func_logger = logging.getLogger("%s-%s" % (get_bp_intervals.__name__, multiprocessing.current_process()))
     if not skip_bed:
         return None
@@ -724,6 +728,12 @@ def get_bp_intervals(skip_bed,workdir,pad=SC_PAD):
         sv_length = int(name_fields[2])
         chromosome = interval.chrom
         info = json.loads(base64.b64decode(name_fields[0]))    
+
+        methods = set(sv_methods.split(";"))
+        num_tools = int(info.get("NUM_SVTOOLS", 1))
+        if not (num_tools <= assembly_max_tools or not (methods & precise_methods)):
+            continue
+
         name_s="%d,%d,+"%(interval.start,interval.end)
         name_e="%d,%d,+"%(interval.end,interval.start)
         intvls.append([chromosome,max(interval.start-pad,0),interval.start+pad,name_s])
@@ -765,7 +775,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                           overlap_ratio=OVERLAP_RATIO,merge_max_dist=-int(1*SC_PAD), 
                           mean_read_length=MEAN_READ_LENGTH, mean_read_coverage=MEAN_READ_COVERAGE, 
                           min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,
-                          num_sd = 2, plus_minus_thr_scale=0.4, none_thr_scale=1.2,unmerged_other_bed=None):
+                          num_sd = 2, plus_minus_thr_scale=0.4, none_thr_scale=1.3,unmerged_other_bed=None):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
@@ -840,6 +850,10 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
         thr_sv={"INS":min_support_frac_ins, "INV":MIN_SUPPORT_FRAC_INV, 
                 "DEL":MIN_SUPPORT_FRAC_DEL, "DUP": MIN_SUPPORT_FRAC_DUP}
+
+        thr_sv_abs={"INS":min_support_ins, "INV":MIN_SUPPORT_INV, 
+                "DEL":MIN_SUPPORT_DEL, "DUP": MIN_SUPPORT_DUP}
+
 
 
         unmerged_none_bed = None
@@ -940,8 +954,8 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         neigh_coverage_filtered_bed = os.path.join(workdir, "neigh_filtered.bed")
         bedtool = bedtool.each(partial(filter_low_frac_support,thr_sv=thr_sv,
                                plus_minus_thr_scale=plus_minus_thr_scale)).each(
-                               partial(filter_low_neigh_read_support_INS,
-                               min_support_ins=min_support_ins,
+                               partial(filter_low_neigh_read_support,
+                               thr_sv_abs=thr_sv_abs,
                                plus_minus_thr_scale=plus_minus_thr_scale)).sort().moveto(
                                neigh_coverage_filtered_bed)
         func_logger.info("%d neighbour support filtered intervals" % (bedtool.count()))
@@ -975,7 +989,10 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                                             isize_mean=isize_mean, min_isize=min_isize, max_isize=max_isize, 
                                                             mean_read_length=mean_read_length)).each(
                                                         partial(filter_low_frac_support,thr_sv=thr_sv,
-                                                                plus_minus_thr_scale=plus_minus_thr_scale)).each(partial(
+                                                                plus_minus_thr_scale=plus_minus_thr_scale)).each(
+                                                       partial(filter_low_neigh_read_support,
+                                                       thr_sv_abs=thr_sv_abs,
+                                                       plus_minus_thr_scale=plus_minus_thr_scale)).each(partial(
                                                         get_full_interval,pad=pad)).cut([0,1,2,3,4,5,6,8]).sort()
 
             func_logger.info("%d recovered 2-BP intervals with 1-end SC" % (bedtool_1end_resolved.count()))
@@ -1020,7 +1037,8 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
                                    svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
                                    overlap_ratio=OVERLAP_RATIO, mean_read_length=MEAN_READ_LENGTH,
                                    mean_read_coverage=MEAN_READ_COVERAGE, min_ins_cov_frac=MIN_INS_COVERAGE_FRAC,
-                                   max_ins_cov_frac=MAX_INS_COVERAGE_FRAC):
+                                   max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,
+                                   assembly_max_tools=ASSEMBLY_MAX_TOOLS):
     func_logger = logging.getLogger(
         "%s-%s" % (parallel_generate_sc_intervals.__name__, multiprocessing.current_process()))
 
@@ -1049,11 +1067,12 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
 
     pool = multiprocessing.Pool(num_threads)
 
-    unmerged_other_bed = get_bp_intervals(skip_bed,workdir,pad=pad)
+    unmerged_other_bed = get_bp_intervals(skip_bed,workdir,assembly_max_tools,pad)
 
 
     bed_files = []
     for index, (bam, chromosome) in enumerate(itertools.product(bams, chromosomes)):
+        print index
         process_workdir = os.path.join(workdir, str(index))
         if not os.path.isdir(process_workdir):
             os.makedirs(process_workdir)
@@ -1172,6 +1191,8 @@ if __name__ == "__main__":
     parser.add_argument("--mean_read_coverage", type=float, default=MEAN_READ_COVERAGE, help="Mean read coverage")
     parser.add_argument("--min_ins_cov_frac", type=float, default=MIN_INS_COVERAGE_FRAC, help="Minimum read coverage around the insertion breakpoint.")
     parser.add_argument("--max_ins_cov_frac", type=float, default=MAX_INS_COVERAGE_FRAC, help="Maximum read coverage around the insertion breakpoint.")
+    parser.add_argument("--assembly_max_tools", type=int, default=ASSEMBLY_MAX_TOOLS,
+                           help="Skip assembly if more than this many tools support a call (default 1)")
 
     args = parser.parse_args()
 
@@ -1186,4 +1207,4 @@ if __name__ == "__main__":
                                    isize_sd=args.isize_sd, svs_to_softclip=args.svs_to_softclip, 
                                    overlap_ratio=args.overlap_ratio, mean_read_length=args.mean_read_length,
                                    mean_read_coverage=args.mean_read_coverage, min_ins_cov_frac=args.min_ins_cov_frac,
-                                   max_ins_cov_frac=args.max_ins_cov_frac)
+                                   max_ins_cov_frac=args.max_ins_cov_frac, assembly_max_tools=args.assembly_max_tools)

@@ -163,7 +163,7 @@ def find_idp(feature,wiggle):
     end_dup=feature.end
     start_del=int(feature.fields[n+1])
     end_del=int(feature.fields[n+2])
-    if abs(start_del-end_del)>abs(start_dup-end_dup):
+    if abs(start_del-end_del)>(abs(start_dup-end_dup)-wiggle):
         return None
     dist_ends=[abs(start_del-start_dup),abs(end_del-end_dup)]
     if min(dist_ends)>wiggle:
@@ -266,15 +266,15 @@ def merge_idp_itx(fasta_file,record_dup,records_del,del_pos,del_interval,score,s
         del_interval_ends=map(int,del_interval.split("-"))
         if abs(del_pos-del_interval_ends[0])<abs(del_pos-del_interval_ends[1]):
             pos = start
-            info["END"] = del_pos
+            info["END"] = max(del_pos,pos)
             info["POS2"] = end
         else:
             pos = del_pos
-            info["END"] = end
+            info["END"] = max(end,pos)
             info["POS2"] = start
     elif svtype=="ITX":
         pos = start
-        info["END"] = del_pos
+        info["END"] = max(del_pos,pos)
         info["POS2"] = end
 
     info["CHR2"]=record_dup.CHROM
