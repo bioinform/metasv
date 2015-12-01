@@ -210,33 +210,33 @@ def find_other_bp(aln, isize_mean, svtype, soft_clip, dist_L_end, dist_R_end,
     elif svtype == "INV":
         if soft_clip>0:
             if is_right and not aln.is_reverse and not is_first_pair:
-                other_bp = soft_clip_location - (isize_diff + 2*dist_L_end)
+                other_bp = soft_clip_location - (isize_diff + 2*dist_L_end - (dist_L_end))
             elif is_left and not aln.is_reverse and not is_first_pair:
-                other_bp = soft_clip_location + (-isize_diff - 2*soft_clip)
+                other_bp = soft_clip_location + (-isize_diff - 2*soft_clip + (aln.rlen))
             elif is_left and aln.is_reverse and is_first_pair:
-                other_bp = soft_clip_location + (isize_diff + 2*dist_R_end)
+                other_bp = soft_clip_location + (isize_diff + 2*dist_R_end - (dist_R_end))
             elif is_right and aln.is_reverse and is_first_pair:
-                other_bp = soft_clip_location - (-isize_diff - 2*soft_clip)
+                other_bp = soft_clip_location - (-isize_diff - 2*soft_clip + (aln.rlen))
             elif is_left and aln.is_reverse and not is_first_pair:
-                other_bp = soft_clip_location - (isize_sum - 2*dist_R_end)
+                other_bp = soft_clip_location - (isize_sum - 2*dist_R_end - (aln.rlen))
             elif is_right and not aln.is_reverse and is_first_pair:
-                other_bp = soft_clip_location + (isize_sum - 2*dist_L_end)
+                other_bp = soft_clip_location + (isize_sum - 2*dist_L_end - (aln.rlen) )
         else:
             if not aln.is_reverse and not is_first_pair and is_right:
-                other_bp = soft_clip_location - (isize_diff + 2*(soft_clip_location-aln.pos))
+                other_bp = soft_clip_location - (isize_diff + 2*(soft_clip_location-aln.pos) - (aln.rlen))
             elif not aln.is_reverse and not is_first_pair and is_left:
-                other_bp = soft_clip_location + (-isize_diff + 2*(aln.pos-soft_clip_location))
+                other_bp = soft_clip_location + (-isize_diff + 2*(aln.pos-soft_clip_location) + (aln.rlen))
             elif aln.is_reverse and is_first_pair and is_left:
-                other_bp = soft_clip_location + (isize_diff + 2*(aln.aend-soft_clip_location))
+                other_bp = soft_clip_location + (isize_diff + 2*(aln.aend-soft_clip_location) - (aln.rlen))
             elif aln.is_reverse and is_first_pair and is_right:
-                other_bp = soft_clip_location - (-isize_diff + 2*(soft_clip_location-aln.aend))
+                other_bp = soft_clip_location - (-isize_diff + 2*(soft_clip_location-aln.aend) + (aln.rlen))
             elif aln.is_reverse and not is_first_pair and is_left:
-                other_bp = soft_clip_location - (isize_sum - 2*(aln.aend-soft_clip_location))
+                other_bp = soft_clip_location - (isize_sum - 2*(aln.aend-soft_clip_location) - (aln.rlen))
             elif not aln.is_reverse and is_first_pair and is_right:
-                other_bp = soft_clip_location + (isize_sum - 2*(soft_clip_location-aln.pos))
+                other_bp = soft_clip_location + (isize_sum - 2*(soft_clip_location-aln.pos) - (aln.rlen))
     elif svtype == "DEL":
         if soft_clip>0:
-            if is_left and aln.is_reverse and not is_first_pair:
+            if is_left and aln.is_reverse and not is_first_pair: 
                 other_bp = soft_clip_location - isize_diff
             elif is_right and not aln.is_reverse and is_first_pair:
                 other_bp = soft_clip_location + isize_diff
@@ -248,14 +248,14 @@ def find_other_bp(aln, isize_mean, svtype, soft_clip, dist_L_end, dist_R_end,
     elif svtype == "DUP":
         if soft_clip>0:
             if is_left and aln.is_reverse and is_first_pair:
-                other_bp = soft_clip_location + isize_sum
+                other_bp = soft_clip_location + isize_sum - (aln.rlen+dist_R_end)
             elif is_right and not aln.is_reverse and not is_first_pair:
-                other_bp = soft_clip_location - isize_sum
+                other_bp = soft_clip_location - isize_sum + (aln.rlen+dist_L_end)
         else:
             if aln.is_reverse and is_first_pair and is_left:
-                other_bp = soft_clip_location + isize_sum
+                other_bp = soft_clip_location + isize_sum - (2*aln.rlen)
             elif not aln.is_reverse and not is_first_pair and aln.pos < (soft_clip_location + wiggle):
-                other_bp = soft_clip_location - isize_sum       
+                other_bp = soft_clip_location - isize_sum + (2*aln.rlen)
     if not other_bp is None:
         return max(other_bp,0)
     else:
@@ -606,23 +606,23 @@ def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
                                    strand=feature.strand, otherfields=feature.fields[6:]+[neigh_svs])      
 
 
-def filter_low_frac_support(feature,thr_sv,plus_minus_thr_scale):
+def filter_low_frac_support(feature,thr_sv,plus_minus_thr_scale,ls_scale):
     sv_type = feature.fields[3].split(",")[1]
     neigh_support, plus_support, minus_support = map(int,feature.fields[8].split(";"))
     coverage = float(feature.fields[6]) 
     sc_read_support= float(feature.fields[4])
-    low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else 1.2
+    low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else ls_scale
     if (coverage * thr_sv[sv_type] * low_supp_scale) > neigh_support:
         return None
     if sv_type == "INS" and ((coverage * thr_sv[sv_type] * low_supp_scale * plus_minus_thr_scale) 
                                                 > min(plus_support,minus_support)):
         return None
     return feature
-def filter_low_neigh_read_support(feature,thr_sv_abs,plus_minus_thr_scale):
+def filter_low_neigh_read_support(feature,thr_sv_abs,plus_minus_thr_scale,ls_scale):
     sv_type = feature.fields[3].split(",")[1]
     neigh_support, plus_support, minus_support = map(int,feature.fields[8].split(";"))
     sc_read_support= float(feature.fields[4])
-    low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else 1.2
+    low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else ls_scale
     
     if (neigh_support< (thr_sv_abs[sv_type] * low_supp_scale)
                             or ((sv_type=="INS") and (min(plus_support,minus_support) 
@@ -637,7 +637,7 @@ def resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=SC_MIN_MAP
                           merge_max_dist=-int(1*SC_PAD), mean_read_length=MEAN_READ_LENGTH, 
                           mean_read_coverage=MEAN_READ_COVERAGE,min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, 
                           max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,num_sd=2,plus_minus_thr_scale=0.4, 
-                          none_thr_scale=1.3):
+                          none_thr_scale=1.3, ls_scale=1.3):
     func_logger = logging.getLogger("%s-%s" % (resolve_none_svs.__name__, multiprocessing.current_process()))
 
 
@@ -690,7 +690,7 @@ def resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=SC_MIN_MAP
             minus_support=len(filter(lambda x:x=="-",svs_fields[2::2]))
             coverage = float(interval.fields[6]) 
             sc_read_support= float(interval.fields[4])
-            low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else 1.2
+            low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else ls_scale
 
             if (neigh_support<(thr_sv_abs[svtype] * low_supp_scale * none_thr_scale) 
                 or (coverage * thr_sv[svtype]  * low_supp_scale * none_thr_scale) > neigh_support) :
@@ -775,7 +775,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                           overlap_ratio=OVERLAP_RATIO,merge_max_dist=-int(1*SC_PAD), 
                           mean_read_length=MEAN_READ_LENGTH, mean_read_coverage=MEAN_READ_COVERAGE, 
                           min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,
-                          num_sd = 2, plus_minus_thr_scale=0.4, none_thr_scale=1.3,unmerged_other_bed=None):
+                          num_sd = 2, plus_minus_thr_scale=0.4, none_thr_scale=1.3, ls_scale=1.3, unmerged_other_bed=None):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
@@ -889,7 +889,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                       mean_read_coverage=mean_read_coverage,min_ins_cov_frac=min_ins_cov_frac, 
                                       max_ins_cov_frac=max_ins_cov_frac, num_sd=num_sd,
                                       plus_minus_thr_scale=plus_minus_thr_scale, 
-                                      none_thr_scale=none_thr_scale)
+                                      none_thr_scale=none_thr_scale, ls_scale=ls_scale)
             if resolved_none_bed:
                 unmerged_all_bed = os.path.join(workdir, "unmerged_all.bed")
                 bedtool = bedtool.cat(resolved_none_bed,postmerge=False).sort().moveto(unmerged_all_bed)
@@ -953,10 +953,10 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
         neigh_coverage_filtered_bed = os.path.join(workdir, "neigh_filtered.bed")
         bedtool = bedtool.each(partial(filter_low_frac_support,thr_sv=thr_sv,
-                               plus_minus_thr_scale=plus_minus_thr_scale)).each(
+                               plus_minus_thr_scale=plus_minus_thr_scale,ls_scale=ls_scale)).each(
                                partial(filter_low_neigh_read_support,
                                thr_sv_abs=thr_sv_abs,
-                               plus_minus_thr_scale=plus_minus_thr_scale)).sort().moveto(
+                               plus_minus_thr_scale=plus_minus_thr_scale,ls_scale=ls_scale)).sort().moveto(
                                neigh_coverage_filtered_bed)
         func_logger.info("%d neighbour support filtered intervals" % (bedtool.count()))
 
@@ -989,10 +989,10 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                                                             isize_mean=isize_mean, min_isize=min_isize, max_isize=max_isize, 
                                                             mean_read_length=mean_read_length)).each(
                                                         partial(filter_low_frac_support,thr_sv=thr_sv,
-                                                                plus_minus_thr_scale=plus_minus_thr_scale)).each(
+                                                                plus_minus_thr_scale=plus_minus_thr_scale,ls_scale=ls_scale)).each(
                                                        partial(filter_low_neigh_read_support,
                                                        thr_sv_abs=thr_sv_abs,
-                                                       plus_minus_thr_scale=plus_minus_thr_scale)).each(partial(
+                                                       plus_minus_thr_scale=plus_minus_thr_scale,ls_scale=ls_scale)).each(partial(
                                                         get_full_interval,pad=pad)).cut([0,1,2,3,4,5,6,8]).sort()
 
             func_logger.info("%d recovered 2-BP intervals with 1-end SC" % (bedtool_1end_resolved.count()))
