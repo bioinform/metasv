@@ -637,7 +637,7 @@ def resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=SC_MIN_MAP
                           merge_max_dist=-int(1*SC_PAD), mean_read_length=MEAN_READ_LENGTH, 
                           mean_read_coverage=MEAN_READ_COVERAGE,min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, 
                           max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,num_sd=2,plus_minus_thr_scale=0.4, 
-                          none_thr_scale=1.3, ls_scale=1.3, other_scale=1.3):
+                          none_thr_scale=1.4, ls_scale=1.4, other_scale=1.4):
     func_logger = logging.getLogger("%s-%s" % (resolve_none_svs.__name__, multiprocessing.current_process()))
 
 
@@ -776,7 +776,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                           overlap_ratio=OVERLAP_RATIO,merge_max_dist=-int(1*SC_PAD), 
                           mean_read_length=MEAN_READ_LENGTH, mean_read_coverage=MEAN_READ_COVERAGE, 
                           min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,
-                          num_sd = 2, plus_minus_thr_scale=0.4, none_thr_scale=1.3, ls_scale=1.3, other_scale=1.3, unmerged_other_bed=None):
+                          num_sd = 2, plus_minus_thr_scale=0.4, none_thr_scale=1.4, ls_scale=1.4, other_scale=1.4, unmerged_other_bed=None):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
