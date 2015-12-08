@@ -67,23 +67,24 @@
 ##INFO=<ID=PD_BP_RANGE_START,Number=1,Type=Integer,Description="Pindel: breakpoint range start">
 ##INFO=<ID=PD_BP_RANGE_END,Number=1,Type=Integer,Description="Pindel: breakpoint range end">
 ##INFO=<ID=PD_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of reads supporting the SV">
-##INFO=<ID=PD_UNIQUE_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of uniquely mapped reads supporting the SV">
+##INFO=<ID=PD_UNIQ_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of uniquely mapped reads supporting the SV">
 ##INFO=<ID=PD_UP_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of up reads supporting the SV">
-##INFO=<ID=PD_UP_UNIQUE_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of up uniquely mapped reads supporting the SV">
+##INFO=<ID=PD_UP_UNIQ_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of up uniquely mapped reads supporting the SV">
 ##INFO=<ID=PD_DOWN_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of down reads supporting the SV">
-##INFO=<ID=PD_DOWN_UNIQUE_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of down uniquely mapped reads supporting the SV">
+##INFO=<ID=PD_DOWN_UNIQ_READ_SUPP,Number=1,Type=Integer,Description="Pindel: number of down uniquely mapped reads supporting the SV">
 ##INFO=<ID=PD_SIMPLE_SCORE,Number=1,Type=Integer,Description="Pindel: simple score for the SV">
 ##INFO=<ID=PD_SUM_MAPQ,Number=1,Type=Integer,Description="Pindel: sum of mapq of the supporting reads">
 ##INFO=<ID=PD_NUM_SAMPLE,Number=1,Type=Integer,Description="Pindel: number of samples">
 ##INFO=<ID=PD_NUM_SAMPLE_SUPP,Number=1,Type=Integer,Description="Pindel: number of supporting samples">
-##INFO=<ID=PD_NUM_SAMPLE_UNIQUE_SUPP,Number=1,Type=Integer,Description="Pindel: number of samples with unique supporting reads">
+##INFO=<ID=PD_NUM_SAMPLE_UNIQ_SUPP,Number=1,Type=Integer,Description="Pindel: number of samples with unique supporting reads">
 ##INFO=<ID=PD_HOMLEN,Number=1,Type=Integer,Description="Pindel: length of sequence homology around the breakpoints">
-##INFO=<ID=PD_HOMSEQ,Number=1,Type=String,Description="Pindel: homologous sequence around the breakpoints">
-##INFO=<ID=SC_READ_SUPPORT,Number=1,Type=Integer,Description="Soft-Clip: Number of soft-clip supporting reads">
-##INFO=<ID=SC_NEIGH_SUPPORT,Number=1,Type=Integer,Description="Soft-Clip: Number of reads near the soft-clip location that support SV event">
-##INFO=<ID=SC_COVERAGE,Number=1,Type=Integer,Description="Soft-Clip: Read coverage in the soft-clip location">
-##INFO=<ID=IDP_INTERVALS,Number=1,Type=String,Description="Intervals used to merge into interspersed duplication">
-##INFO=<ID=ITX_INTERVALS,Number=1,Type=String,Description="Intervals used to merge into intra-chromosomal translocation">
+##INFO=<ID=PD_HOMSEQ,Number=.,Type=String,Description="Pindel: homologous sequence around the breakpoints">
+##INFO=<ID=SC_READ_SUPPORT,Number=.,Type=Integer,Description="Soft-Clip: Number of soft-clip supporting reads">
+##INFO=<ID=SC_NEIGH_SUPPORT,Number=.,Type=Integer,Description="Soft-Clip: Number of reads near the soft-clip location that support SV event">
+##INFO=<ID=SC_COVERAGE,Number=.,Type=Integer,Description="Soft-Clip: Read coverage in the soft-clip location">
+##INFO=<ID=IDP_INTERVALS,Number=.,Type=String,Description="Intervals used to merge into interspersed duplication">
+##INFO=<ID=ITX_INTERVALS,Number=.,Type=String,Description="Intervals used to merge into intra-chromosomal translocation">
+##INFO=<ID=CTX_INTERVALS,Number=.,Type=String,Description="Intervals used to merge into inter-chromosomal translocation">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">
 ##FORMAT=<ID=CNQ,Number=1,Type=Float,Description="Copy number genotype quality for imprecise events">

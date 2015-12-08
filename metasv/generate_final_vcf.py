@@ -329,6 +329,19 @@ def merge_ctx(fasta_file,record_del,record_ins,score):
 
     return vcf_record
 
+def remove_info_fields(record,fields):
+    info = {}
+    info.update(record.INFO)
+    for field in fields:
+        if field in info:
+            del info[field]
+    sample_indexes = [0]
+    vcf_record = vcf.model._Record(record.CHROM, record.POS, record.ID, record.REF, record.ALT, record.QUAL,
+                                   record.FILTER, info, record.FORMAT, sample_indexes)
+    vcf_record.samples = record.samples
+    return vcf_record
+
+
 def resolve_for_IDP_ITX_CTX(vcf_records,fasta_file,pad=0,wiggle=10,overlap_ratio=0.9):
     del_records = filter(lambda x: (x.INFO["SVTYPE"] == "DEL") ,vcf_records)
     dup_records = filter(lambda x: (x.INFO["SVTYPE"] == "DUP") ,vcf_records)    
@@ -401,7 +414,7 @@ def resolve_for_IDP_ITX_CTX(vcf_records,fasta_file,pad=0,wiggle=10,overlap_ratio
 
 
                                          
-    vcf_records = sorted(vcf_records, key = lambda x: (x.CHROM, x.POS))
+    vcf_records = sorted(map(lambda x: remove_info_fields(x,["SC_CHR2_STR"]),vcf_records), key = lambda x: (x.CHROM, x.POS))
     return vcf_records
 
 
