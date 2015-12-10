@@ -882,19 +882,22 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
         #Resolve NONE type SVs
         if unmerged_none_bed:
-            resolved_none_bed=resolve_none_svs(sam_file, workdir, unmerged_none_bed, min_mapq=min_mapq,
-                                      min_soft_clip=min_soft_clip, min_support_ins=min_support_ins, 
-                                      min_support_frac_ins=min_support_frac_ins, max_nm=max_nm, min_matches=min_matches, 
-                                      isize_mean=isize_mean, isize_sd=isize_sd, svs_to_softclip=svs_to_softclip,
-                                      merge_max_dist=merge_max_dist, mean_read_length=mean_read_length, 
-                                      mean_read_coverage=mean_read_coverage,min_ins_cov_frac=min_ins_cov_frac, 
-                                      max_ins_cov_frac=max_ins_cov_frac, num_sd=num_sd,
-                                      plus_minus_thr_scale=plus_minus_thr_scale, 
-                                      none_thr_scale=none_thr_scale, ls_scale=ls_scale, other_scale=other_scale)
-            if resolved_none_bed:
-                unmerged_all_bed = os.path.join(workdir, "unmerged_all.bed")
-                bedtool = bedtool.cat(resolved_none_bed,postmerge=False).sort().moveto(unmerged_all_bed)
-                func_logger.info("%d candidate all reads" % (bedtool.count()))
+            bedtool_none=pybedtools.BedTool(unmerged_none_bed)
+            bedtool_none=bedtool_none.intersect(bedtool,f=overlap_ratio,r=True,wa=True,v=True).moveto(unmerged_none_bed)
+            if len(bedtool_none)>0:
+                resolved_none_bed=resolve_none_svs(sam_file, workdir, unmerged_none_bed, min_mapq=min_mapq,
+                                          min_soft_clip=min_soft_clip, min_support_ins=min_support_ins, 
+                                          min_support_frac_ins=min_support_frac_ins, max_nm=max_nm, min_matches=min_matches, 
+                                          isize_mean=isize_mean, isize_sd=isize_sd, svs_to_softclip=svs_to_softclip,
+                                          merge_max_dist=merge_max_dist, mean_read_length=mean_read_length, 
+                                          mean_read_coverage=mean_read_coverage,min_ins_cov_frac=min_ins_cov_frac, 
+                                          max_ins_cov_frac=max_ins_cov_frac, num_sd=num_sd,
+                                          plus_minus_thr_scale=plus_minus_thr_scale, 
+                                          none_thr_scale=none_thr_scale, ls_scale=ls_scale, other_scale=other_scale)
+                if resolved_none_bed:
+                    unmerged_all_bed = os.path.join(workdir, "unmerged_all.bed")
+                    bedtool = bedtool.cat(resolved_none_bed,postmerge=False).sort().moveto(unmerged_all_bed)
+                    func_logger.info("%d candidate all reads" % (bedtool.count()))
 
 
         bedtool_lr={"L":bedtool.filter(lambda x: int(x.name.split(",")[0])<=int(x.name.split(",")[1])).sort(),
