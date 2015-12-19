@@ -79,7 +79,7 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
     logger.info("Extracting reads from %s for region %s with padding %d using functions %s" % (
         bamname, region, pad, extract_fn_names))
 
-    chr_name = region.split(':')[0]
+    chr_name = str(region.split(':')[0])
     chr_start = int(region.split(':')[1].split("-")[0]) - pad
     chr_end = int(region.split(':')[1].split('-')[1]) + pad
 
