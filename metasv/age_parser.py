@@ -95,16 +95,24 @@ class AgeRecord:
             if line: self.line_num += 1
             return line
 
-    rx_rng = re.compile("\[\s*(\d+),\s*(\d+)\]")
+    rx_rng = re.compile(r"\[\s*(\d+),\s*(\d+)\]")
+    rx_perc = re.compile(r"\(\s*(\d+)%\)")
+    rx_input = re.compile(r"=>\s+(\d+) nucs '(.*?)'")
 
     def read_alignment_ranges(self, age_fd, name):
         line = age_fd.readline().strip()
         if not line.startswith(name):
-            raise AgeFormatError(age_fd.line, 1)
+            raise AgeFormatError(age_fd.line_num, 1)
         start_end = []
         for m in rx_rng.finditer(line):
-            start_end.append([m.group(1), m.group(2)])
+            start_end.append([int(m.group(1)), int(m.group(2))])
         return start_end
+
+    def parse_input_descriptor(self, line):
+        m = rx.search(line)
+        if m is None:
+            raise AgeFormatError(age_fd.line_num, 2)
+        return (m.group(2), int(m.group(1))) # filename, sequence length
 
     def read_from_age_file(self, age_out_file):
         with open(age_out_file) as raw_age_fd:
@@ -112,32 +120,26 @@ class AgeRecord:
             while True:
                 line = age_fd.readline()
                 if not line: break
-
                 line = line.strip()
 
-                if line.startswith("Aligned:"):
+                if line.startswith("Aligned:"): # works for both age output formats
                     self.aligned_bases = int(line.split()[1])
                     continue
 
-                if line.startswith("First seq"):
-                    words = line.split()
-                    file1 = words[-1]
-                    len1 = int(words[-3])
+                if line.startswith("First seq"): # now works with official age output
+                    file1, len1 = self.parse_input_descriptor(line)
                     if self.tr_region_1:
-                        len1+=self.tr_region_1[1]
-                        
+                        len1+=self.tr_region_1[1]                        
                     self.inputs.append(AgeInput(file1, len1))
                     continue
 
-                if line.startswith("Second seq"):
-                    words = line.split()
-                    file2 = words[-1]
-                    len2 = int(words[-3])
+                if line.startswith("Second seq"): # now works with official age output
+                    file2, len2 = self.parse_input_descriptor(line)
                     self.inputs.append(AgeInput(file2, len2))
                     continue
 
-                if line.startswith("Identic:"):
-                    nums = map(int, line.split()[2::2])
+                if line.startswith("Identic:"): # revised to work with official output format
+                    nums = map(int, rx_perc.findall(line))
                     self.percent = nums[0]
                     if len(nums) > 1:
                         self.percents = nums[1:3]
@@ -194,7 +196,6 @@ class AgeRecord:
             logger.warn("%s has problems" % age_out_file)
         else:
             self.flank_percent = int(round(100.0 * sum(self.flanking_regions) / self.inputs[0].length))
-
 
     def has_long_ref_flanks(self, min_len=50):
         return len(self.ref_flanking_regions) == 2 and min(self.ref_flanking_regions) >= min_len
