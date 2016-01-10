@@ -33,6 +33,16 @@ class AgeInput:
         return str(self)
 
 
+class AgeFormatError(Exception):
+    class Context(Enum):
+        ar
+    def __init__(self, context, line):
+        self.context = context
+        self.line = line
+    def __str__(self):
+        return repr(self.value)
+
+
 class AgeRecord:
     def __init__(self, age_out_file=None,tr_region_1=[]):
         # Index 0 corresponds to the reference sequence
@@ -73,10 +83,32 @@ class AgeRecord:
         self.tr_region_1=tr_region_1 # Truncation region in first sequence
         self.invalid_tr_intervals=[] #Indicies of invalid intervals in first sequence due to truncation
         
-        if age_out_file is None:
-            return
+        if age_out_file is not None:
+            self.read_from_age_file(age_out_file)
 
-        with open(age_out_file) as age_fd:
+    class LineReader:
+        def __init__(self, fd):
+            self.fd = fd
+            self.line_num = 0
+        def readline(self):
+            line = self.fd.readline()
+            if line: self.line_num += 1
+            return line
+
+    rx_rng = re.compile("\[\s*(\d+),\s*(\d+)\]")
+
+    def read_alignment_ranges(self, age_fd, name):
+        line = age_fd.readline().strip()
+        if not line.startswith(name):
+            raise AgeFormatError(age_fd.line, 1)
+        start_end = []
+        for m in rx_rng.finditer(line):
+            start_end.append([m.group(1), m.group(2)])
+        return start_end
+
+    def read_from_age_file(self, age_out_file):
+        with open(age_out_file) as raw_age_fd:
+            age_fd = LineReader(raw_age_fd)
             while True:
                 line = age_fd.readline()
                 if not line: break
@@ -111,39 +143,32 @@ class AgeRecord:
                         self.percents = nums[1:3]
                     continue
 
-                if line.startswith("Score:"):
+                if line.startswith("Score:"): # works for both age output formats
                     self.score = int(line.split()[1])
                     continue
 
-                if line.startswith("Alignment:"):
-                    self.start1_end1s_orig = map(lambda y: map(int, y),
-                                            map(lambda x: x.split(","), line.split(":")[1].split()))
-                    self.start2_end2s = map(lambda y: map(int, y),
-                                            map(lambda x: x.split(","), line.split(":")[2].split()))
-                    
+                if line == "Alignment:": # revised to work with official output format
+                    self.start1_end1s_orig = self.read_alignment_ranges(age_fd, "first")
+                    self.start2_end2s = self.read_alignment_ranges(age_fd, "second")
                     if self.tr_region_1:
                         self.update_pos_tr()
                         self.invalid_tr_intervals=[i for i,interval in enumerate(self.start1_end1s_orig) if 
                                                      (interval[0]< self.tr_region_1[0]) ^ (interval[1]< self.tr_region_1[0])]
                         if self.invalid_tr_intervals:
                             logger.warn("These intervals has problems (spanned over truncation): %s" % self.invalid_tr_intervals)
-
                     else:
                         self.start1_end1s=self.start1_end1s_orig
-                    
                     self.polarities1 = map(lambda y: 1 if y[1]>y[0] else -1,self.start1_end1s)
                     self.polarities2 = map(lambda y: 1 if y[1]>y[0] else -1,self.start2_end2s)
                     self.nfrags = len(self.start1_end1s)
                     self.flanking_regions[0] = abs(self.start2_end2s[0][1] - self.start2_end2s[0][0] + 1)
                     self.flanking_regions[1] = 0 if len(self.start2_end2s) == 1 else abs(
                         self.start2_end2s[1][1] - self.start2_end2s[1][0] + 1)
-
                     self.ref_flanking_regions[0] = abs(self.start1_end1s[0][1] - self.start1_end1s[0][0] + 1)
                     self.ref_flanking_regions[1] = 0 if len(self.start1_end1s) == 1 else abs(
                         self.start1_end1s[1][1] - self.start1_end1s[1][0] + 1)
                     continue
-                
-                
+
                 #TODO: May need to fix EXCISED REGIONS for truncated regions
                 if line.startswith("EXCISED REGION(S):"):
                     self.excised_regions = map(lambda y: map(int, y),
@@ -170,7 +195,6 @@ class AgeRecord:
         else:
             self.flank_percent = int(round(100.0 * sum(self.flanking_regions) / self.inputs[0].length))
 
-        return
 
     def has_long_ref_flanks(self, min_len=50):
         return len(self.ref_flanking_regions) == 2 and min(self.ref_flanking_regions) >= min_len
