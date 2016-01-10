@@ -1,5 +1,6 @@
 import logging
 import itertools
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class AgeFormatError(Exception):
         self.context = context
         self.line = line
     def __str__(self):
-        return repr(self.value)
+        return "Error while reading AGE output, L%d (section %s)." % (self.line, self.context)
 
 
 class AgeRecord:
@@ -87,6 +88,7 @@ class AgeRecord:
             self.read_from_age_file(age_out_file)
 
     class LineReader:
+        """Behaves like file objects do but also counts lines for tracing the AGE parser."""
         def __init__(self, fd):
             self.fd = fd
             self.line_num = 0
@@ -98,21 +100,48 @@ class AgeRecord:
     rx_rng = re.compile(r"\[\s*(\d+),\s*(\d+)\]")
     rx_perc = re.compile(r"\(\s*(\d+)%\)")
     rx_input = re.compile(r"=>\s+(\d+) nucs '(.*?)'")
+    rx_ex = re.compile(r"seq =>\s+(\d+) nucs( \[(\d+),(\d+)\])?")
 
     def read_alignment_ranges(self, age_fd, name):
         line = age_fd.readline().strip()
         if not line.startswith(name):
-            raise AgeFormatError(age_fd.line_num, 1)
+            raise AgeFormatError("ALIGNMENT RANGES", age_fd.line_num)
         start_end = []
         for m in rx_rng.finditer(line):
             start_end.append([int(m.group(1)), int(m.group(2))])
         return start_end
 
     def parse_input_descriptor(self, line):
+        """Returns a tuple of filename and sequence length."""
         m = rx.search(line)
         if m is None:
-            raise AgeFormatError(age_fd.line_num, 2)
-        return (m.group(2), int(m.group(1))) # filename, sequence length
+            raise AgeFormatError("INPUT DESCRIPTOR", age_fd.line_num)
+        return (m.group(2), int(m.group(1)))
+
+    def read_excluded_range(self, age_fd, name, context):
+        line = age_fd.readline().strip()
+        if line is None:
+            return None
+        if not line.startswith(name):
+            raise AgeFormatError(context, age_fd.line_num)
+        m = rx.search(line)
+        seq_len = int(m.group(1))
+        # ATTN: Do you intend to ever use start or stop? So far those are never read anywhere. 
+        return [0] if seq_len == 0 else [seq_len, int(m.group(3)), int(m.group(4))]
+
+    def read_excluded_regions(self, age_fd, context):
+        excluded_regions = [];
+        while True:
+            seq_rng = self.read_excluded_range(age_fd, "first", context)
+            if seq_rng is None:
+                break
+            excluded_regions.append(seq_rng)
+            seq_rng = self.read_excluded_range(age_fd, "second", context)
+            if seq_rng is None:
+                raise AgeFormatError(context, age_fd.line_num)
+            excluded_regions.append(seq_rng)
+            # ATTN: Is it intentional that while AGE allows multiple excised regions, only the first is ever looked at?
+        return excluded_regions
 
     def read_from_age_file(self, age_out_file):
         with open(age_out_file) as raw_age_fd:
@@ -172,16 +201,13 @@ class AgeRecord:
                     continue
 
                 #TODO: May need to fix EXCISED REGIONS for truncated regions
-                if line.startswith("EXCISED REGION(S):"):
-                    self.excised_regions = map(lambda y: map(int, y),
-                                               map(lambda x: x.split(","), line.split(":")[1].split()))
+                if line == "EXCISED REGION(S):":
+                    self.excised_regions = self.read_excluded_regions(age_fd, line)
                     continue
 
                 #TODO: May need to fix ALTERNATIVE REGION for truncated regions
-                if line.startswith("ALTERNATIVE REGION(S):"):
-                    words = line.split(":")[1].split()
-                    self.n_alt = int(words[0])
-                    self.alternate_regions = map(lambda y: map(int, y), map(lambda x: x.split(","), words[1:]))
+                if line == "ALTERNATIVE REGION(S):":
+                    self.alternate_regions = self.read_excluded_regions(age_fd, line)
                     continue
 
                 #TODO: May need to fix breakpoint_identities for truncated regions
