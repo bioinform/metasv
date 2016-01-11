@@ -48,7 +48,6 @@ class AgeRecord:
     def __init__(self, age_out_file=None,tr_region_1=[]):
         # Index 0 corresponds to the reference sequence
         self.aligned_bases = 0
-        self.breakpoint_identities = []  # Homology lengths around the breakpoints
         self.inputs = []  # inputs[1] is expected to have an insertion w.r.t. inputs[0]
         self.percent = 100  # Percent of matching bases in alignment
         self.percents = [100, 100]  # Percent of matching bases in alignment for each flank
@@ -101,19 +100,20 @@ class AgeRecord:
     rx_perc = re.compile(r"\(\s*(\d+)%\)")
     rx_input = re.compile(r"=>\s+(\d+) nucs '(.*?)'")
     rx_ex = re.compile(r"seq =>\s+(\d+) nucs( \[(\d+),(\d+)\])?")
+    rx_ident = re.compile(r"seq =>\s+(\d+) nucs( \[(\d+),(\d+)\] to \[(\d+),(\d+)\])?")
 
     def read_alignment_ranges(self, age_fd, name):
         line = age_fd.readline().strip()
         if not line.startswith(name):
             raise AgeFormatError("ALIGNMENT RANGES", age_fd.line_num)
         start_end = []
-        for m in rx_rng.finditer(line):
+        for m in self.rx_rng.finditer(line):
             start_end.append([int(m.group(1)), int(m.group(2))])
         return start_end
 
     def parse_input_descriptor(self, line):
         """Returns a tuple of filename and sequence length."""
-        m = rx.search(line)
+        m = self.rx_input.search(line)
         if m is None:
             raise AgeFormatError("INPUT DESCRIPTOR", age_fd.line_num)
         return (m.group(2), int(m.group(1)))
@@ -124,9 +124,9 @@ class AgeRecord:
             return None
         if not line.startswith(name):
             raise AgeFormatError(context, age_fd.line_num)
-        m = rx.search(line)
+        m = self.rx_ex.search(line)
         seq_len = int(m.group(1))
-        # ATTN: Do you intend to ever use start or stop? So far those are never read anywhere. 
+        # ATTN: Do you intend to ever use start or stop of excluded regions? So far those are never read anywhere. 
         return [0] if seq_len == 0 else [seq_len, int(m.group(3)), int(m.group(4))]
 
     def read_excluded_regions(self, age_fd, context):
@@ -142,6 +142,15 @@ class AgeRecord:
             excluded_regions.append(seq_rng)
             # ATTN: Is it intentional that while AGE allows multiple excised regions, only the first is ever looked at?
         return excluded_regions
+
+    def read_identities(self, age_fd, name, context):
+        line = age_fd.readline().strip()
+        if not line.startswith(name):
+            raise AgeFormatError(context, age_fd.line_num)
+        m = self.rx_ident.search(line)
+        seq_len = int(m.group(1))
+        # ATTN: Do you intend to ever use positions of identities? So far those are never read anywhere. 
+        return [0] if seq_len == 0 else [seq_len, int(m.group(3)), int(m.group(4)), int(m.group(5)), int(m.group(6))]
 
     def read_from_age_file(self, age_out_file):
         with open(age_out_file) as raw_age_fd:
@@ -168,7 +177,7 @@ class AgeRecord:
                     continue
 
                 if line.startswith("Identic:"): # revised to work with official output format
-                    nums = map(int, rx_perc.findall(line))
+                    nums = map(int, self.rx_perc.findall(line))
                     self.percent = nums[0]
                     if len(nums) > 1:
                         self.percents = nums[1:3]
@@ -211,10 +220,11 @@ class AgeRecord:
                     continue
 
                 #TODO: May need to fix breakpoint_identities for truncated regions
-                if line.startswith("Identity at b"):
-                    self.breakpoint_identities = map(lambda y: map(int, y),
-                                                     map(lambda x: x.split(","), line.split(":")[1].split()))
-                    self.hom = max(0, self.breakpoint_identities[1][0])
+                if line == "Identity at breakpoints:":
+                    self.read_identities(age_fd, "first", "IDENTITIES") # skip first sequence
+                    breakpoint_identities = self.read_identities(age_fd, "second", "IDENTITIES")
+                    # ATTN: Is it intentional to only examine the first occurrence?
+                    self.hom = max(0, breakpoint_identities[1][0])
                     continue
 
         if len(self.inputs) == 0:
