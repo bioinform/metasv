@@ -35,8 +35,6 @@ class AgeInput:
 
 
 class AgeFormatError(Exception):
-    class Context(Enum):
-        ar
     def __init__(self, context, line):
         self.context = context
         self.line = line
@@ -120,7 +118,7 @@ class AgeRecord:
 
     def read_excluded_range(self, age_fd, name, context):
         line = age_fd.readline().strip()
-        if line is None:
+        if len(line) == 0:
             return None
         if not line.startswith(name):
             raise AgeFormatError(context, age_fd.line_num)
@@ -154,40 +152,40 @@ class AgeRecord:
 
     def read_from_age_file(self, age_out_file):
         with open(age_out_file) as raw_age_fd:
-            age_fd = LineReader(raw_age_fd)
+            age_fd = self.LineReader(raw_age_fd)
             while True:
                 line = age_fd.readline()
                 if not line: break
                 line = line.strip()
 
-                if line.startswith("Aligned:"): # works for both age output formats
+                if line.startswith("Aligned:"):
                     self.aligned_bases = int(line.split()[1])
                     continue
 
-                if line.startswith("First seq"): # now works with official age output
+                if line.startswith("First  seq"):
                     file1, len1 = self.parse_input_descriptor(line)
                     if self.tr_region_1:
                         len1+=self.tr_region_1[1]                        
                     self.inputs.append(AgeInput(file1, len1))
                     continue
 
-                if line.startswith("Second seq"): # now works with official age output
+                if line.startswith("Second seq"):
                     file2, len2 = self.parse_input_descriptor(line)
                     self.inputs.append(AgeInput(file2, len2))
                     continue
 
-                if line.startswith("Identic:"): # revised to work with official output format
+                if line.startswith("Identic:"):
                     nums = map(int, self.rx_perc.findall(line))
                     self.percent = nums[0]
                     if len(nums) > 1:
                         self.percents = nums[1:3]
                     continue
 
-                if line.startswith("Score:"): # works for both age output formats
+                if line.startswith("Score:"):
                     self.score = int(line.split()[1])
                     continue
 
-                if line == "Alignment:": # revised to work with official output format
+                if line == "Alignment:":
                     self.start1_end1s_orig = self.read_alignment_ranges(age_fd, "first")
                     self.start2_end2s = self.read_alignment_ranges(age_fd, "second")
                     if self.tr_region_1:
@@ -224,7 +222,7 @@ class AgeRecord:
                     self.read_identities(age_fd, "first", "IDENTITIES") # skip first sequence
                     breakpoint_identities = self.read_identities(age_fd, "second", "IDENTITIES")
                     # ATTN: Is it intentional to only examine the first occurrence?
-                    self.hom = max(0, breakpoint_identities[1][0])
+                    self.hom = max(0, breakpoint_identities[0])
                     continue
 
         if len(self.inputs) == 0:
