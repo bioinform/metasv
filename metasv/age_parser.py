@@ -310,3 +310,18 @@ class AgeRecord:
 
     def __repr__(self):
         return str(self)
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 2:
+        print "Bad number of arguments: Provide name of one AGE output file as test case for AGE parser."
+    else:
+        rec = AgeRecord(sys.argv[1])
+        print "Input descriptor: ", rec.inputs
+        print "Percent matches in alignment: ", rec.percent
+        print "Matches by flank: ", rec.percents
+        print "Alignment intervals S1: ", rec.start1_end1s
+        print "Alignment intervals S2: ", rec.start2_end2s
+        print "Excised lengths and intervals: ", rec.excised_regions
+        print "Alternate regions: ", rec.alternate_regions
+        print "Homology length: ", rec.hom
