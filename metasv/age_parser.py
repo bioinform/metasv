@@ -109,11 +109,11 @@ class AgeRecord:
             start_end.append([int(m.group(1)), int(m.group(2))])
         return start_end
 
-    def parse_input_descriptor(self, line):
+    def parse_input_descriptor(self, line, line_num):
         """Returns a tuple of filename and sequence length."""
         m = self.rx_input.search(line)
         if m is None:
-            raise AgeFormatError("INPUT DESCRIPTOR", age_fd.line_num)
+            raise AgeFormatError("INPUT DESCRIPTOR", line_num)
         return (m.group(2), int(m.group(1)))
 
     def read_excluded_range(self, age_fd, name, context):
@@ -163,14 +163,14 @@ class AgeRecord:
                     continue
 
                 if line.startswith("First  seq"):
-                    file1, len1 = self.parse_input_descriptor(line)
+                    file1, len1 = self.parse_input_descriptor(line, age_fd.line_num)
                     if self.tr_region_1:
                         len1+=self.tr_region_1[1]                        
                     self.inputs.append(AgeInput(file1, len1))
                     continue
 
                 if line.startswith("Second seq"):
-                    file2, len2 = self.parse_input_descriptor(line)
+                    file2, len2 = self.parse_input_descriptor(line, age_fd.line_num)
                     self.inputs.append(AgeInput(file2, len2))
                     continue
 
