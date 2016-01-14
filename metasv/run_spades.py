@@ -9,6 +9,8 @@ from functools import partial, update_wrapper
 import json
 import base64
 import time
+import shlex
+from threading import Timer
 
 import pysam
 import pybedtools
@@ -23,14 +25,31 @@ logger = logging.getLogger(__name__)
 precise_methods = set(["AS", "SR", "JM"])
 
 
-def run_cmd(cmd, logger, spades_log_fd):
-    logger.info("Running command %s" % cmd)
-    spades_log_fd.write("*************************************************\n")
-    start_time = time.time()
-    retcode = subprocess.call(cmd, shell=True, stderr=spades_log_fd, stdout=spades_log_fd)
-    logger.info("Returned code %d (%g seconds)" % (retcode, time.time() - start_time))
-
-    return retcode
+class TimedExternalCmd:
+    def __init__(self, cmd, logger):
+        self.cmd = shlex.split(cmd)
+        self.p = None
+        self.did_timeout = False
+    def enforce_timeout(self):
+        self.p.terminate()
+        self.did_timeout = True
+    def run(self, cmd_log_fd, timeout=None):
+        logger.info("Running %s with arguments %s" % (self.cmd[0].upper(), str(self.cmd[1::])))
+        cmd_log_fd.write("*************************************************\n")
+        self.p = subprocess.Popen(self.cmd, stderr=cmd_log_fd, stdout=cmd_log_fd)
+        start_time = time.time()
+        if timeout:
+            t = Timer(timeout, self.enforce_timeout)
+            t.start()
+        self.p.wait()
+        if timeout:
+            t.cancel()
+            if self.did_timeout:
+                logger.error("Timed out after %d seconds", timeout)
+                return None
+        retcode = self.p.returncode
+        logger.info("Returned code %d (%g seconds)" % (retcode, time.time() - start_time))
+        return retcode
 
 
 def append_contigs(src, interval, dst_fd, fn_id=0, sv_type="INS"):
@@ -78,16 +97,15 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
                 if extracted_count >= 5:
                     extra_opt = "--sc" if not fn_id == 0 else ""
                     spades_log_fd.write("Running spades for interval %s with extraction function %s\n" % (
-                    str(interval).strip(), extract_fn_name))
-                    retcode = run_cmd(
-                        "bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 --phred-offset 33 %s\"" % (
-                            timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger,
-                        spades_log_fd)
+                        str(interval).strip(), extract_fn_name))
+                    cmd = TimedExternalCmd("%s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 --phred-offset 33 %s" % (
+                        spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger)
+                    retcode = cmd.run(spades_log_fd, timeout)
                     if retcode == 0:
                         append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % extract_fn_name, interval,
                                        merged_contigs, fn_id, sv_type)
-                    elif retcode == 1:
-                        thread_logger.error("Spades failed for some reason")
+                    elif not cmd.did_timeout:
+                        thread_logger.error("Spades failed")
                         if stop_on_fail:
                             thread_logger.error("Aborting!")
                             raise Exception("Spades failure on interval %s for extraction function %s\n" % (
