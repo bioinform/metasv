@@ -2,15 +2,12 @@ import os
 import argparse
 import logging
 import multiprocessing
-import subprocess
 import fileinput
 import traceback
 from functools import partial, update_wrapper
 import json
 import base64
-import time
-import shlex
-from threading import Timer
+from external_cmd import TimedExternalCmd
 
 import pysam
 import pybedtools
@@ -23,33 +20,6 @@ logging.basicConfig(level=logging.INFO, format=FORMAT)
 logger = logging.getLogger(__name__)
 
 precise_methods = set(["AS", "SR", "JM"])
-
-
-class TimedExternalCmd:
-    def __init__(self, cmd, logger):
-        self.cmd = shlex.split(cmd)
-        self.p = None
-        self.did_timeout = False
-    def enforce_timeout(self):
-        self.p.terminate()
-        self.did_timeout = True
-    def run(self, cmd_log_fd, timeout=None):
-        logger.info("Running %s with arguments %s" % (self.cmd[0].upper(), str(self.cmd[1::])))
-        cmd_log_fd.write("*************************************************\n")
-        self.p = subprocess.Popen(self.cmd, stderr=cmd_log_fd, stdout=cmd_log_fd)
-        start_time = time.time()
-        if timeout:
-            t = Timer(timeout, self.enforce_timeout)
-            t.start()
-        self.p.wait()
-        if timeout:
-            t.cancel()
-            if self.did_timeout:
-                logger.error("Timed out after %d seconds", timeout)
-                return None
-        retcode = self.p.returncode
-        logger.info("Returned code %d (%g seconds)" % (retcode, time.time() - start_time))
-        return retcode
 
 
 def append_contigs(src, interval, dst_fd, fn_id=0, sv_type="INS"):
@@ -100,7 +70,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
                         str(interval).strip(), extract_fn_name))
                     cmd = TimedExternalCmd("%s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 --phred-offset 33 %s" % (
                         spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger)
-                    retcode = cmd.run(spades_log_fd, timeout)
+                    retcode = cmd.run(cmd_log_fd_out=spades_log_fd, timeout=timeout)
                     if retcode == 0:
                         append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % extract_fn_name, interval,
                                        merged_contigs, fn_id, sv_type)
