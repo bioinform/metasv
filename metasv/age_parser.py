@@ -226,7 +226,8 @@ class AgeRecord:
                     continue
 
                 #TODO: May need to fix ALTERNATIVE REGION for truncated regions
-                if line == self.SEC_ALTERNATIVE:
+                if line.startswith(self.SEC_ALTERNATIVE):
+                    self.n_alt = int(line.split()[-1])
                     self.alternate_regions = self.read_excluded_regions(age_fd, line)
                     continue
 
@@ -336,5 +337,5 @@ if __name__ == "__main__":
         print "Alignment intervals S1: ", rec.start1_end1s
         print "Alignment intervals S2: ", rec.start2_end2s
         print "Excised lengths and intervals: ", rec.excised_regions
-        print "Alternate regions: ", rec.alternate_regions
+        print "Number of alternate regions: ", rec.n_alt
         print "Homology length: ", rec.hom
