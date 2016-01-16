@@ -89,16 +89,26 @@ class AgeRecord:
         def __init__(self, fd):
             self.fd = fd
             self.line_num = 0
+            self.stash = False
+            self.line = None
+        def stash_line(self, context):
+            if self.stash:
+                raise AgeFormatError(context, self.line_num)
+            self.stash = True
         def readline(self):
-            line = self.fd.readline()
-            if line: self.line_num += 1
-            return line
+            if self.stash:
+                self.stash = False
+                return self.line
+            self.line = self.fd.readline()
+            if self.line: self.line_num += 1
+            return self.line
 
     rx_rng = re.compile(r"\[\s*(\d+),\s*(\d+)\]")
     rx_perc = re.compile(r"\(\s*(\d+)%\)")
     rx_input = re.compile(r"=>\s+(\d+) nucs '(.*?)'")
     rx_ex = re.compile(r"seq =>\s+(\d+) nucs( \[(\d+),(\d+)\])?")
     rx_ident = re.compile(r"seq =>\s+(\d+) nucs( \[(\d+),(\d+)\] to \[(\d+),(\d+)\])?")
+    SEC_ALTERNATIVE = "ALTERNATIVE REGION(S):"
 
     def read_alignment_ranges(self, age_fd, name):
         line = age_fd.readline().strip()
@@ -119,6 +129,9 @@ class AgeRecord:
     def read_excluded_range(self, age_fd, name, context):
         line = age_fd.readline().strip()
         if len(line) == 0:
+            return None
+        if line.startswith(self.SEC_ALTERNATIVE):
+            age_fd.stash_line(context)
             return None
         if not line.startswith(name):
             raise AgeFormatError(context, age_fd.line_num)
@@ -213,7 +226,7 @@ class AgeRecord:
                     continue
 
                 #TODO: May need to fix ALTERNATIVE REGION for truncated regions
-                if line == "ALTERNATIVE REGION(S):":
+                if line == self.SEC_ALTERNATIVE:
                     self.alternate_regions = self.read_excluded_regions(age_fd, line)
                     continue
 
