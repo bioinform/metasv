@@ -59,7 +59,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
 
     try:
         for interval in intervals:
-            region = "%s:%d-%d" % (interval.chrom, interval.start, interval.end)
+            region = "%s:%d-%d" % (str(interval.chrom), interval.start, interval.end)
             thread_logger.info("Processing interval %s" % (str(interval).strip()))
 
             sv_type = interval.name.split(",")[1]
