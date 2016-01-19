@@ -1,5 +1,6 @@
 import logging
 import itertools
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +34,18 @@ class AgeInput:
         return str(self)
 
 
+class AgeFormatError(Exception):
+    def __init__(self, context, line):
+        self.context = context
+        self.line = line
+    def __str__(self):
+        return "Error while reading AGE output, L%d (section %s)." % (self.line, self.context)
+
+
 class AgeRecord:
     def __init__(self, age_out_file=None,tr_region_1=[]):
         # Index 0 corresponds to the reference sequence
         self.aligned_bases = 0
-        self.breakpoint_identities = []  # Homology lengths around the breakpoints
         self.inputs = []  # inputs[1] is expected to have an insertion w.r.t. inputs[0]
         self.percent = 100  # Percent of matching bases in alignment
         self.percents = [100, 100]  # Percent of matching bases in alignment for each flank
@@ -73,39 +81,114 @@ class AgeRecord:
         self.tr_region_1=tr_region_1 # Truncation region in first sequence
         self.invalid_tr_intervals=[] #Indicies of invalid intervals in first sequence due to truncation
         
-        if age_out_file is None:
-            return
+        if age_out_file is not None:
+            self.read_from_age_file(age_out_file)
 
-        with open(age_out_file) as age_fd:
+    class LineReader:
+        """Behaves like file objects do but also counts lines for tracing the AGE parser."""
+        def __init__(self, fd):
+            self.fd = fd
+            self.line_num = 0
+            self.stash = False
+            self.line = None
+        def stash_line(self, context):
+            if self.stash:
+                raise AgeFormatError(context, self.line_num)
+            self.stash = True
+        def readline(self):
+            if self.stash:
+                self.stash = False
+                return self.line
+            self.line = self.fd.readline()
+            if self.line: self.line_num += 1
+            return self.line
+
+    rx_rng = re.compile(r"\[\s*(\d+),\s*(\d+)\]")
+    rx_perc = re.compile(r"\(\s*(\d+)%\)")
+    rx_input = re.compile(r"=>\s+(\d+) nucs '(.*?)'")
+    rx_ex = re.compile(r"seq =>\s+(\d+) nucs( \[(\d+),(\d+)\])?")
+    rx_ident = re.compile(r"seq =>\s+(\d+) nucs( \[(\d+),(\d+)\] to \[(\d+),(\d+)\])?")
+    SEC_ALTERNATIVE = "ALTERNATIVE REGION(S):"
+
+    def read_alignment_ranges(self, age_fd, name):
+        line = age_fd.readline().strip()
+        if not line.startswith(name):
+            raise AgeFormatError("ALIGNMENT RANGES", age_fd.line_num)
+        start_end = []
+        for m in self.rx_rng.finditer(line):
+            start_end.append([int(m.group(1)), int(m.group(2))])
+        return start_end
+
+    def parse_input_descriptor(self, age_fd):
+        """Returns a tuple of filename and sequence length."""
+        m = self.rx_input.search(age_fd.line)
+        if m is None:
+            raise AgeFormatError("INPUT DESCRIPTOR", age_fd.line_num)
+        return (m.group(2), int(m.group(1)))
+
+    def read_excluded_range(self, age_fd, name, context):
+        line = age_fd.readline().strip()
+        if len(line) == 0:
+            return None
+        if line.startswith(self.SEC_ALTERNATIVE):
+            age_fd.stash_line(context)
+            return None
+        if not line.startswith(name):
+            raise AgeFormatError(context, age_fd.line_num)
+        m = self.rx_ex.search(line)
+        seq_len = int(m.group(1))
+        # ATTN: Do you intend to ever use start or stop of excluded regions? So far those are never read anywhere. 
+        return [0] if seq_len == 0 else [seq_len, int(m.group(3)), int(m.group(4))]
+
+    def read_excluded_regions(self, age_fd, context):
+        excluded_regions = [];
+        while True:
+            seq_rng = self.read_excluded_range(age_fd, "first", context)
+            if seq_rng is None:
+                break
+            excluded_regions.append(seq_rng)
+            seq_rng = self.read_excluded_range(age_fd, "second", context)
+            if seq_rng is None:
+                raise AgeFormatError(context, age_fd.line_num)
+            excluded_regions.append(seq_rng)
+            # ATTN: Is it intentional that while AGE allows multiple excised regions, only the first is ever looked at?
+        return excluded_regions
+
+    def read_identities(self, age_fd, name, context):
+        line = age_fd.readline().strip()
+        if not line.startswith(name):
+            raise AgeFormatError(context, age_fd.line_num)
+        m = self.rx_ident.search(line)
+        seq_len = int(m.group(1))
+        # ATTN: Do you intend to ever use positions of identities? So far those are never read anywhere. 
+        return [0] if seq_len == 0 else [seq_len, int(m.group(3)), int(m.group(4)), int(m.group(5)), int(m.group(6))]
+
+    def read_from_age_file(self, age_out_file):
+        with open(age_out_file) as raw_age_fd:
+            age_fd = self.LineReader(raw_age_fd)
             while True:
                 line = age_fd.readline()
                 if not line: break
-
                 line = line.strip()
 
                 if line.startswith("Aligned:"):
                     self.aligned_bases = int(line.split()[1])
                     continue
 
-                if line.startswith("First seq"):
-                    words = line.split()
-                    file1 = words[-1]
-                    len1 = int(words[-3])
+                if line.startswith("First  seq"):
+                    file1, len1 = self.parse_input_descriptor(age_fd)
                     if self.tr_region_1:
-                        len1+=self.tr_region_1[1]
-                        
+                        len1+=self.tr_region_1[1]                        
                     self.inputs.append(AgeInput(file1, len1))
                     continue
 
                 if line.startswith("Second seq"):
-                    words = line.split()
-                    file2 = words[-1]
-                    len2 = int(words[-3])
+                    file2, len2 = self.parse_input_descriptor(age_fd)
                     self.inputs.append(AgeInput(file2, len2))
                     continue
 
                 if line.startswith("Identic:"):
-                    nums = map(int, line.split()[2::2])
+                    nums = map(int, self.rx_perc.findall(line))
                     self.percent = nums[0]
                     if len(nums) > 1:
                         self.percents = nums[1:3]
@@ -115,53 +198,45 @@ class AgeRecord:
                     self.score = int(line.split()[1])
                     continue
 
-                if line.startswith("Alignment:"):
-                    self.start1_end1s_orig = map(lambda y: map(int, y),
-                                            map(lambda x: x.split(","), line.split(":")[1].split()))
-                    self.start2_end2s = map(lambda y: map(int, y),
-                                            map(lambda x: x.split(","), line.split(":")[2].split()))
-                    
+                if line == "Alignment:":
+                    self.start1_end1s_orig = self.read_alignment_ranges(age_fd, "first")
+                    self.start2_end2s = self.read_alignment_ranges(age_fd, "second")
                     if self.tr_region_1:
                         self.update_pos_tr()
                         self.invalid_tr_intervals=[i for i,interval in enumerate(self.start1_end1s_orig) if 
                                                      (interval[0]< self.tr_region_1[0]) ^ (interval[1]< self.tr_region_1[0])]
                         if self.invalid_tr_intervals:
                             logger.warn("These intervals has problems (spanned over truncation): %s" % self.invalid_tr_intervals)
-
                     else:
                         self.start1_end1s=self.start1_end1s_orig
-                    
                     self.polarities1 = map(lambda y: 1 if y[1]>y[0] else -1,self.start1_end1s)
                     self.polarities2 = map(lambda y: 1 if y[1]>y[0] else -1,self.start2_end2s)
                     self.nfrags = len(self.start1_end1s)
                     self.flanking_regions[0] = abs(self.start2_end2s[0][1] - self.start2_end2s[0][0] + 1)
                     self.flanking_regions[1] = 0 if len(self.start2_end2s) == 1 else abs(
                         self.start2_end2s[1][1] - self.start2_end2s[1][0] + 1)
-
                     self.ref_flanking_regions[0] = abs(self.start1_end1s[0][1] - self.start1_end1s[0][0] + 1)
                     self.ref_flanking_regions[1] = 0 if len(self.start1_end1s) == 1 else abs(
                         self.start1_end1s[1][1] - self.start1_end1s[1][0] + 1)
                     continue
-                
-                
+
                 #TODO: May need to fix EXCISED REGIONS for truncated regions
-                if line.startswith("EXCISED REGION(S):"):
-                    self.excised_regions = map(lambda y: map(int, y),
-                                               map(lambda x: x.split(","), line.split(":")[1].split()))
+                if line == "EXCISED REGION(S):":
+                    self.excised_regions = self.read_excluded_regions(age_fd, line)
                     continue
 
                 #TODO: May need to fix ALTERNATIVE REGION for truncated regions
-                if line.startswith("ALTERNATIVE REGION(S):"):
-                    words = line.split(":")[1].split()
-                    self.n_alt = int(words[0])
-                    self.alternate_regions = map(lambda y: map(int, y), map(lambda x: x.split(","), words[1:]))
+                if line.startswith(self.SEC_ALTERNATIVE):
+                    self.n_alt = int(line.split()[-1])
+                    self.alternate_regions = self.read_excluded_regions(age_fd, line)
                     continue
 
                 #TODO: May need to fix breakpoint_identities for truncated regions
-                if line.startswith("Identity at b"):
-                    self.breakpoint_identities = map(lambda y: map(int, y),
-                                                     map(lambda x: x.split(","), line.split(":")[1].split()))
-                    self.hom = max(0, self.breakpoint_identities[1][0])
+                if line == "Identity at breakpoints:":
+                    self.read_identities(age_fd, "first", "IDENTITIES") # skip first sequence
+                    breakpoint_identities = self.read_identities(age_fd, "second", "IDENTITIES")
+                    # ATTN: Is it intentional to only examine the first occurrence?
+                    self.hom = max(0, breakpoint_identities[0])
                     continue
 
         if len(self.inputs) == 0:
@@ -169,8 +244,6 @@ class AgeRecord:
             logger.warn("%s has problems" % age_out_file)
         else:
             self.flank_percent = int(round(100.0 * sum(self.flanking_regions) / self.inputs[0].length))
-
-        return
 
     def has_long_ref_flanks(self, min_len=50):
         return len(self.ref_flanking_regions) == 2 and min(self.ref_flanking_regions) >= min_len
@@ -251,3 +324,18 @@ class AgeRecord:
 
     def __repr__(self):
         return str(self)
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 2:
+        print "Bad number of arguments: Provide name of one AGE output file as test case for AGE parser."
+    else:
+        rec = AgeRecord(sys.argv[1])
+        print "Input descriptor: ", rec.inputs
+        print "Percent matches in alignment: ", rec.percent
+        print "Matches by flank: ", rec.percents
+        print "Alignment intervals S1: ", rec.start1_end1s
+        print "Alignment intervals S2: ", rec.start2_end2s
+        print "Excised lengths and intervals: ", rec.excised_regions
+        print "Number of alternate regions: ", rec.n_alt
+        print "Homology length: ", rec.hom
