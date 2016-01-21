@@ -120,6 +120,8 @@ if __name__ == "__main__":
                         default=MIN_INV_SUBALIGN_LENGTH)
     as_parser.add_argument("--min_del_subalign_len", help="Minimum length of deletion sub-alginment", type=int,
                         default=MIN_DEL_SUBALIGN_LENGTH)
+    as_parser.add_argument("--age_window", help="Window size for AGE to merge nearby breakpoints", type=int,
+                        default=AGE_WINDOW_SIZE)
     as_parser.add_argument("--boost_sc", help="Use soft-clips for improving breakpoint detection",
                                   action="store_true")
     gt_parser = parser.add_argument_group("Genotyping options")

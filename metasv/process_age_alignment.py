@@ -4,11 +4,11 @@ import multiprocessing
 from collections import defaultdict
 import pybedtools
 
-from defaults import MIN_INV_SUBALIGN_LENGTH, MIN_DEL_SUBALIGN_LENGTH
+from defaults import MIN_INV_SUBALIGN_LENGTH, MIN_DEL_SUBALIGN_LENGTH,AGE_WINDOW_SIZE
 
 logger = logging.getLogger(__name__)
 
-def get_insertion_breakpoints(age_records, intervals, expected_bp_pos, window=20, start=0, dist_to_expected_bp=50):
+def get_insertion_breakpoints(age_records, intervals, expected_bp_pos, window=AGE_WINDOW_SIZE, start=0, dist_to_expected_bp=50):
     func_logger = logging.getLogger("%s-%s" % (get_insertion_breakpoints.__name__, multiprocessing.current_process()))
     bedtools_intervals = [pybedtools.Interval("1", interval[0], interval[1]) for interval in sorted(intervals)]
     func_logger.info("bedtools_intervals %s" % (str(bedtools_intervals)))
@@ -27,7 +27,7 @@ def get_insertion_breakpoints(age_records, intervals, expected_bp_pos, window=20
         left_support = [interval[0] for interval in intervals if abs(interval[0] - breakpoint) <= window]
         right_support = [interval[1] for interval in intervals if abs(interval[1] - breakpoint) <= window]
         counter_examples = [age_record for age_record in age_records if age_record.has_long_ref_flanks() and (
-            age_record.has_ref_deletion(window) or age_record.has_insertion(min_diff=1,
+            age_record.has_ref_deletion(window) or age_record.has_insertion(min_diff=20,
                                                                             max_diff=49)) and age_record.breakpoint_match(
             breakpoint, window)]
         if counter_examples:
@@ -271,7 +271,8 @@ def get_reference_intervals(age_records, start=0, min_interval_len=100):
 
 def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_interval_len=200, pad=500,
                         min_deletion_len=30, min_del_subalign_len=MIN_DEL_SUBALIGN_LENGTH, 
-                        min_inv_subalign_len=MIN_INV_SUBALIGN_LENGTH, dist_to_expected_bp=400):
+                        min_inv_subalign_len=MIN_INV_SUBALIGN_LENGTH, dist_to_expected_bp=400,
+                        age_window=AGE_WINDOW_SIZE, pad_ins=0):
     func_logger = logging.getLogger("%s-%s" % (process_age_records.__name__, multiprocessing.current_process()))
 
     good_age_records = age_records
@@ -331,7 +332,10 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
         reference_intervals = get_reference_intervals(good_age_records, start=1, min_interval_len=min_interval_len)
 
         func_logger.info("Gathered reference intervals as %s" % (str(reference_intervals)))
-        breakpoints = get_insertion_breakpoints(good_age_records, reference_intervals, expected_bp_pos=[2*pad,max((sv_region.pos2-sv_region.pos1),0)] ,start=sv_region.pos1 - pad)
+        breakpoints = get_insertion_breakpoints(good_age_records, reference_intervals, 
+                                                expected_bp_pos=[pad+pad_ins,max((sv_region.pos2-sv_region.pos1)-pad_ins+pad,0)],
+                                                window=age_window,
+                                                start=sv_region.pos1 - pad)
     elif sv_type == "INV":
         breakpoints = get_inversion_breakpoints(good_age_records, start=sv_region.pos1 - pad ,pad=pad, min_inv_subalign_len=min_inv_subalign_len, dist_to_expected_bp=dist_to_expected_bp)
     elif sv_type == "DUP":
@@ -351,17 +355,17 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
             func_logger.info("False deletion interval %s" % (str(breakpoints)))
             return [], dict(info)
     elif sv_type == "INS":
-        if len(breakpoints) == 1:
-            if sv_region.pos2 - sv_region.pos1 <= 20:
-                info["BA_BP_SCORE"] = abs(breakpoints[0][0] - sv_region.pos1)
-                if abs(breakpoints[0][0] - sv_region.pos1) > 20:
-                    return [], dict(info)
-            else:
-                diff1 = breakpoints[0][0] - sv_region.pos1
-                diff2 = sv_region.pos2 - breakpoints[0][0]
-                info["BA_BP_SCORE"] = min(abs(diff1 - pad), abs(diff2 - pad))
-                if not (pad - 25 <= diff1 <= pad + 25 or pad - 25 <= diff2 <= pad + 25):
-                    return [], dict(info)
+        if len(breakpoints) == 1:    
+#             if sv_region.pos2 - sv_region.pos1 <= 20:
+#                 info["BA_BP_SCORE"] = abs(breakpoints[0][0] - sv_region.pos1)
+#                 if abs(breakpoints[0][0] - sv_region.pos1) > 20:
+#                     return [], dict(info)
+#             else:
+            diff1 = breakpoints[0][0] - (sv_region.pos1+pad_ins)
+            diff2 = (sv_region.pos2-pad_ins) - breakpoints[0][0]
+            info["BA_BP_SCORE"] = min(abs(diff1), abs(diff2 ))
+            if not  min(abs(diff1), abs(diff2 )) <=  100 :
+                return [], dict(info)
             func_logger.info("True insertion interval %s" % (str(breakpoints)))
         else:
             return [], dict(info)

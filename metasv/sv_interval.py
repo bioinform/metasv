@@ -285,7 +285,8 @@ class SVInterval:
         info = self.get_info()
         
         if self.sv_type in ["ITX", "CTX"]:
-            info["END"] = self.end
+            info["POS2"] = self.end
+            info["END"] = end
             info["CHR2"] = self.chrom2
             if not self.is_precise:
                 info.update({"IMPRECISE": True})

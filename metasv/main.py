@@ -286,7 +286,8 @@ def run_metasv(args):
                                                           mean_read_length=args.mean_read_length,
                                                           mean_read_coverage=args.mean_read_coverage, 
                                                           min_ins_cov_frac=args.min_ins_cov_frac,
-                                                          max_ins_cov_frac=args.max_ins_cov_frac)
+                                                          max_ins_cov_frac=args.max_ins_cov_frac,
+                                                          assembly_max_tools=args.assembly_max_tools)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
         logger.info("Will run assembly now")
@@ -306,6 +307,7 @@ def run_metasv(args):
                                            nthreads=args.num_threads,
                                            min_contig_len=AGE_MIN_CONTIG_LENGTH, min_del_subalign_len=args.min_del_subalign_len,
                                            min_inv_subalign_len=args.min_inv_subalign_len,
+                                           age_window=args.age_window,
                                            age_workdir=age_tmpdir)
 
         final_bed = os.path.join(args.workdir, "final.bed")
@@ -330,7 +332,7 @@ def run_metasv(args):
 
         logger.info("Output final VCF file")
 
-        convert_metasv_bed_to_vcf(bedfile=genotyped_bed, vcf_out=final_vcf, workdir=args.workdir, sample=args.sample, pass_calls=False)
+        convert_metasv_bed_to_vcf(bedfile=genotyped_bed, vcf_out=final_vcf, workdir=args.workdir, sample=args.sample, reference=args.reference, pass_calls=False)
     else:
         shutil.copy(preasm_vcf, final_vcf)
         pysam.tabix_index(final_vcf, force=True, preset="vcf")
