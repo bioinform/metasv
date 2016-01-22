@@ -2,13 +2,12 @@ import os
 import argparse
 import logging
 import multiprocessing
-import subprocess
 import fileinput
 import traceback
 from functools import partial, update_wrapper
 import json
 import base64
-import time
+from external_cmd import TimedExternalCmd
 
 import pysam
 import pybedtools
@@ -21,16 +20,6 @@ logging.basicConfig(level=logging.INFO, format=FORMAT)
 logger = logging.getLogger(__name__)
 
 precise_methods = set(["AS", "SR", "JM"])
-
-
-def run_cmd(cmd, logger, spades_log_fd):
-    logger.info("Running command %s" % cmd)
-    spades_log_fd.write("*************************************************\n")
-    start_time = time.time()
-    retcode = subprocess.call(cmd, shell=True, stderr=spades_log_fd, stdout=spades_log_fd)
-    logger.info("Returned code %d (%g seconds)" % (retcode, time.time() - start_time))
-
-    return retcode
 
 
 def append_contigs(src, interval, dst_fd, fn_id=0, sv_type="INS"):
@@ -59,7 +48,7 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
 
     try:
         for interval in intervals:
-            region = "%s:%d-%d" % (interval.chrom, interval.start, interval.end)
+            region = "%s:%d-%d" % (str(interval.chrom), interval.start, interval.end)
             thread_logger.info("Processing interval %s" % (str(interval).strip()))
 
             sv_type = interval.name.split(",")[1]
@@ -78,16 +67,15 @@ def run_spades_single(intervals=[], bam=None, spades=None, work=None, pad=SPADES
                 if extracted_count >= 5:
                     extra_opt = "--sc" if not fn_id == 0 else ""
                     spades_log_fd.write("Running spades for interval %s with extraction function %s\n" % (
-                    str(interval).strip(), extract_fn_name))
-                    retcode = run_cmd(
-                        "bash -c \"timeout %ds %s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 --phred-offset 33 %s\"" % (
-                            timeout, spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger,
-                        spades_log_fd)
+                        str(interval).strip(), extract_fn_name))
+                    cmd = TimedExternalCmd("%s -1 %s -2 %s -o %s/spades_%s/ -m 4 -t 1 --phred-offset 33 %s" % (
+                        spades, end1, end2, work, extract_fn_name, extra_opt), thread_logger)
+                    retcode = cmd.run(cmd_log_fd_out=spades_log_fd, timeout=timeout)
                     if retcode == 0:
                         append_contigs(os.path.join(work, "spades_%s/contigs.fasta") % extract_fn_name, interval,
                                        merged_contigs, fn_id, sv_type)
-                    elif retcode == 1:
-                        thread_logger.error("Spades failed for some reason")
+                    elif not cmd.did_timeout:
+                        thread_logger.error("Spades failed")
                         if stop_on_fail:
                             thread_logger.error("Aborting!")
                             raise Exception("Spades failure on interval %s for extraction function %s\n" % (

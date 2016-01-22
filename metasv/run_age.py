@@ -7,6 +7,7 @@ import hashlib
 from functools import partial
 import json
 import base64
+from external_cmd import TimedExternalCmd
 
 import pysam
 import pybedtools
@@ -127,20 +128,19 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 asm_name = os.path.join(age_workdir, "%s.as.fa" % prefix)
                 out = os.path.join(age_workdir, "%s.age.out" % prefix)
                 err = os.path.join(age_workdir, "%s.age.err" % prefix)
+                fd_out = open(out, "w")
+                fd_err = open(err, "w")
 
                 with open(asm_name, "w") as file_handle:
                     file_handle.write(">{}.as\n{}".format(region_name, contig_sequence))
 
-                age_cmd = "%s %s -both -go=-6 %s %s >%s 2>%s" % (
-                    age,
-                    "-inv" if contig.sv_type == "INV" else "-tdup" if contig.sv_type == "DUP" else "-indel",
-                    ref_f_name,
-                    asm_name,
-                    out,
-                    err)
-                execute_cmd = "timeout %ds %s" % (timeout, age_cmd)
-
-                retcode = run_cmd(execute_cmd, thread_logger, None, None)
+                age_cmd = "%s %s -both -go=-6 %s %s" % (
+                    age, "-inv" if contig.sv_type == "INV" else "-tdup" if contig.sv_type == "DUP" else "-indel",
+                    ref_f_name, asm_name)
+                cmd_runner = TimedExternalCmd(age_cmd, thread_logger)
+                retcode = cmd_runner.run(timeout=timeout, cmd_log_fd_out=fd_out, cmd_log_fd_err=fd_err)
+                fd_out.close()
+                fd_err.close()
 
                 if retcode == 0:
                     age_record = AgeRecord(out,tr_region_1=tr_region)
