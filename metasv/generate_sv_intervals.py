@@ -1076,7 +1076,6 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
 
     bed_files = []
     for index, (bam, chromosome) in enumerate(itertools.product(bams, chromosomes)):
-        print index
         process_workdir = os.path.join(workdir, str(index))
         if not os.path.isdir(process_workdir):
             os.makedirs(process_workdir)

@@ -70,39 +70,39 @@ def discordant_with_normal_orientation(aln, mate, chr_tid, chr_start, chr_end, i
     return not (isize_min <= abs(aln.tlen) <= isize_max)
 
 
-def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pairs = EXTRACTION_MAX_READ_PAIRS,
+def extract_read_pairs(bamnames, region, prefix, extract_fns, pad=0, max_read_pairs = EXTRACTION_MAX_READ_PAIRS,
                        truncation_pad_read_extract = EXTRACTION_TRUNCATION_PAD,  
                        max_interval_len_truncation = EXTRACTION_MAX_INTERVAL_TRUNCATION, sv_type=''):
     logger = logging.getLogger("%s-%s" % (extract_read_pairs.__name__, multiprocessing.current_process()))
 
     extract_fn_names = [extract_fn.__name__ for extract_fn in extract_fns]
     logger.info("Extracting reads from %s for region %s with padding %d using functions %s" % (
-        bamname, region, pad, extract_fn_names))
+        ",".join(bamnames), region, pad, extract_fn_names))
 
     chr_name = str(region.split(':')[0])
     chr_start = int(region.split(':')[1].split("-")[0]) - pad
     chr_end = int(region.split(':')[1].split('-')[1]) + pad
 
     selected_pair_counts = [0] * len(extract_fn_names)
-    aln_list = []
-
     start_time = time.time()
 
-    bam = pysam.Samfile(bamname, "rb")
-    chr_tid = bam.gettid(chr_name)
-    if chr_start < 0:
-        logger.error("Skipping read extraction since interval too close to chromosome beginning")
-    else:
-        # Read alignments from the interval in memory and build a dictionary to get mate instead of calling bammate.mate() function
-        if abs(chr_end-chr_start)>max_interval_len_truncation and sv_type in ["INV","DEL","DUP"]:
-            # For large SVs, middle sequences has no effect on genotyping. So, we only extract reads around breakpoints to speed up
-            truncate_start = chr_start + pad + truncation_pad_read_extract 
-            truncate_end = chr_end -  (pad + truncation_pad_read_extract)
-            logger.info("Truncate the reads in [%d-%d] for %s_%d_%d" % (truncate_start,truncate_end,chr_name,chr_start,chr_end))
-            aln_list = [aln for aln in bam.fetch(chr_name, start=chr_start, end=truncate_start-1) if not aln.is_secondary] + \
-                       [aln for aln in bam.fetch(chr_name, start=truncate_end+1, end=chr_end) if not aln.is_secondary]
-        else:        
-            aln_list = [aln for aln in bam.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
+    bams = [pysam.Samfile(bamname, "rb") for bamname in bamnames]
+    aln_list = []
+    for bam in bams:
+        chr_tid = bam.gettid(chr_name)
+        if chr_start < 0:
+            logger.error("Skipping read extraction since interval too close to chromosome beginning")
+        else:
+            # Read alignments from the interval in memory and build a dictionary to get mate instead of calling bammate.mate() function
+            if abs(chr_end-chr_start)>max_interval_len_truncation and sv_type in ["INV","DEL","DUP"]:
+                # For large SVs, middle sequences has no effect on genotyping. So, we only extract reads around breakpoints to speed up
+                truncate_start = chr_start + pad + truncation_pad_read_extract
+                truncate_end = chr_end -  (pad + truncation_pad_read_extract)
+                logger.info("Truncate the reads in [%d-%d] for %s_%d_%d" % (truncate_start,truncate_end,chr_name,chr_start,chr_end))
+                aln_list += [aln for aln in bam.fetch(chr_name, start=chr_start, end=truncate_start-1) if not aln.is_secondary] + \
+                            [aln for aln in bam.fetch(chr_name, start=truncate_end+1, end=chr_end) if not aln.is_secondary]
+            else:
+                aln_list += [aln for aln in bam.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
 
     aln_dict = {}
     for aln in aln_list:
@@ -116,20 +116,23 @@ def extract_read_pairs(bamname, region, prefix, extract_fns, pad=0, max_read_pai
         for aln_pair in aln_dict.values():
             missing_index = 0 if aln_pair[0] is None else (1 if aln_pair[1] is None else 2)
             if missing_index < 2:
-                mate = None
-                try:
-                    mate = bam.mate(aln_pair[1 - missing_index])
-                except ValueError:
-                    pass
-                if mate is not None:
-                    aln_pair[missing_index] = mate
-                    aln_pairs.append(aln_pair)
+                for bam in bams:
+                    mate = None
+                    try:
+                        mate = bam.mate(aln_pair[1 - missing_index])
+                    except ValueError:
+                        pass
+                    if mate is not None:
+                        aln_pair[missing_index] = mate
+                        aln_pairs.append(aln_pair)
+                        break
             else:
                 aln_pairs.append(aln_pair)
     else:
         logger.info("Too many reads encountered for %s. Skipping read extraction. (%d >%d)"%(region, len(aln_dict),max_read_pairs))
 
-    bam.close()
+    for bam in bams:
+        bam.close()
 
     ends = [(open("%s_%s_1.fq" % (prefix, name), "w"), open("%s_%s_2.fq" % (prefix, name), "w")) for name in
             extract_fn_names]
@@ -157,7 +160,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Extract reads and mates from a region for spades assembly",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--bam", help="BAM file to extract reads from", required=True)
+    parser.add_argument("--bams", nargs='+', help="BAM files to extract reads from", required=True, default=[])
     parser.add_argument("--region", help="Samtools region string", required=True)
     parser.add_argument("--prefix", help="Output FASTQ prefix", required=True)
     parser.add_argument("--extract_fn", help="Extraction function", choices=["all_pair", "non_perfect", "discordant"],
@@ -178,5 +181,5 @@ if __name__ == "__main__":
         extract_fn = partial(discordant, isize_min=args.isize_min, isize_max=args.isize_max)
         update_wrapper(extract_fn, discordant)
 
-    extract_read_pairs(args.bam, args.region, args.prefix, [extract_fn], pad=args.pad,
+    extract_read_pairs(args.bams, args.region, args.prefix, [extract_fn], pad=args.pad,
                        max_read_pairs=args.max_read_pairs)
