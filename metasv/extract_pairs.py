@@ -81,14 +81,14 @@ def get_mate(aln, bam_handles):
     return mate
 
 
-def extract_read_pairs(bamnames, region, prefix, extract_fns, pad=0, max_read_pairs = EXTRACTION_MAX_READ_PAIRS,
+def extract_read_pairs(bam_handles, region, prefix, extract_fns, pad=0, max_read_pairs = EXTRACTION_MAX_READ_PAIRS,
                        truncation_pad_read_extract = EXTRACTION_TRUNCATION_PAD,  
                        max_interval_len_truncation = EXTRACTION_MAX_INTERVAL_TRUNCATION, sv_type=''):
     logger = logging.getLogger("%s-%s" % (extract_read_pairs.__name__, multiprocessing.current_process()))
 
     extract_fn_names = [extract_fn.__name__ for extract_fn in extract_fns]
-    logger.info("Extracting reads from %s for region %s with padding %d using functions %s" % (
-        ",".join(bamnames), region, pad, extract_fn_names))
+    logger.info("Extracting reads from for region %s with padding %d using functions %s" % (
+        region, pad, extract_fn_names))
 
     chr_name = str(region.split(':')[0])
     chr_start = int(region.split(':')[1].split("-")[0]) - pad
@@ -97,9 +97,8 @@ def extract_read_pairs(bamnames, region, prefix, extract_fns, pad=0, max_read_pa
     selected_pair_counts = [0] * len(extract_fn_names)
     start_time = time.time()
 
-    bams = [pysam.Samfile(bamname, "rb") for bamname in bamnames]
     aln_list = []
-    chr_tid = bams[0].gettid(chr_name) if bams else -1
+    chr_tid = bam_handles[0].gettid(chr_name) if bam_handles else -1
 
     if chr_start < 0:
         logger.error("Skipping read extraction since interval too close to chromosome beginning")
@@ -110,10 +109,10 @@ def extract_read_pairs(bamnames, region, prefix, extract_fns, pad=0, max_read_pa
             truncate_start = chr_start + pad + truncation_pad_read_extract
             truncate_end = chr_end -  (pad + truncation_pad_read_extract)
             logger.info("Truncate the reads in [%d-%d] for %s_%d_%d" % (truncate_start,truncate_end,chr_name,chr_start,chr_end))
-            aln_list += [aln for bam in bams for aln in bam.fetch(chr_name, start=chr_start, end=truncate_start-1) if not aln.is_secondary] + \
-                        [aln for bam in bams for aln in bam.fetch(chr_name, start=truncate_end+1, end=chr_end) if not aln.is_secondary]
+            aln_list += [aln for bam_handle in bam_handles for aln in bam_handle.fetch(chr_name, start=chr_start, end=truncate_start-1) if not aln.is_secondary] + \
+                        [aln for bam_handle in bam_handles for aln in bam_handle.fetch(chr_name, start=truncate_end+1, end=chr_end) if not aln.is_secondary]
         else:
-            aln_list += [aln for bam in bams for aln in bam.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
+            aln_list += [aln for bam_handle in bam_handles for aln in bam_handle.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
 
     aln_dict = {}
     for aln in aln_list:
@@ -127,7 +126,7 @@ def extract_read_pairs(bamnames, region, prefix, extract_fns, pad=0, max_read_pa
         for aln_pair in aln_dict.values():
             missing_index = 0 if aln_pair[0] is None else (1 if aln_pair[1] is None else 2)
             if missing_index < 2:
-                mate = get_mate(aln_pair[1 - missing_index], bams)
+                mate = get_mate(aln_pair[1 - missing_index], bam_handles)
                 if mate is not None:
                     aln_pair[missing_index] = mate
                     aln_pairs.append(aln_pair)
@@ -135,9 +134,6 @@ def extract_read_pairs(bamnames, region, prefix, extract_fns, pad=0, max_read_pa
                 aln_pairs.append(aln_pair)
     else:
         logger.info("Too many reads encountered for %s. Skipping read extraction. (%d >%d)"%(region, len(aln_dict),max_read_pairs))
-
-    for bam in bams:
-        bam.close()
 
     ends = [(open("%s_%s_1.fq" % (prefix, name), "w"), open("%s_%s_2.fq" % (prefix, name), "w")) for name in
             extract_fn_names]
@@ -186,5 +182,10 @@ if __name__ == "__main__":
         extract_fn = partial(discordant, isize_min=args.isize_min, isize_max=args.isize_max)
         update_wrapper(extract_fn, discordant)
 
-    extract_read_pairs(args.bams, args.region, args.prefix, [extract_fn], pad=args.pad,
+    bam_handles = [pysam.Samfile(bam, "rb") for bam in args.bams]
+
+    extract_read_pairs(bam_handles, args.region, args.prefix, [extract_fn], pad=args.pad,
                        max_read_pairs=args.max_read_pairs)
+
+    for bam_handle in bam_handles:
+        bam_handle.close()

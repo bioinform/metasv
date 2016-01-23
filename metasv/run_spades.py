@@ -47,13 +47,15 @@ def run_spades_single(intervals=[], bams=[], spades=None, work=None, pad=SPADES_
     extract_fns = [extract_pairs.all_pair_hq, extract_pairs.non_perfect_hq]
 
     try:
+        bam_handles = [pysam.Samfile(bam, "rb") for bam in bams]
+
         for interval in intervals:
             region = "%s:%d-%d" % (str(interval.chrom), interval.start, interval.end)
             thread_logger.info("Processing interval %s" % (str(interval).strip()))
 
             sv_type = interval.name.split(",")[1]
 
-            extraction_counts = extract_pairs.extract_read_pairs(bams, region, "%s/" % work, extract_fns, pad=pad,
+            extraction_counts = extract_pairs.extract_read_pairs(bam_handles, region, "%s/" % work, extract_fns, pad=pad,
                                                                  max_read_pairs=max_read_pairs, sv_type=sv_type)
             all_pair_count = extraction_counts[0][1]
 
@@ -82,6 +84,10 @@ def run_spades_single(intervals=[], bams=[], spades=None, work=None, pad=SPADES_
                             str(interval).strip(), extract_fn_name))
                 else:
                     thread_logger.info("Too few read pairs (%d) extracted. Skipping assembly." % extracted_count)
+
+        for bam_handle in bam_handles:
+            bam_handle.close()
+
     except Exception as e:
         thread_logger.error('Caught exception in worker thread')
 
