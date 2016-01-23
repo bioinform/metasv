@@ -19,31 +19,30 @@ GT_REF = "0/0"
 GT_UNK = "./."
 
 
-def count_reads_supporting_ref(chrom, start, end, bam_handles, isize_min, isize_max, window):
+def count_reads_supporting_ref(chrom, start, end, bam_handle, isize_min, isize_max, window):
     total_normal_reads = 0
     total_read_bases = 0
     total_reads = 0
     window_start = max(0, start - window)
     window_end = end + window
-    for bam_handle in bam_handles:
-        for aln in bam_handle.fetch(str(chrom), window_start, window_end):
-            if aln.is_duplicate or not aln.is_paired:
-                continue
-            total_reads += 1
-            if aln.is_unmapped or aln.mate_is_unmapped:
-                continue
-            if aln.rnext != aln.tid: continue
-            if aln.is_reverse:
-                if not (aln.pnext < aln.pos and not aln.mate_is_reverse): continue
-            else:
-                if not (aln.pnext > aln.pos and aln.mate_is_reverse): continue
-            if not (((aln.aend - end) >= 20 and (end - aln.pos) >= 20) or (
-                    (start - aln.pos) >= 20 and (aln.aend - start) >= 20)):
-                continue
-            tlen = abs(aln.tlen)
-            if isize_min <= tlen <= isize_max:
-                total_normal_reads += 1
-                total_read_bases = total_read_bases + aln.qlen
+    for aln in bam_handle.fetch(chrom, window_start, window_end):
+        if aln.is_duplicate or not aln.is_paired:
+            continue
+        total_reads += 1
+        if aln.is_unmapped or aln.mate_is_unmapped:
+            continue
+        if aln.rnext != aln.tid: continue
+        if aln.is_reverse:
+            if not (aln.pnext < aln.pos and not aln.mate_is_reverse): continue
+        else:
+            if not (aln.pnext > aln.pos and aln.mate_is_reverse): continue
+        if not (((aln.aend - end) >= 20 and (end - aln.pos) >= 20) or (
+                (start - aln.pos) >= 20 and (aln.aend - start) >= 20)):
+            continue
+        tlen = abs(aln.tlen)
+        if isize_min <= tlen <= isize_max:
+            total_normal_reads += 1
+            total_read_bases = total_read_bases + aln.qlen
     return total_normal_reads, total_read_bases, total_reads
 
 
@@ -54,10 +53,11 @@ def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handles, isize_
     locations = [start, end] if sv_type != "INS" else [start]
     total_normal, total = 0, 0
     for location in locations:
-        total_normal_, total_bases_, total_ = count_reads_supporting_ref(chrom, location, location, bam_handles,
-                                                                         isize_min, isize_max, window)
-        total_normal += total_normal_
-        total += total_
+        for bam_handle in bam_handles:
+            total_normal_, total_bases_, total_ = count_reads_supporting_ref(chrom, location, location, bam_handle,
+                                                                             isize_min, isize_max, window)
+            total_normal += total_normal_
+            total += total_
 
     normal_frac = float(total_normal) / float(max(1, total))
     gt = GT_REF
@@ -70,7 +70,7 @@ def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handles, isize_
 
 
 def parse_interval(interval):
-    chrom = interval.chrom
+    chrom = str(interval.chrom)
     pos = interval.start
     end = interval.end
 
