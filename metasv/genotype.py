@@ -70,7 +70,7 @@ def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handles, isize_
 
 
 def parse_interval(interval):
-    chrom = str(interval.chrom)
+    chrom = interval.chrom
     pos = interval.start
     end = interval.end
 
@@ -127,7 +127,7 @@ def genotype_intervals(intervals_file=None, bams=[], workdir=None, window=GT_WIN
         bam_handles = [pysam.Samfile(bam, "rb") for bam in bams]
         for interval in pybedtools.BedTool(intervals_file):
             chrom, start, end, sv_type, svlen = parse_interval(interval)
-            genotype = genotype_interval(chrom, start, end, sv_type, svlen, bam_handles, isize_min, isize_max, window,
+            genotype = genotype_interval(str(chrom), start, end, sv_type, svlen, bam_handles, isize_min, isize_max, window,
                                          normal_frac_threshold)
             fields = interval.fields + [genotype]
             genotyped_intervals.append(pybedtools.create_interval_from_list(fields))

@@ -69,6 +69,17 @@ def discordant_with_normal_orientation(aln, mate, chr_tid, chr_start, chr_end, i
     if aln.is_reverse and mate.is_reverse or not aln.is_reverse and not mate.is_reverse: return False
     return not (isize_min <= abs(aln.tlen) <= isize_max)
 
+def get_mate(aln, bam_handles):
+    mate = None
+    for bam_handle in bam_handles:
+        try:
+            mate = bam_handle.mate(aln)
+        except ValueError:
+            pass
+        if mate is not None:
+            return mate
+    return mate
+
 
 def extract_read_pairs(bamnames, region, prefix, extract_fns, pad=0, max_read_pairs = EXTRACTION_MAX_READ_PAIRS,
                        truncation_pad_read_extract = EXTRACTION_TRUNCATION_PAD,  
@@ -88,21 +99,21 @@ def extract_read_pairs(bamnames, region, prefix, extract_fns, pad=0, max_read_pa
 
     bams = [pysam.Samfile(bamname, "rb") for bamname in bamnames]
     aln_list = []
-    for bam in bams:
-        chr_tid = bam.gettid(chr_name)
-        if chr_start < 0:
-            logger.error("Skipping read extraction since interval too close to chromosome beginning")
+    chr_tid = bams[0].gettid(chr_name) if bams else -1
+
+    if chr_start < 0:
+        logger.error("Skipping read extraction since interval too close to chromosome beginning")
+    else:
+        # Read alignments from the interval in memory and build a dictionary to get mate instead of calling bammate.mate() function
+        if abs(chr_end-chr_start)>max_interval_len_truncation and sv_type in ["INV","DEL","DUP"]:
+            # For large SVs, middle sequences has no effect on genotyping. So, we only extract reads around breakpoints to speed up
+            truncate_start = chr_start + pad + truncation_pad_read_extract
+            truncate_end = chr_end -  (pad + truncation_pad_read_extract)
+            logger.info("Truncate the reads in [%d-%d] for %s_%d_%d" % (truncate_start,truncate_end,chr_name,chr_start,chr_end))
+            aln_list += [aln for bam in bams for aln in bam.fetch(chr_name, start=chr_start, end=truncate_start-1) if not aln.is_secondary] + \
+                        [aln for bam in bams for aln in bam.fetch(chr_name, start=truncate_end+1, end=chr_end) if not aln.is_secondary]
         else:
-            # Read alignments from the interval in memory and build a dictionary to get mate instead of calling bammate.mate() function
-            if abs(chr_end-chr_start)>max_interval_len_truncation and sv_type in ["INV","DEL","DUP"]:
-                # For large SVs, middle sequences has no effect on genotyping. So, we only extract reads around breakpoints to speed up
-                truncate_start = chr_start + pad + truncation_pad_read_extract
-                truncate_end = chr_end -  (pad + truncation_pad_read_extract)
-                logger.info("Truncate the reads in [%d-%d] for %s_%d_%d" % (truncate_start,truncate_end,chr_name,chr_start,chr_end))
-                aln_list += [aln for aln in bam.fetch(chr_name, start=chr_start, end=truncate_start-1) if not aln.is_secondary] + \
-                            [aln for aln in bam.fetch(chr_name, start=truncate_end+1, end=chr_end) if not aln.is_secondary]
-            else:
-                aln_list += [aln for aln in bam.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
+            aln_list += [aln for bam in bams for aln in bam.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
 
     aln_dict = {}
     for aln in aln_list:
@@ -116,16 +127,10 @@ def extract_read_pairs(bamnames, region, prefix, extract_fns, pad=0, max_read_pa
         for aln_pair in aln_dict.values():
             missing_index = 0 if aln_pair[0] is None else (1 if aln_pair[1] is None else 2)
             if missing_index < 2:
-                for bam in bams:
-                    mate = None
-                    try:
-                        mate = bam.mate(aln_pair[1 - missing_index])
-                    except ValueError:
-                        pass
-                    if mate is not None:
-                        aln_pair[missing_index] = mate
-                        aln_pairs.append(aln_pair)
-                        break
+                mate = get_mate(aln_pair[1 - missing_index], bams)
+                if mate is not None:
+                    aln_pair[missing_index] = mate
+                    aln_pairs.append(aln_pair)
             else:
                 aln_pairs.append(aln_pair)
     else:
