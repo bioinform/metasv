@@ -97,10 +97,8 @@ def extract_read_pairs(bam_handles, region, prefix, extract_fns, pad=0, max_read
     selected_pair_counts = [0] * len(extract_fn_names)
     start_time = time.time()
 
-    aln_list = []
-    chr_tid = bam_handles[0].gettid(chr_name) if bam_handles else -1
-
     if chr_start < 0:
+        regions_to_extract = []
         logger.error("Skipping read extraction since interval too close to chromosome beginning")
     else:
         # Read alignments from the interval in memory and build a dictionary to get mate instead of calling bammate.mate() function
@@ -111,7 +109,8 @@ def extract_read_pairs(bam_handles, region, prefix, extract_fns, pad=0, max_read
             truncate_end = chr_end -  (pad + truncation_pad_read_extract)
             logger.info("Truncate the reads in [%d-%d] for %s_%d_%d" % (truncate_start,truncate_end,chr_name,chr_start,chr_end))
             regions_to_extract = [(chr_name, chr_start, truncate_start-1), (chr_name, truncate_end+1, chr_end)]
-        aln_list = [aln for (chr_, start_, end_) in regions_to_extract for bam_handle in bam_handles for aln in bam_handle.fetch(chr_, start=start_, end=end_) if not aln.is_secondary]
+
+    aln_list = [aln for (chr_, start_, end_) in regions_to_extract for bam_handle in bam_handles for aln in bam_handle.fetch(chr_, start=start_, end=end_) if not aln.is_secondary]
 
     aln_dict = {}
     for aln in aln_list:
@@ -136,6 +135,8 @@ def extract_read_pairs(bam_handles, region, prefix, extract_fns, pad=0, max_read
 
     ends = [(open("%s_%s_1.fq" % (prefix, name), "w"), open("%s_%s_2.fq" % (prefix, name), "w")) for name in
             extract_fn_names]
+
+    chr_tid = bam_handles[0].gettid(chr_name) if bam_handles else -1
     for first, second in aln_pairs:
         for fn_index, extract_fn in enumerate(extract_fns):
             if extract_fn(first, second,chr_tid,chr_start,chr_end):
