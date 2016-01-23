@@ -104,15 +104,14 @@ def extract_read_pairs(bam_handles, region, prefix, extract_fns, pad=0, max_read
         logger.error("Skipping read extraction since interval too close to chromosome beginning")
     else:
         # Read alignments from the interval in memory and build a dictionary to get mate instead of calling bammate.mate() function
+        regions_to_extract = [(chr_name, chr_start, chr_end)]
         if abs(chr_end-chr_start)>max_interval_len_truncation and sv_type in ["INV","DEL","DUP"]:
             # For large SVs, middle sequences has no effect on genotyping. So, we only extract reads around breakpoints to speed up
             truncate_start = chr_start + pad + truncation_pad_read_extract
             truncate_end = chr_end -  (pad + truncation_pad_read_extract)
             logger.info("Truncate the reads in [%d-%d] for %s_%d_%d" % (truncate_start,truncate_end,chr_name,chr_start,chr_end))
-            aln_list += [aln for bam_handle in bam_handles for aln in bam_handle.fetch(chr_name, start=chr_start, end=truncate_start-1) if not aln.is_secondary] + \
-                        [aln for bam_handle in bam_handles for aln in bam_handle.fetch(chr_name, start=truncate_end+1, end=chr_end) if not aln.is_secondary]
-        else:
-            aln_list += [aln for bam_handle in bam_handles for aln in bam_handle.fetch(chr_name, start=chr_start, end=chr_end) if not aln.is_secondary]
+            regions_to_extract = [(chr_name, chr_start, truncate_start-1), (chr_name, truncate_end+1, chr_end)]
+        aln_list = [aln for (chr_, start_, end_) in regions_to_extract for bam_handle in bam_handles for aln in bam_handle.fetch(chr_, start=start_, end=end_) if not aln.is_secondary]
 
     aln_dict = {}
     for aln in aln_list:
