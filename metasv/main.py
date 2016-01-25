@@ -292,7 +292,7 @@ def run_metasv(args):
 
         logger.info("Will run assembly now")
 
-        assembled_fasta, ignored_bed = run_spades_parallel(bam=args.bam.name, spades=args.spades, bed=assembly_bed,
+        assembled_fasta, ignored_bed = run_spades_parallel(bam=args.bam.name, spades=args.spades, spades_options=args.spades_options, bed=assembly_bed,
                                                            work=spades_tmpdir, pad=args.assembly_pad,
                                                            nthreads=args.num_threads,
                                                            chrs=list(contig_whitelist),

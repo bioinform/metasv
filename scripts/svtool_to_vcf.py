@@ -63,9 +63,9 @@ def convert_svtool_to_vcf(file_name, sample, out_vcf, toolname, reference, sort=
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert SV tool output file to VCF",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--input", help="SV tool output file", required=False)
-    parser.add_argument("--output", help="Output VCF to create", required=False)
-    parser.add_argument("--tool", help="Tool name", required=False, default="BreakDancer",
+    parser.add_argument("--input", help="SV tool output file")
+    parser.add_argument("--output", help="Output VCF to create")
+    parser.add_argument("--tool", help="Tool name", default="BreakDancer",
                         choices=sorted(tool_to_reader.keys()))
     parser.add_argument("--sample", help="Sample name", required=True)
     parser.add_argument("--reference", help="Reference FASTA")
