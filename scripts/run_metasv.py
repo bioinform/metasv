@@ -91,6 +91,7 @@ if __name__ == "__main__":
     as_parser = parser.add_argument_group("Assembly options")
     as_parser.add_argument("--spades", help="Path to SPAdes executable")
     as_parser.add_argument("--spades_options", help="Options for SPAdes", default="")
+    as_parser.add_argument("--spades_timeout", help="Maximum time (in seconds) for running SPAdes on an interval", default=SPADES_TIMEOUT, type=int)
     as_parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
     as_parser.add_argument("--svs_to_assemble", nargs="+", help="SVs to assemble", default=SVS_ASSEMBLY_SUPPORTED,
                            choices=SVS_ASSEMBLY_SUPPORTED)
@@ -106,6 +107,7 @@ if __name__ == "__main__":
                            help="Padding base pairs to use for assembling breakpoint with Spades and AGE")
     as_parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
     as_parser.add_argument("--age", help="Path to AGE executable")
+    as_parser.add_argument("--age_timeout", help="Maximum time (in seconds) for running AGE on an assembled contig", default=AGE_TIMEOUT, type=int)
     as_parser.add_argument("--min_inv_subalign_len", help="Minimum length of inversion sub-alginment", type=int,
                         default=MIN_INV_SUBALIGN_LENGTH)
     as_parser.add_argument("--min_del_subalign_len", help="Minimum length of deletion sub-alginment", type=int,
