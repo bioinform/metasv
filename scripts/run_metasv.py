@@ -126,7 +126,7 @@ if __name__ == "__main__":
                             help="Enable output of merged SVs for individual tools")
 
     work_parser = parser.add_argument_group("Running environment options")
-    work_parser.add_argument("--workdir", help="Scratch directory for working", default="work", required=False)
+    work_parser.add_argument("--workdir", help="Scratch directory for working", default="work")
     work_parser.add_argument("--num_threads", help="Number of threads to use", type=int, default=1)
     work_parser.add_argument("--outdir", help="Output directory", required=True)
 

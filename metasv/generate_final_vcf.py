@@ -519,7 +519,7 @@ if __name__ == "__main__":
     parser.add_argument("--bed", help="MetaSV final BED", required=True)
     parser.add_argument("--vcf", help="Final VCF to output", required=True)
     parser.add_argument("--vcf_template", help="VCF template", default=vcf_template)
-    parser.add_argument("--reference", help="Reference FASTA", required=False)
+    parser.add_argument("--reference", help="Reference FASTA")
     parser.add_argument("--work", help="Work directory", default="work")
     parser.add_argument("--pass_only", action="store_true", help="Output only PASS calls")
 
