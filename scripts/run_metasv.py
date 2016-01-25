@@ -101,6 +101,7 @@ if __name__ == "__main__":
 
     as_parser = parser.add_argument_group("Assembly options")
     as_parser.add_argument("--spades", help="Path to SPAdes executable", required=False)
+    as_parser.add_argument("--spades_options", help="Options for SPAdes", default="")
     as_parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
     as_parser.add_argument("--svs_to_assemble", nargs="+", help="SVs to assemble", default=SVS_ASSEMBLY_SUPPORTED,
                            choices=SVS_ASSEMBLY_SUPPORTED)
