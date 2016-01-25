@@ -13,37 +13,31 @@ if __name__ == "__main__":
     input_parser = parser.add_argument_group("Input data options")
     input_parser.add_argument("--sample", metavar="Sample", help="Sample name", required=True)
     input_parser.add_argument("--pindel_vcf", nargs="+", metavar="pindel_vcf", help="VCF file or dir for Pindel VCFs",
-                              required=False, default=[])
+                              default=[])
     input_parser.add_argument("--pindel_native", nargs="+", metavar="File list", help="Pindel native files",
-                              required=False,
                               default=[])
     input_parser.add_argument("--breakdancer_vcf", nargs="+", metavar="breakdancer_vcf",
-                              help="VCF file or dir for BreakDancer VCFs", required=False, default=[])
+                              help="VCF file or dir for BreakDancer VCFs", default=[])
     input_parser.add_argument("--breakdancer_native", nargs="+", metavar="File list", help="BreakDancer native files",
-                              required=False, default=[])
+                              default=[])
     input_parser.add_argument("--breakseq_vcf", nargs="+", metavar="breakseq_vcf",
-                              help="VCF file or dir for BreakSeq VCFs",
-                              required=False, default=[])
+                              help="VCF file or dir for BreakSeq VCFs", default=[])
     input_parser.add_argument("--breakseq_native", nargs="+", metavar="breakseq_native",
-                              help="BreakSeq native GFF files",
-                              required=False, default=[])
+                              help="BreakSeq native GFF files", default=[])
     input_parser.add_argument("--cnvnator_vcf", nargs="+", metavar="cnvnator_vcf",
-                              help="VCF file or dir for CNVnator VCFs",
-                              required=False, default=[])
+                              help="VCF file or dir for CNVnator VCFs", default=[])
     input_parser.add_argument("--cnvnator_native", nargs="+", metavar="File list", help="CNVnator native files",
-                              required=False,
                               default=[])
     input_parser.add_argument("--gatk_vcf", nargs="+", metavar="file", help="VCF file or dir for gatk VCFs",
-                              required=False,
                               default=[])
     input_parser.add_argument("--manta_vcf", nargs="+", help="VCF file or dir for Manta VCFs",
-                              required=False, default=[])
+                              default=[])
     input_parser.add_argument("--lumpy_vcf", nargs="+", help="VCF file or dir for Lumpy VCFs",
-                              required=False, default=[])
+                              default=[])
     input_parser.add_argument("--cnvkit_vcf", nargs="+", help="VCF file or dir for CNVkit VCFs",
-                              required=False, default=[])
+                              default=[])
     input_parser.add_argument("--wham_vcf", nargs="+", help="VCF file or dir for WHAM VCFs",
-                              required=False, default=[])
+                              default=[])
                               
     input_parser.add_argument("--mean_read_length", type=float, default=MEAN_READ_LENGTH, help="Mean read length")
 
@@ -52,8 +46,8 @@ if __name__ == "__main__":
     reference_parser.add_argument("--chromosomes",
                                   help="Chromosome list to process. If unspecified, then all chromosomes will be considered.",
                                   nargs="+", default=[])
-    reference_parser.add_argument("--gaps", metavar="gaps", help="Gap bed file", required=False, default=None)
-    reference_parser.add_argument("--filter_gaps", help="Filter out gaps", action="store_true", required=False)
+    reference_parser.add_argument("--gaps", metavar="gaps", help="Gap bed file", default=None)
+    reference_parser.add_argument("--filter_gaps", help="Filter out gaps", action="store_true")
     reference_parser.add_argument("--keep_standard_contigs", action="store_true",
                                   help="Keep only the major contigs + MT")
 
@@ -63,19 +57,14 @@ if __name__ == "__main__":
     bam_parser.add_argument("--isize_sd", type=float, default=ISIZE_SD, help="Insert size standard deviation")
 
     merging_parser = parser.add_argument_group("Tool output merging options")
-    merging_parser.add_argument("--wiggle", help="Wiggle for interval overlap", default=WIGGLE, type=int,
-                                required=False)
+    merging_parser.add_argument("--wiggle", help="Wiggle for interval overlap", default=WIGGLE, type=int)
     merging_parser.add_argument("--inswiggle", help="Wiggle for insertions, overides wiggle", default=INS_WIGGLE,
-                                type=int,
-                                required=False)
+                                type=int)
     merging_parser.add_argument("--minsvlen", help="Minimum length acceptable to be an SV", default=MIN_SV_LENGTH,
-                                type=int,
-                                required=False)
+                                type=int)
     merging_parser.add_argument("--maxsvlen", help="Maximum length SV to report", default=MAX_SV_LENGTH,
-                                type=int,
-                                required=False)
-    merging_parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=OVERLAP_RATIO, type=float,
-                                required=False)
+                                type=int)
+    merging_parser.add_argument("--overlap_ratio", help="Reciprocal overlap ratio", default=OVERLAP_RATIO, type=float)
 
     insertion_parser = parser.add_argument_group("Insertion detection options")
     insertion_parser.add_argument("--min_avg_base_qual", help="Minimum average base quality",
@@ -100,7 +89,8 @@ if __name__ == "__main__":
 
 
     as_parser = parser.add_argument_group("Assembly options")
-    as_parser.add_argument("--spades", help="Path to SPAdes executable", required=False)
+    as_parser.add_argument("--spades", help="Path to SPAdes executable")
+    as_parser.add_argument("--spades_options", help="Options for SPAdes", default="")
     as_parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
     as_parser.add_argument("--svs_to_assemble", nargs="+", help="SVs to assemble", default=SVS_ASSEMBLY_SUPPORTED,
                            choices=SVS_ASSEMBLY_SUPPORTED)
@@ -115,7 +105,7 @@ if __name__ == "__main__":
     as_parser.add_argument("--assembly_pad", type=int, default=SPADES_PAD,
                            help="Padding base pairs to use for assembling breakpoint with Spades and AGE")
     as_parser.add_argument("--stop_spades_on_fail", action="store_true", help="Abort on SPAdes failure")
-    as_parser.add_argument("--age", help="Path to AGE executable", required=False)
+    as_parser.add_argument("--age", help="Path to AGE executable")
     as_parser.add_argument("--min_inv_subalign_len", help="Minimum length of inversion sub-alginment", type=int,
                         default=MIN_INV_SUBALIGN_LENGTH)
     as_parser.add_argument("--min_del_subalign_len", help="Minimum length of deletion sub-alginment", type=int,
@@ -136,7 +126,7 @@ if __name__ == "__main__":
                             help="Enable output of merged SVs for individual tools")
 
     work_parser = parser.add_argument_group("Running environment options")
-    work_parser.add_argument("--workdir", help="Scratch directory for working", default="work", required=False)
+    work_parser.add_argument("--workdir", help="Scratch directory for working", default="work")
     work_parser.add_argument("--num_threads", help="Number of threads to use", type=int, default=1)
     work_parser.add_argument("--outdir", help="Output directory", required=True)
 
