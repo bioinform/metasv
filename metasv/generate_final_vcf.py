@@ -480,7 +480,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None, vcf_temp
             info = json.loads(base64.b64decode(name_split[0]))
             sv_type = name_split[1]
             sv_id = "."
-            ref = fasta_file.fetch(interval.chrom, interval.start, interval.start + 1) if fasta_file else "."
+            ref = fasta_file.fetch(str(interval.chrom), interval.start, interval.start + 1) if fasta_file else "."
             alt = [vcf.model._SV(sv_type)]
             qual = "."
             sv_filter = [interval.fields[7]]
