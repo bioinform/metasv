@@ -846,7 +846,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
             return None
 
         unmerged_bed = os.path.join(workdir, "unmerged.bed")
-        bedtool = pybedtools.BedTool(unmerged_intervals).sort().moveto(unmerged_bed)
+        bedtool = pybedtools.BedTool(unmerged_intervals).sort().saveas(unmerged_bed)
         func_logger.info("%d candidate reads" % (bedtool.count()))
 
         thr_sv={"INS":min_support_frac_ins, "INV":MIN_SUPPORT_FRAC_INV, 
@@ -854,8 +854,6 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
 
         thr_sv_abs={"INS":min_support_ins, "INV":MIN_SUPPORT_INV, 
                 "DEL":MIN_SUPPORT_DEL, "DUP": MIN_SUPPORT_DUP}
-
-
 
         unmerged_none_bed = None
         if not unmerged_none_intervals:
