@@ -87,7 +87,7 @@ def extract_read_pairs(bam_handles, region, prefix, extract_fns, pad=0, max_read
     logger = logging.getLogger("%s-%s" % (extract_read_pairs.__name__, multiprocessing.current_process()))
 
     extract_fn_names = [extract_fn.__name__ for extract_fn in extract_fns]
-    logger.info("Extracting reads from for region %s with padding %d using functions %s" % (
+    logger.info("Extracting reads for region %s with padding %d using functions %s" % (
         region, pad, extract_fn_names))
 
     chr_name = str(region.split(':')[0])
