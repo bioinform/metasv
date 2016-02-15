@@ -1076,7 +1076,6 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
 
     bed_files = []
     for index, (bam, chromosome) in enumerate(itertools.product(bams, chromosomes)):
-        print index
         process_workdir = os.path.join(workdir, str(index))
         if not os.path.isdir(process_workdir):
             os.makedirs(process_workdir)
@@ -1130,27 +1129,24 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     bedtool = bedtool.cut(xrange(6)).saveas(os.path.join(workdir, "top_intervals.bed"))
 
     interval_bed = os.path.join(workdir, "intervals.bed")
-    if skip_bed:
-        skip_bedtool = pybedtools.BedTool(skip_bed)
-        sc_skip_bed = os.path.join(workdir, "sc_metasv.bed")
-        if "INS" in svs_to_softclip:
-            skip_bedtool = skip_bedtool.each(partial(add_INS_padding,pad=pad)).saveas(sc_skip_bed)
-        nonsc_skip_bed = os.path.join(workdir, "non_sc_metasv.bed")
-        func_logger.info(
-            "Merging %d features with %d features from %s" % (bedtool.count(), skip_bedtool.count(), skip_bed))
-        nonsc_skip_bedtool = skip_bedtool.filter(lambda x: x.name.split(',')[1] not in svs_to_softclip).saveas(nonsc_skip_bed)
-        sc_skip_bedtool = skip_bedtool.filter(lambda x: x.name.split(',')[1] in svs_to_softclip).saveas(interval_bed)
-        if len(sc_skip_bedtool) > 0:
-            bedtool = bedtool.cat(sc_skip_bedtool, postmerge=False)
-        bedtool = bedtool.sort()
-        bedtool = merge_for_each_sv(bedtool,c="4",o="collapse",svs_to_softclip=svs_to_softclip,
+
+    skip_bedtool = pybedtools.BedTool(skip_bed) if skip_bed else []
+
+    sc_skip_bed = os.path.join(workdir, "sc_metasv.bed")
+    if "INS" in svs_to_softclip and skip_bedtool:
+        skip_bedtool = skip_bedtool.each(partial(add_INS_padding,pad=pad)).saveas(sc_skip_bed)
+    nonsc_skip_bed = os.path.join(workdir, "non_sc_metasv.bed")
+    nonsc_skip_bedtool = skip_bedtool.filter(lambda x: x.name.split(',')[1] not in svs_to_softclip).saveas(nonsc_skip_bed) if skip_bedtool else []
+    sc_skip_bedtool = skip_bedtool.filter(lambda x: x.name.split(',')[1] in svs_to_softclip).saveas(interval_bed) if skip_bedtool else []
+    if len(sc_skip_bedtool):
+        bedtool = bedtool.cat(sc_skip_bedtool, postmerge=False)
+    bedtool = bedtool.sort()
+    bedtool = merge_for_each_sv(bedtool,c="4",o="collapse",svs_to_softclip=svs_to_softclip,
                                   overlap_ratio=overlap_ratio, reciprocal_for_2bp=True, d=merge_max_dist)
-        bedtool = bedtool.each(partial(fix_merged_fields,inter_tools=True)).sort().moveto(interval_bed)
-        if len(nonsc_skip_bedtool) > 0:
-            bedtool = bedtool.cat(nonsc_skip_bedtool, postmerge=False).sort().moveto(interval_bed)
-        func_logger.info("After merging with %s %d features" % (skip_bed, bedtool.count()))
-    else:
-        bedtool = bedtool.saveas(interval_bed)
+    bedtool = bedtool.each(partial(fix_merged_fields,inter_tools=True)).sort().moveto(interval_bed)
+    if len(nonsc_skip_bedtool):
+        bedtool = bedtool.cat(nonsc_skip_bedtool, postmerge=False).sort().moveto(interval_bed)
+    func_logger.info("After merging with %s %d features" % (str(skip_bed), bedtool.count()))
 
     bedtool = bedtool.each(partial(remove_INS_padding,pad=pad)).sort().saveas(interval_bed)
 

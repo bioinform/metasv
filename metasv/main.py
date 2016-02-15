@@ -103,13 +103,12 @@ def run_metasv(args):
         for native_file in nativename:
             for record in svReader(native_file, svs_to_report=args.svs_to_report):
                 interval = record.to_sv_interval()
+                if not interval:
+                    # This is the case for SVs we want to skip
+                    continue
                 BD_min_inv_len = args.mean_read_length+4*args.isize_sd
                 if toolname=="BreakDancer" and interval.sv_type == "INV" and  abs(interval.length)< BD_min_inv_len:
                     #Filter BreakDancer artifact INVs with size < readlength+4*isize_sd
-                    continue
-
-                if not interval:
-                    # This is the case for SVs we want to skip
                     continue
                 if not interval_overlaps_interval_list(interval, gap_intervals) and interval.chrom in contig_whitelist:
                     
@@ -271,7 +270,7 @@ def run_metasv(args):
         # this does the improved assembly location finder with softclipped reads
         if args.boost_sc:
             logger.info("Generating Soft-Clipping intervals.")
-            assembly_bed = parallel_generate_sc_intervals([args.bam.name], list(contig_whitelist), merged_bed,
+            assembly_bed = parallel_generate_sc_intervals(args.bams, list(contig_whitelist), merged_bed,
                                                           args.workdir,
                                                           num_threads=args.num_threads,
                                                           min_support_ins=args.min_support_ins,
@@ -292,7 +291,7 @@ def run_metasv(args):
 
         logger.info("Will run assembly now")
 
-        assembled_fasta, ignored_bed = run_spades_parallel(bam=args.bam.name, spades=args.spades, spades_options=args.spades_options, bed=assembly_bed,
+        assembled_fasta, ignored_bed = run_spades_parallel(bams=args.bams, spades=args.spades, spades_options=args.spades_options, bed=assembly_bed,
                                                            work=spades_tmpdir, pad=args.assembly_pad,
                                                            nthreads=args.num_threads,
                                                            chrs=list(contig_whitelist),
@@ -324,7 +323,7 @@ def run_metasv(args):
         else:
             final_bed = None
 
-        genotyped_bed = parallel_genotype_intervals(final_bed, args.bam.name,
+        genotyped_bed = parallel_genotype_intervals(final_bed, args.bams,
                                                     workdir=os.path.join(args.workdir, "genotyping"),
                                                     nthreads=args.num_threads, chromosomes=list(contig_whitelist),
                                                     window=args.gt_window, isize_mean=args.isize_mean,

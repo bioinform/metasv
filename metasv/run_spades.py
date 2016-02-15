@@ -32,7 +32,7 @@ def append_contigs(src, interval, dst_fd, fn_id=0, sv_type="INS"):
                 dst_fd.write(line)
 
 
-def run_spades_single(intervals=[], bam=None, spades=None, spades_options="", work=None, pad=SPADES_PAD, timeout=SPADES_TIMEOUT,
+def run_spades_single(intervals=[], bams=[], spades=None, spades_options="", work=None, pad=SPADES_PAD, timeout=SPADES_TIMEOUT,
                       isize_min=ISIZE_MIN,
                       isize_max=ISIZE_MAX, stop_on_fail=False, max_read_pairs=EXTRACTION_MAX_READ_PAIRS):
     thread_logger = logging.getLogger("%s-%s" % (run_spades_single.__name__, multiprocessing.current_process()))
@@ -47,13 +47,15 @@ def run_spades_single(intervals=[], bam=None, spades=None, spades_options="", wo
     extract_fns = [extract_pairs.all_pair_hq, extract_pairs.non_perfect_hq]
 
     try:
+        bam_handles = [pysam.Samfile(bam, "rb") for bam in bams]
+
         for interval in intervals:
             region = "%s:%d-%d" % (str(interval.chrom), interval.start, interval.end)
             thread_logger.info("Processing interval %s" % (str(interval).strip()))
 
             sv_type = interval.name.split(",")[1]
 
-            extraction_counts = extract_pairs.extract_read_pairs(bam, region, "%s/" % work, extract_fns, pad=pad,
+            extraction_counts = extract_pairs.extract_read_pairs(bam_handles, region, "%s/" % work, extract_fns, pad=pad,
                                                                  max_read_pairs=max_read_pairs, sv_type=sv_type)
             all_pair_count = extraction_counts[0][1]
 
@@ -82,6 +84,10 @@ def run_spades_single(intervals=[], bam=None, spades=None, spades_options="", wo
                             str(interval).strip(), extract_fn_name))
                 else:
                     thread_logger.info("Too few read pairs (%d) extracted. Skipping assembly." % extracted_count)
+
+        for bam_handle in bam_handles:
+            bam_handle.close()
+
     except Exception as e:
         thread_logger.error('Caught exception in worker thread')
 
@@ -156,7 +162,7 @@ def add_breakpoints(interval):
     return pybedtools.create_interval_from_list(fields)
 
 
-def run_spades_parallel(bam=None, spades=None, spades_options="", bed=None, work=None, pad=SPADES_PAD, nthreads=1, chrs=[],
+def run_spades_parallel(bams=[], spades=None, spades_options="", bed=None, work=None, pad=SPADES_PAD, nthreads=1, chrs=[],
                         max_interval_size=SPADES_MAX_INTERVAL_SIZE,
                         timeout=SPADES_TIMEOUT, isize_min=ISIZE_MIN, isize_max=ISIZE_MAX,
                         svs_to_assemble=SVS_ASSEMBLY_SUPPORTED,
@@ -189,7 +195,7 @@ def run_spades_parallel(bam=None, spades=None, spades_options="", bed=None, work
     assembly_fastas = []
     for i in xrange(nthreads):
         intervals = [interval for (j, interval) in enumerate(selected_intervals) if (j % nthreads) == i]
-        kwargs_dict = {"intervals": intervals, "bam": bam, "spades": spades, "spades_options": spades_options, "work": "%s/%d" % (work, i), "pad": pad,
+        kwargs_dict = {"intervals": intervals, "bams": bams, "spades": spades, "spades_options": spades_options, "work": "%s/%d" % (work, i), "pad": pad,
                        "timeout": timeout, "isize_min": isize_min, "isize_max": isize_max, "stop_on_fail": stop_on_fail,
                        "max_read_pairs": max_read_pairs}
         pool.apply_async(run_spades_single, kwds=kwargs_dict,
@@ -224,7 +230,7 @@ def run_spades_parallel(bam=None, spades=None, spades_options="", bed=None, work
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run spades on a bed file.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--bam", help="BAM file to use reads from", required=True)
+    parser.add_argument("--bams", nargs='+', help="BAM file to use reads from", required=True, default=[])
     parser.add_argument("--spades", help="Spades python executable", required=True)
     parser.add_argument("--spades_options", help="Options for SPAdes", default="")
     parser.add_argument("--work", help="Work directory", default="work")
@@ -246,6 +252,6 @@ if __name__ == "__main__":
         logger.info("Creating %s" % args.work)
         os.makedirs(args.work)
 
-    run_spades_parallel(bam=args.bam, spades=args.spades, spades_options=args.spades_options, bed=args.bed, work=args.work, pad=args.pad,
+    run_spades_parallel(bams=args.bams, spades=args.spades, spades_options=args.spades_options, bed=args.bed, work=args.work, pad=args.pad,
                         nthreads=args.nthreads, chrs=args.chrs, max_interval_size=args.max_interval_size,
                         isize_min=args.isize_min, isize_max=args.isize_max, max_read_pairs=args.max_read_pairs)

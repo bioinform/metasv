@@ -25,7 +25,7 @@ def count_reads_supporting_ref(chrom, start, end, bam_handle, isize_min, isize_m
     total_reads = 0
     window_start = max(0, start - window)
     window_end = end + window
-    for aln in bam_handle.fetch(str(chrom), window_start, window_end):
+    for aln in bam_handle.fetch(chrom, window_start, window_end):
         if aln.is_duplicate or not aln.is_paired:
             continue
         total_reads += 1
@@ -46,17 +46,18 @@ def count_reads_supporting_ref(chrom, start, end, bam_handle, isize_min, isize_m
     return total_normal_reads, total_read_bases, total_reads
 
 
-def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handle, isize_min, isize_max, window=GT_WINDOW,
+def genotype_interval(chrom, start, end, sv_type, sv_length, bam_handles, isize_min, isize_max, window=GT_WINDOW,
                       normal_frac_threshold=GT_NORMAL_FRAC):
     func_logger = logging.getLogger("%s-%s" % (genotype_interval.__name__, multiprocessing.current_process()))
 
     locations = [start, end] if sv_type != "INS" else [start]
     total_normal, total = 0, 0
     for location in locations:
-        total_normal_, total_bases_, total_ = count_reads_supporting_ref(chrom, location, location, bam_handle,
-                                                                         isize_min, isize_max, window)
-        total_normal += total_normal_
-        total += total_
+        for bam_handle in bam_handles:
+            total_normal_, total_bases_, total_ = count_reads_supporting_ref(chrom, location, location, bam_handle,
+                                                                             isize_min, isize_max, window)
+            total_normal += total_normal_
+            total += total_
 
     normal_frac = float(total_normal) / float(max(1, total))
     gt = GT_REF
@@ -107,7 +108,7 @@ def genotype_intervals_callback(result, result_list):
         result_list.append(result)
 
 
-def genotype_intervals(intervals_file=None, bam=None, workdir=None, window=GT_WINDOW, isize_mean=ISIZE_MEAN,
+def genotype_intervals(intervals_file=None, bams=[], workdir=None, window=GT_WINDOW, isize_mean=ISIZE_MEAN,
                        isize_sd=ISIZE_SD, normal_frac_threshold=GT_NORMAL_FRAC):
     func_logger = logging.getLogger("%s-%s" % (genotype_intervals.__name__, multiprocessing.current_process()))
 
@@ -123,13 +124,15 @@ def genotype_intervals(intervals_file=None, bam=None, workdir=None, window=GT_WI
     isize_max = isize_mean + 3 * isize_sd
 
     try:
-        bam_handle = pysam.Samfile(bam, "rb")
+        bam_handles = [pysam.Samfile(bam, "rb") for bam in bams]
         for interval in pybedtools.BedTool(intervals_file):
             chrom, start, end, sv_type, svlen = parse_interval(interval)
-            genotype = genotype_interval(chrom, start, end, sv_type, svlen, bam_handle, isize_min, isize_max, window,
+            genotype = genotype_interval(str(chrom), start, end, sv_type, svlen, bam_handles, isize_min, isize_max, window,
                                          normal_frac_threshold)
             fields = interval.fields + [genotype]
             genotyped_intervals.append(pybedtools.create_interval_from_list(fields))
+        for bam_handle in bam_handles:
+            bam_handle.close()
         bedtool = pybedtools.BedTool(genotyped_intervals).moveto(os.path.join(workdir, "genotyped.bed"))
     except Exception as e:
         func_logger.error('Caught exception in worker thread')
@@ -146,7 +149,7 @@ def genotype_intervals(intervals_file=None, bam=None, workdir=None, window=GT_WI
     return bedtool.fn
 
 
-def parallel_genotype_intervals(intervals_file=None, bam=None, workdir=None, nthreads=1, chromosomes=[],
+def parallel_genotype_intervals(intervals_file=None, bams=[], workdir=None, nthreads=1, chromosomes=[],
                                 window=GT_WINDOW, isize_mean=ISIZE_MEAN, isize_sd=ISIZE_SD,
                                 normal_frac_threshold=GT_NORMAL_FRAC):
     func_logger = logging.getLogger("%s-%s" % (parallel_genotype_intervals.__name__, multiprocessing.current_process()))
@@ -176,7 +179,7 @@ def parallel_genotype_intervals(intervals_file=None, bam=None, workdir=None, nth
         process_intervals = pybedtools.BedTool(
             selected_intervals[i * intervals_per_process: (i + 1) * intervals_per_process]).saveas(
             os.path.join(process_workdir, "ungenotyped.bed"))
-        kwargs_dict = {"intervals_file": process_intervals.fn, "bam": bam, "workdir": process_workdir, "window": window,
+        kwargs_dict = {"intervals_file": process_intervals.fn, "bams": bams, "workdir": process_workdir, "window": window,
                        "isize_mean": isize_mean, "isize_sd": isize_sd, "normal_frac_threshold": normal_frac_threshold}
         pool.apply_async(genotype_intervals, kwds=kwargs_dict,
                          callback=partial(genotype_intervals_callback, result_list=genotyped_beds))
@@ -211,7 +214,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Genotype final BED output from MetaSV assembly",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--bam", help="BAM", required=True, type=file)
+    parser.add_argument("--bams", nargs="+", help="BAMs", required=True, default=[])
     parser.add_argument("--chromosomes", nargs="+",
                         help="Chromosomes to process. Leave unspecified to process all intervals.", default=[])
     parser.add_argument("--workdir", help="Working directory", default="work")
@@ -227,7 +230,7 @@ if __name__ == "__main__":
 
     logger.info("Command-line: " + " ".join(sys.argv))
 
-    genotyped_bed = parallel_genotype_intervals(args.intervals_file.name, args.bam.name, args.workdir, args.nthreads,
+    genotyped_bed = parallel_genotype_intervals(args.intervals_file.name, args.bams, args.workdir, args.nthreads,
                                                 args.chromosomes, args.window, args.isize_mean, args.isize_sd,
                                                 args.normal_frac)
     if genotyped_bed:

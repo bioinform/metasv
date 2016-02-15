@@ -52,7 +52,7 @@ if __name__ == "__main__":
                                   help="Keep only the major contigs + MT")
 
     bam_parser = parser.add_argument_group("Input BAM options")
-    bam_parser.add_argument("--bam", help="BAM", type=file)
+    bam_parser.add_argument("--bams", nargs="+", help="BAMs", default=[])
     bam_parser.add_argument("--isize_mean", type=float, default=ISIZE_MEAN, help="Insert size mean")
     bam_parser.add_argument("--isize_sd", type=float, default=ISIZE_SD, help="Insert size standard deviation")
 
