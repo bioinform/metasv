@@ -50,8 +50,9 @@ def get_insertion_breakpoints(age_records, intervals, expected_bp_pos, window=AG
                 func_logger.info("\t\tinsertion lengths = %s" % (
                 str([age_record.insertion_length() for age_record in both_support])))
             insertion_length = max([0] + [age_record.insertion_length() for age_record in both_support])
-            func_logger.info("\t\tInsertion length = %d" % insertion_length)
-            breakpoints.append((breakpoint, insertion_length))
+            insertion_sequence = both_support[0].get_insertion_sequence if both_support else ""
+            func_logger.info("\t\tInsertion length = %d %s" % (insertion_length, insertion_sequence))
+            breakpoints.append((breakpoint, insertion_length, insertion_sequence))
 
     func_logger.info("Nonfiltered breakpoints as %s" % (str(breakpoints)))
 
@@ -60,7 +61,7 @@ def get_insertion_breakpoints(age_records, intervals, expected_bp_pos, window=AG
 
     func_logger.info("Gathered breakpoints as %s" % (str(breakpoints)))
 
-    return [(start + b[0], b[1]) for b in breakpoints]
+    return [(start + b[0], b[1], b[2]) for b in breakpoints]
 
 
 def get_deletion_breakpoints(age_records, window=20, min_flank_length=50, start=0):
