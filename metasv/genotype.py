@@ -83,8 +83,8 @@ def parse_interval(interval):
         info = json.loads(base64.b64decode(name.split(",")[0]))
     except TypeError:
         info = dict()
-    if len(interval.fields) > 9:
-        info.update(json.loads(base64.b64decode(interval.fields[9])))
+    if len(interval.fields) > 10:
+        info.update(json.loads(base64.b64decode(interval.fields[10])))
 
     index_to_use = 0
     svlen = -1
