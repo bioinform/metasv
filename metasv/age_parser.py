@@ -264,7 +264,7 @@ class AgeRecord:
             if self.start2_end2s[1][0] > self.start2_end2s[0][1]:
                 return self.assembly_contig[self.start2_end2s[0][1]: self.start2_end2s[1][0]]
             return self.assembly_contig[self.start2_end2s[1][0]: self.start2_end2s[0][1]: -1]
-        return ""
+        return "."
 
     def breakpoint_match(self, breakpoint, window=20):
         return min(map(lambda x: abs(x - breakpoint), list(itertools.chain.from_iterable(self.start1_end1s)))) <= window
