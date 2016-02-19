@@ -65,6 +65,11 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             else:
                 matching_interval = matching_intervals[0]
             thread_logger.info("Matching interval %s" % (str(matching_interval)))
+            sc_locations = []
+            try:
+                sc_locations = map(int, json.loads(base64.b64decode(matching_interval.name.split(",")[0]))["SC_LOCATIONS"].split(","))
+            except:
+                pass
 
             if region not in contig_dict:
                 continue
@@ -146,6 +151,7 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                     age_record = AgeRecord(out,tr_region_1=tr_region)
                     if len(age_record.inputs) == 2:
                         age_record.contig = contig
+                        age_record.set_assembly_contig(contig_sequence)
                         age_records.append(age_record)
                     else:
                         thread_logger.error("Number of inputs != 2 in age output file %s. Skipping." % out)
@@ -172,14 +178,14 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                                                              pad=pad, dist_to_expected_bp=dist_to_expected_bp,
                                                              min_del_subalign_len=min_del_subalign_len,
                                                              min_inv_subalign_len=min_inv_subalign_len,
-                                                             age_window=age_window)
+                                                             age_window=age_window, sc_locations=sc_locations)
                 bedtools_fields = matching_interval.fields
                 if len(breakpoints) == 1 and sv_type == "INS":
-                    bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1]])
+                    bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1], breakpoints[0][2]])
                 elif len(breakpoints) == 2 and (sv_type in ["DEL","INV","DUP"]):
-                    bedtools_fields += map(str, breakpoints + [breakpoints[1] - breakpoints[0]])
+                    bedtools_fields += map(str, breakpoints + [breakpoints[1] - breakpoints[0]] + ["."])
                 else:
-                    bedtools_fields += map(str, [bedtools_fields[1], bedtools_fields[2], -1])
+                    bedtools_fields += map(str, [bedtools_fields[1], bedtools_fields[2], -1, "."])
                 bedtools_fields[3] += ";AS"
                 bedtools_fields.append(base64.b64encode(json.dumps(info_dict)))
                 thread_logger.info("Writing out fields %s" % (str(bedtools_fields)))

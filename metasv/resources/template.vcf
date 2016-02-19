@@ -82,9 +82,11 @@
 ##INFO=<ID=SC_READ_SUPPORT,Number=.,Type=Integer,Description="Soft-Clip: Number of soft-clip supporting reads">
 ##INFO=<ID=SC_NEIGH_SUPPORT,Number=.,Type=Integer,Description="Soft-Clip: Number of reads near the soft-clip location that support SV event">
 ##INFO=<ID=SC_COVERAGE,Number=.,Type=Integer,Description="Soft-Clip: Read coverage in the soft-clip location">
+##INFO=<ID=SC_LOCATIONS,Number=.,Type=Integer,Description="Soft-Clip: Locations of soft-clips for the SV">
 ##INFO=<ID=IDP_INTERVALS,Number=.,Type=String,Description="Intervals used to merge into interspersed duplication">
 ##INFO=<ID=ITX_INTERVALS,Number=.,Type=String,Description="Intervals used to merge into intra-chromosomal translocation">
 ##INFO=<ID=CTX_INTERVALS,Number=.,Type=String,Description="Intervals used to merge into inter-chromosomal translocation">
+##INFO=<ID=INSERTION_SEQUENCE,Number=1,Type=String,Description="Sequence inserted for long insertions">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">
 ##FORMAT=<ID=CNQ,Number=1,Type=Float,Description="Copy number genotype quality for imprecise events">

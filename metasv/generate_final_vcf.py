@@ -57,7 +57,7 @@ def get_interval_info(feature,pass_calls):
     
     pos = feature.start
     end = feature.end
-    genotype = "./." if len(feature.fields) < 11 else feature.fields[10]
+    genotype = "./." if len(feature.fields) < 12 else feature.fields[11]
     if genotype == "0/0":
         func_logger.info("Skipping homozygous reference %s" % str(feature))
         return None
@@ -72,8 +72,10 @@ def get_interval_info(feature,pass_calls):
         info = json.loads(base64.b64decode(name.split(",")[0]))
     except TypeError:
         info = dict()
-    if len(feature.fields) > 9:
-        info.update(json.loads(base64.b64decode(feature.fields[9])))
+    if len(feature.fields) > 10:
+        info.update(json.loads(base64.b64decode(feature.fields[10])))
+    if feature.fields[9] != ".":
+        info["INSERTION_SEQUENCE"] = feature.fields[9]
 
     index_to_use = 0
     is_pass = False

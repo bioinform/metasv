@@ -418,6 +418,11 @@ def fix_merged_fields(feature,inter_tools=True):
     if sc_sub_intervals_info:
         for k in ["SC_COVERAGE", "SC_NEIGH_SUPPORT"]:
             info[k]=",".join(map(lambda x:"%s"%x[k],sc_sub_intervals_info))
+        all_sc_locations = []
+        for sc_sub_intervals_info_ in sc_sub_intervals_info:
+            all_sc_locations.extend(map(int, sc_sub_intervals_info_["SC_COUNT_STR"].split(",")[::2]))
+        all_sc_locations = sorted(set(all_sc_locations))
+        info["SC_LOCATIONS"] = ",".join(map(str, all_sc_locations))
         if sv_type=="INS":
             chr2_str=",".join(map(lambda x:"%s"%x["SC_CHR2_STR"],filter(lambda y: "SC_CHR2_STR" in y,sc_sub_intervals_info)))
             if chr2_str:
