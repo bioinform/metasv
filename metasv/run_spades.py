@@ -158,6 +158,7 @@ def add_breakpoints(interval):
         breakpoints = [interval.start, interval.end]
     fields += map(str, breakpoints)
     fields += name_fields[2:3]
+    fields += ["."]
     fields.append(base64.b64encode(json.dumps(dict())))  # Does nothing, make sure the fields line up
     return pybedtools.create_interval_from_list(fields)
 
