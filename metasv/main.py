@@ -1,5 +1,6 @@
 from collections import defaultdict
 import shutil
+import sys
 
 from defaults import *
 from vcf_utils import *
@@ -30,6 +31,7 @@ def create_dirs(dirlist):
 
 def run_metasv(args):
     logger.info("Running MetaSV %s" % __version__)
+    logger.info("Command-line %s" % (" ".join(sys.argv)))
     logger.info("Arguments are " + str(args))
     
     
