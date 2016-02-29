@@ -286,7 +286,8 @@ def run_metasv(args):
                                                           mean_read_coverage=args.mean_read_coverage, 
                                                           min_ins_cov_frac=args.min_ins_cov_frac,
                                                           max_ins_cov_frac=args.max_ins_cov_frac,
-                                                          assembly_max_tools=args.assembly_max_tools)
+                                                          assembly_max_tools=args.assembly_max_tools,
+                                                          other_scale=args.sc_other_scale)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
         logger.info("Will run assembly now")

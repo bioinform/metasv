@@ -642,7 +642,7 @@ def resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=SC_MIN_MAP
                           merge_max_dist=-int(1*SC_PAD), mean_read_length=MEAN_READ_LENGTH, 
                           mean_read_coverage=MEAN_READ_COVERAGE,min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, 
                           max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,num_sd=2,plus_minus_thr_scale=0.4, 
-                          none_thr_scale=1.4, ls_scale=1.4, other_scale=1.4):
+                          none_thr_scale=1.4, ls_scale=1.4, other_scale=SC_OTHER_SCALE):
     func_logger = logging.getLogger("%s-%s" % (resolve_none_svs.__name__, multiprocessing.current_process()))
 
 
@@ -781,7 +781,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                           overlap_ratio=OVERLAP_RATIO,merge_max_dist=-int(1*SC_PAD), 
                           mean_read_length=MEAN_READ_LENGTH, mean_read_coverage=MEAN_READ_COVERAGE, 
                           min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,
-                          num_sd = 2, plus_minus_thr_scale=0.4, none_thr_scale=1.4, ls_scale=1.4, other_scale=1.4, unmerged_other_bed=None):
+                          num_sd = 2, plus_minus_thr_scale=0.4, none_thr_scale=1.4, ls_scale=1.4, other_scale=SC_OTHER_SCALE, unmerged_other_bed=None):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
@@ -1047,7 +1047,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
                                    overlap_ratio=OVERLAP_RATIO, mean_read_length=MEAN_READ_LENGTH,
                                    mean_read_coverage=MEAN_READ_COVERAGE, min_ins_cov_frac=MIN_INS_COVERAGE_FRAC,
                                    max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,
-                                   assembly_max_tools=ASSEMBLY_MAX_TOOLS):
+                                   assembly_max_tools=ASSEMBLY_MAX_TOOLS, other_scale=SC_OTHER_SCALE):
     func_logger = logging.getLogger(
         "%s-%s" % (parallel_generate_sc_intervals.__name__, multiprocessing.current_process()))
 
@@ -1093,7 +1093,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
                        "isize_mean": isize_mean, "isize_sd": isize_sd, "svs_to_softclip": svs_to_softclip, 
                        "merge_max_dist": merge_max_dist, "mean_read_length": mean_read_length,
                        "mean_read_coverage": mean_read_coverage, "min_ins_cov_frac": min_ins_cov_frac,
-                       "max_ins_cov_frac": max_ins_cov_frac,"unmerged_other_bed": unmerged_other_bed}
+                       "max_ins_cov_frac": max_ins_cov_frac,"unmerged_other_bed": unmerged_other_bed, "other_scale": other_scale}
         pool.apply_async(generate_sc_intervals, args=args_list, kwds=kwargs_dict,
                          callback=partial(generate_sc_intervals_callback, result_list=bed_files))
 
@@ -1197,6 +1197,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_ins_cov_frac", type=float, default=MAX_INS_COVERAGE_FRAC, help="Maximum read coverage around the insertion breakpoint.")
     parser.add_argument("--assembly_max_tools", type=int, default=ASSEMBLY_MAX_TOOLS,
                            help="Skip assembly if more than this many tools support a call (default 1)")
+    parser.add_argument("--other_scale", type=float, default=SC_OTHER_SCALE, help="Parameter to control none SV type resolution")
 
     args = parser.parse_args()
 
@@ -1211,4 +1212,4 @@ if __name__ == "__main__":
                                    isize_sd=args.isize_sd, svs_to_softclip=args.svs_to_softclip, 
                                    overlap_ratio=args.overlap_ratio, mean_read_length=args.mean_read_length,
                                    mean_read_coverage=args.mean_read_coverage, min_ins_cov_frac=args.min_ins_cov_frac,
-                                   max_ins_cov_frac=args.max_ins_cov_frac, assembly_max_tools=args.assembly_max_tools)
+                                   max_ins_cov_frac=args.max_ins_cov_frac, assembly_max_tools=args.assembly_max_tools, other_scale=args.other_scale)
