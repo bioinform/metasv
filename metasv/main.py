@@ -11,7 +11,7 @@ from breakseq_reader import BreakSeqReader
 from cnvnator_reader import CNVnatorReader
 from generate_sv_intervals import parallel_generate_sc_intervals
 from run_spades import run_spades_parallel
-from run_age import run_age_parallel
+from age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
 from fasta_utils import get_contigs
 from genotype import parallel_genotype_intervals
