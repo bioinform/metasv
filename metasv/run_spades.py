@@ -177,7 +177,6 @@ def run_spades_parallel(bams=[], spades=None, spades_options="", bed=None, work=
         return None, None
 
     bedtool = pybedtools.BedTool(bed)
-    total = bedtool.count()
 
     chrs = set(chrs)
     all_intervals = [interval for interval in bedtool] if not chrs else [interval for interval in bedtool if
@@ -192,31 +191,36 @@ def run_spades_parallel(bams=[], spades=None, spades_options="", bed=None, work=
     logger.info("%d intervals selected" % len(selected_intervals))
     logger.info("%d intervals ignored" % len(ignored_intervals))
 
-    pool = multiprocessing.Pool(nthreads)
-    assembly_fastas = []
-    for i in xrange(nthreads):
-        intervals = [interval for (j, interval) in enumerate(selected_intervals) if (j % nthreads) == i]
-        kwargs_dict = {"intervals": intervals, "bams": bams, "spades": spades, "spades_options": spades_options, "work": "%s/%d" % (work, i), "pad": pad,
-                       "timeout": timeout, "isize_min": isize_min, "isize_max": isize_max, "stop_on_fail": stop_on_fail,
-                       "max_read_pairs": max_read_pairs}
-        pool.apply_async(run_spades_single, kwds=kwargs_dict,
-                         callback=partial(run_spades_single_callback, result_list=assembly_fastas))
+    nthreads = min(len(selected_intervals), nthreads)
 
-    pool.close()
-    pool.join()
+    assembled_fasta = None
+    if nthreads:
+        pool = multiprocessing.Pool(nthreads)
+        assembly_fastas = []
+        for i in xrange(nthreads):
+            intervals = [interval for (j, interval) in enumerate(selected_intervals) if (j % nthreads) == i]
+            kwargs_dict = {"intervals": intervals, "bams": bams, "spades": spades, "spades_options": spades_options, "work": "%s/%d" % (work, i), "pad": pad,
+                           "timeout": timeout, "isize_min": isize_min, "isize_max": isize_max, "stop_on_fail": stop_on_fail,
+                           "max_read_pairs": max_read_pairs}
+            pool.apply_async(run_spades_single, kwds=kwargs_dict,
+                             callback=partial(run_spades_single_callback, result_list=assembly_fastas))
 
-    logger.info("Merging the contigs from %s" % (str(assembly_fastas)))
-    assembled_fasta = os.path.join(work, "spades_assembled.fa")
-    with open(assembled_fasta, "w") as assembled_fd:
-        for line in fileinput.input(assembly_fastas):
-            assembled_fd.write("%s\n" % (line.strip()))
+        pool.close()
+        pool.join()
 
-    if os.path.getsize(assembled_fasta) > 0:
-        logger.info("Indexing the assemblies")
-        pysam.faidx(assembled_fasta)
+        logger.info("Merging the contigs from %s" % (str(assembly_fastas)))
+        assembled_fasta = os.path.join(work, "spades_assembled.fa")
+        with open(assembled_fasta, "w") as assembled_fd:
+            for line in fileinput.input(assembly_fastas):
+                assembled_fd.write("%s\n" % (line.strip()))
+
+        if os.path.getsize(assembled_fasta) > 0:
+            logger.info("Indexing the assemblies")
+            pysam.faidx(assembled_fasta)
+        else:
+            logger.error("No assembly generated")
     else:
-        logger.error("No assembly generated")
-        assembled_fasta = None
+        logger.warn("No intervals for assembly.")
 
     ignored_bed = None
     if ignored_intervals:
