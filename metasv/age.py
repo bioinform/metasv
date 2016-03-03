@@ -89,9 +89,6 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             with open(ref_name, "w") as file_handle:
                 file_handle.write(">{}.ref\n{}".format(region_name, reference_sequence))
 
-
-            
-
             age_records = []
             thread_logger.info("Processing %d contigs for region %s" % (len(contig_dict[region]), str(region_object)))
             for contig in contig_dict[region]:
@@ -102,7 +99,6 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 if region_object.length()>max_interval_len_truncation_age and contig.sv_type in ["INV","DEL","DUP"]:
                     # For large SVs, middle sequences has no effect on genotyping. So, we truncate middle region of reference to speed up
                     thread_logger.info("Truncate the reference sequence.")
-                    
 
                     truncate_start = pad + dist_to_expected_bp + truncation_pad_read_age +1
                     truncate_end = len(reference_sequence) -  (pad + dist_to_expected_bp + truncation_pad_read_age)
@@ -180,8 +176,9 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                                                              age_window=age_window, sc_locations=sc_locations)
                 bedtools_fields = matching_interval.fields
                 if len(breakpoints) == 1 and sv_type == "INS":
-                    bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1], breakpoints[0][2]])
-                elif len(breakpoints) == 2 and (sv_type in ["DEL","INV","DUP"]):
+                    info_dict["INSERTION_SEQUENCE"] = breakpoints[0][2]
+                    bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1], "."])
+                elif len(breakpoints) == 2 and (sv_type in ["DEL", "INV", "DUP"]):
                     bedtools_fields += map(str, breakpoints + [breakpoints[1] - breakpoints[0]] + ["."])
                 else:
                     bedtools_fields += map(str, [bedtools_fields[1], bedtools_fields[2], -1, "."])
