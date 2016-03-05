@@ -1,6 +1,5 @@
 import traceback
 import os
-import argparse
 import multiprocessing
 import subprocess
 import hashlib
@@ -90,9 +89,6 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
             with open(ref_name, "w") as file_handle:
                 file_handle.write(">{}.ref\n{}".format(region_name, reference_sequence))
 
-
-            
-
             age_records = []
             thread_logger.info("Processing %d contigs for region %s" % (len(contig_dict[region]), str(region_object)))
             for contig in contig_dict[region]:
@@ -103,7 +99,6 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                 if region_object.length()>max_interval_len_truncation_age and contig.sv_type in ["INV","DEL","DUP"]:
                     # For large SVs, middle sequences has no effect on genotyping. So, we truncate middle region of reference to speed up
                     thread_logger.info("Truncate the reference sequence.")
-                    
 
                     truncate_start = pad + dist_to_expected_bp + truncation_pad_read_age +1
                     truncate_end = len(reference_sequence) -  (pad + dist_to_expected_bp + truncation_pad_read_age)
@@ -181,8 +176,9 @@ def run_age_single(intervals_bed=None, region_list=[], contig_dict={}, reference
                                                              age_window=age_window, sc_locations=sc_locations)
                 bedtools_fields = matching_interval.fields
                 if len(breakpoints) == 1 and sv_type == "INS":
-                    bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1], breakpoints[0][2]])
-                elif len(breakpoints) == 2 and (sv_type in ["DEL","INV","DUP"]):
+                    info_dict["INSERTION_SEQUENCE"] = breakpoints[0][2]
+                    bedtools_fields += map(str, [breakpoints[0][0], breakpoints[0][0] + 1, breakpoints[0][1], "."])
+                elif len(breakpoints) == 2 and (sv_type in ["DEL", "INV", "DUP"]):
                     bedtools_fields += map(str, breakpoints + [breakpoints[1] - breakpoints[0]] + ["."])
                 else:
                     bedtools_fields += map(str, [bedtools_fields[1], bedtools_fields[2], -1, "."])
@@ -309,39 +305,3 @@ def run_age_parallel(intervals_bed=None, reference=None, assembly=None, pad=AGE_
     bedtool.sort().saveas(merged_bed)
 
     return merged_bed
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run AGE on files assembled under MetaSV.",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--reference", help="Reference FASTA", required=True, type=file)
-    parser.add_argument("--assembly", help="Assembly FASTA", required=True, type=file)
-    parser.add_argument("--age", help="Path to AGE executable", required=True, type=file)
-    parser.add_argument("--work", help="Work directory", default="work")
-    parser.add_argument("--pad", help="Padding to apply on both sides of the bed regions", type=int, default=AGE_PAD)
-    parser.add_argument("--nthreads", help="Number of threads to use", type=int, default=1)
-    parser.add_argument("--chrs", help="Chromosome list to process", nargs="+", default=[])
-    parser.add_argument("--sv_types", help="SV types list to process (INS, DEL, INV)", nargs="+", default=[])
-    parser.add_argument("--timeout", help="Max time for assembly processes to run", type=int, default=AGE_TIMEOUT)
-    parser.add_argument("--keep_temp", help="Don't delete temporary files", action="store_true")
-    parser.add_argument("--assembly_tool", help="Tool used for assembly", choices=["spades", "tigra"], default="spades")
-    parser.add_argument("--min_contig_len", help="Minimum length of contig to consider", type=int,
-                        default=AGE_MIN_CONTIG_LENGTH)
-    parser.add_argument("--max_region_len", help="Maximum length of an SV interval", type=int,
-                        default=AGE_MAX_REGION_LENGTH)                       
-    parser.add_argument("--min_del_subalign_len", help="Minimum length of deletion sub-alginment", type=int,
-                        default=MIN_DEL_SUBALIGN_LENGTH)
-    parser.add_argument("--min_inv_subalign_len", help="Minimum length of inversion sub-alginment", type=int,
-                        default=MIN_INV_SUBALIGN_LENGTH)
-    parser.add_argument("--age_window", help="Window size for AGE to merge nearby breakpoints", type=int,
-                        default=AGE_WINDOW_SIZE)
-    parser.add_argument("--intervals_bed", help="BED file for assembly", type=file, required=True)
-
-    args = parser.parse_args()
-
-    run_age_parallel(intervals_bed=args.intervals_bed.name, reference=args.reference.name, assembly=args.assembly.name,
-                     pad=args.pad, age=args.age.name, age_workdir=args.work, timeout=args.timeout,
-                     keep_temp=args.keep_temp, assembly_tool=args.assembly_tool, chrs=args.chrs, nthreads=args.nthreads,
-                     min_contig_len=args.min_contig_len, max_region_len=args.max_region_len, sv_types=args.sv_types, 
-                     min_del_subalign_len=args.min_del_subalign_len, min_inv_subalign_len=args.min_inv_subalign_len,
-                     age_window = args.age_window)

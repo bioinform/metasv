@@ -349,7 +349,7 @@ def merge_intervals_bed(bedtool, overlap_ratio , c ,o):
     chrom = intervals[0].chrom
     for i in xrange(len(intervals) - 1):
         next_interval = intervals[i+1]
-        is_overlap, tmp_start, tmp_end=check_overlap(start,end,chrom,next_interval,overlap_ratio=overlap_ratio)
+        is_overlap, tmp_start, tmp_end=check_overlap(start, end, chrom, next_interval, overlap_ratio=overlap_ratio)
         if is_overlap:
             current_merged_interval_list.append(next_interval)
             start = tmp_start
@@ -362,24 +362,26 @@ def merge_intervals_bed(bedtool, overlap_ratio , c ,o):
             chrom = next_interval.chrom
 
     new_intervals.append(current_merged_interval_list)
-    merged_bed = pybedtools.BedTool([blind_merge(intervals,c,o) for intervals in new_intervals])
+    merged_bed = pybedtools.BedTool([blind_merge(intervals, c, o) for intervals in new_intervals])
                                      
     return merged_bed.sort()
 
-def merge_for_each_sv(bedtool,c,o,svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
-                      overlap_ratio=OVERLAP_RATIO,d=0, reciprocal_for_2bp=True,
-                      sv_type_field = [3,1], inter_tools = False):
+
+def merge_for_each_sv(bedtool, c, o, svs_to_softclip=SVS_SOFTCLIP_SUPPORTED,
+                      overlap_ratio=OVERLAP_RATIO, d=0, reciprocal_for_2bp=True,
+                      sv_type_field=[3, 1], inter_tools=False):
     merged_bedtool = pybedtools.BedTool([])
     for svtype in svs_to_softclip:
         sv_bedtool = bedtool.filter(lambda x: svtype in x.fields[sv_type_field[0]].split(',')[sv_type_field[1]]).sort()
-        if sv_bedtool.count()==0: continue
+        if sv_bedtool.count() == 0:
+            continue
         if svtype == "INS" or not reciprocal_for_2bp:
-            sv_bedtool=sv_bedtool.merge(c=c, o=o, d=d)
+            sv_bedtool = sv_bedtool.merge(c=c, o=o, d=d)
         else:
-            sv_bedtool = merge_intervals_bed(sv_bedtool,overlap_ratio=overlap_ratio,
-                                                  c=c,o=o)
+            sv_bedtool = merge_intervals_bed(sv_bedtool, overlap_ratio=overlap_ratio,
+                                             c=c, o=o)
         if len(merged_bedtool) > 0:
-            merged_bedtool=sv_bedtool.cat(merged_bedtool,postmerge=False)
+            merged_bedtool = sv_bedtool.cat(merged_bedtool, postmerge=False)
         else:
             merged_bedtool = sv_bedtool
     return merged_bedtool.sort()
@@ -642,25 +644,22 @@ def resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=SC_MIN_MAP
                           merge_max_dist=-int(1*SC_PAD), mean_read_length=MEAN_READ_LENGTH, 
                           mean_read_coverage=MEAN_READ_COVERAGE,min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, 
                           max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,num_sd=2,plus_minus_thr_scale=0.4, 
-                          none_thr_scale=1.4, ls_scale=1.4, other_scale=1.4):
+                          none_thr_scale=1.4, ls_scale=1.4, other_scale=SC_OTHER_SCALE):
     func_logger = logging.getLogger("%s-%s" % (resolve_none_svs.__name__, multiprocessing.current_process()))
 
-
-    thr_sv={"INS":min_support_frac_ins, "INV":MIN_SUPPORT_FRAC_INV, 
-            "DEL":MIN_SUPPORT_FRAC_DEL, "DUP": MIN_SUPPORT_FRAC_DUP}
-    thr_sv_abs={"INS":min_support_ins, "INV":MIN_SUPPORT_INV, 
-            "DEL":MIN_SUPPORT_DEL, "DUP": MIN_SUPPORT_DUP}
+    thr_sv = {"INS": min_support_frac_ins, "INV": MIN_SUPPORT_FRAC_INV,
+              "DEL": MIN_SUPPORT_FRAC_DEL, "DUP": MIN_SUPPORT_FRAC_DUP}
+    thr_sv_abs = {"INS": min_support_ins, "INV": MIN_SUPPORT_INV,
+                  "DEL": MIN_SUPPORT_DEL, "DUP": MIN_SUPPORT_DUP}
             
     min_isize = isize_mean - num_sd * isize_sd
     max_isize = isize_mean + num_sd * isize_sd
 
-    bedtool_none=pybedtools.BedTool(unmerged_none_bed)
+    bedtool_none = pybedtools.BedTool(unmerged_none_bed)
     func_logger.info("%d unresolved intervals" % (bedtool_none.count()))        
     merged_none_bed = os.path.join(workdir, "merged_none.bed")
-    bedtool_none=bedtool_none.merge(c="4,5,6,7",o="collapse,sum,collapse,collapse", d=merge_max_dist).sort().moveto(merged_none_bed)
+    bedtool_none = bedtool_none.merge(c="4,5,6,7",o="collapse,sum,collapse,collapse", d=merge_max_dist).sort().moveto(merged_none_bed)
     func_logger.info("%d merged unresolved intervals" % (bedtool_none.count()))
-
-
 
     filtered_none_bed = os.path.join(workdir, "filtered_none.bed")
     bedtool_none = bedtool_none.filter(lambda x: int(x.score) >= 0).each(
@@ -681,31 +680,29 @@ def resolve_none_svs(bam_handle, workdir, unmerged_none_bed, min_mapq=SC_MIN_MAP
                              find_svtype=True)).sort().moveto(coverage_filtered_none_bed)
     func_logger.info("%d coverage filtered unresolved intervals" % (bedtool_none.count()))
 
-    resolved_intervals=[]
+    resolved_intervals = []
     for interval in bedtool_none:
-        other_thr_scale=1 if "NONE" in interval.fields[7] else other_scale
+        other_thr_scale = 1 if "NONE" in interval.fields[7] else other_scale
         for svs in interval.fields[8].split(","):
-            svs_fields=svs.split(";")
-            svtype=svs_fields[0]
+            svs_fields = svs.split(";")
+            svtype = svs_fields[0]
             if svtype not in svs_to_softclip:
                 continue
             soft_clip_location = (interval.start+interval.end)/2
 
             neigh_support = (len(svs_fields)-1)/2
-            plus_support=len(filter(lambda x:x=="+",svs_fields[2::2]))
-            minus_support=len(filter(lambda x:x=="-",svs_fields[2::2]))
+            plus_support = len(filter(lambda x: x == "+", svs_fields[2::2]))
+            minus_support = len(filter(lambda x: x == "-", svs_fields[2::2]))
             coverage = float(interval.fields[6]) 
-            sc_read_support= float(interval.fields[4])
-            low_supp_scale=1 if sc_read_support>=MIN_SUPPORT_SC_ONLY else ls_scale
+            sc_read_support = float(interval.fields[4])
+            low_supp_scale = 1 if sc_read_support >= MIN_SUPPORT_SC_ONLY else ls_scale
 
-            if (neigh_support<(thr_sv_abs[svtype] * low_supp_scale * none_thr_scale * other_thr_scale) 
-                or (coverage * thr_sv[svtype]  * low_supp_scale * none_thr_scale * other_thr_scale) > neigh_support) :
+            if (neigh_support < (thr_sv_abs[svtype] * low_supp_scale * none_thr_scale * other_thr_scale) or
+                        (coverage * thr_sv[svtype] * low_supp_scale * none_thr_scale * other_thr_scale) > neigh_support):
                 continue
 
-            if svtype == "INS" and (min(plus_support,minus_support) 
-                                    <(thr_sv_abs[svtype] * low_supp_scale * none_thr_scale * plus_minus_thr_scale * other_thr_scale)
-                                    or (coverage * thr_sv[svtype]  * low_supp_scale * none_thr_scale * plus_minus_thr_scale * other_thr_scale) 
-                                        > min(plus_support,minus_support)):
+            if svtype == "INS" and (min(plus_support, minus_support) < (thr_sv_abs[svtype] * low_supp_scale * none_thr_scale * plus_minus_thr_scale * other_thr_scale) or
+                                            (coverage * thr_sv[svtype] * low_supp_scale * none_thr_scale * plus_minus_thr_scale * other_thr_scale) > min(plus_support,minus_support)):
                 continue
             for j in range(neigh_support):
                 other_bp, strand=svs_fields[1+(j*2):3+(j*2)]
@@ -781,7 +778,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
                           overlap_ratio=OVERLAP_RATIO,merge_max_dist=-int(1*SC_PAD), 
                           mean_read_length=MEAN_READ_LENGTH, mean_read_coverage=MEAN_READ_COVERAGE, 
                           min_ins_cov_frac=MIN_INS_COVERAGE_FRAC, max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,
-                          num_sd = 2, plus_minus_thr_scale=0.4, none_thr_scale=1.4, ls_scale=1.4, other_scale=1.4, unmerged_other_bed=None):
+                          num_sd = 2, plus_minus_thr_scale=0.4, none_thr_scale=1.4, ls_scale=1.4, other_scale=SC_OTHER_SCALE, unmerged_other_bed=None):
     func_logger = logging.getLogger("%s-%s" % (generate_sc_intervals.__name__, multiprocessing.current_process()))
 
     if not os.path.isdir(workdir):
@@ -1047,7 +1044,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
                                    overlap_ratio=OVERLAP_RATIO, mean_read_length=MEAN_READ_LENGTH,
                                    mean_read_coverage=MEAN_READ_COVERAGE, min_ins_cov_frac=MIN_INS_COVERAGE_FRAC,
                                    max_ins_cov_frac=MAX_INS_COVERAGE_FRAC,
-                                   assembly_max_tools=ASSEMBLY_MAX_TOOLS):
+                                   assembly_max_tools=ASSEMBLY_MAX_TOOLS, other_scale=SC_OTHER_SCALE):
     func_logger = logging.getLogger(
         "%s-%s" % (parallel_generate_sc_intervals.__name__, multiprocessing.current_process()))
 
@@ -1093,7 +1090,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
                        "isize_mean": isize_mean, "isize_sd": isize_sd, "svs_to_softclip": svs_to_softclip, 
                        "merge_max_dist": merge_max_dist, "mean_read_length": mean_read_length,
                        "mean_read_coverage": mean_read_coverage, "min_ins_cov_frac": min_ins_cov_frac,
-                       "max_ins_cov_frac": max_ins_cov_frac,"unmerged_other_bed": unmerged_other_bed}
+                       "max_ins_cov_frac": max_ins_cov_frac,"unmerged_other_bed": unmerged_other_bed, "other_scale": other_scale}
         pool.apply_async(generate_sc_intervals, args=args_list, kwds=kwargs_dict,
                          callback=partial(generate_sc_intervals_callback, result_list=bed_files))
 
@@ -1146,14 +1143,14 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     if len(sc_skip_bedtool):
         bedtool = bedtool.cat(sc_skip_bedtool, postmerge=False)
     bedtool = bedtool.sort()
-    bedtool = merge_for_each_sv(bedtool,c="4",o="collapse",svs_to_softclip=svs_to_softclip,
+    bedtool = merge_for_each_sv(bedtool, c="4", o="collapse", svs_to_softclip=svs_to_softclip,
                                   overlap_ratio=overlap_ratio, reciprocal_for_2bp=True, d=merge_max_dist)
-    bedtool = bedtool.each(partial(fix_merged_fields,inter_tools=True)).sort().moveto(interval_bed)
+    bedtool = bedtool.each(partial(fix_merged_fields, inter_tools=True)).sort().moveto(interval_bed)
     if len(nonsc_skip_bedtool):
         bedtool = bedtool.cat(nonsc_skip_bedtool, postmerge=False).sort().moveto(interval_bed)
     func_logger.info("After merging with %s %d features" % (str(skip_bed), bedtool.count()))
 
-    bedtool = bedtool.each(partial(remove_INS_padding,pad=pad)).sort().saveas(interval_bed)
+    bedtool = bedtool.each(partial(remove_INS_padding, pad=pad)).sort().saveas(interval_bed)
 
     pybedtools.cleanup(remove_all=True)
 
@@ -1197,6 +1194,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_ins_cov_frac", type=float, default=MAX_INS_COVERAGE_FRAC, help="Maximum read coverage around the insertion breakpoint.")
     parser.add_argument("--assembly_max_tools", type=int, default=ASSEMBLY_MAX_TOOLS,
                            help="Skip assembly if more than this many tools support a call (default 1)")
+    parser.add_argument("--other_scale", type=float, default=SC_OTHER_SCALE, help="Parameter to control none SV type resolution")
 
     args = parser.parse_args()
 
@@ -1211,4 +1209,4 @@ if __name__ == "__main__":
                                    isize_sd=args.isize_sd, svs_to_softclip=args.svs_to_softclip, 
                                    overlap_ratio=args.overlap_ratio, mean_read_length=args.mean_read_length,
                                    mean_read_coverage=args.mean_read_coverage, min_ins_cov_frac=args.min_ins_cov_frac,
-                                   max_ins_cov_frac=args.max_ins_cov_frac, assembly_max_tools=args.assembly_max_tools)
+                                   max_ins_cov_frac=args.max_ins_cov_frac, assembly_max_tools=args.assembly_max_tools, other_scale=args.other_scale)

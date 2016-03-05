@@ -1,5 +1,6 @@
 from collections import defaultdict
 import shutil
+import sys
 
 from defaults import *
 from vcf_utils import *
@@ -10,7 +11,7 @@ from breakseq_reader import BreakSeqReader
 from cnvnator_reader import CNVnatorReader
 from generate_sv_intervals import parallel_generate_sc_intervals
 from run_spades import run_spades_parallel
-from run_age import run_age_parallel
+from age import run_age_parallel
 from generate_final_vcf import convert_metasv_bed_to_vcf
 from fasta_utils import get_contigs
 from genotype import parallel_genotype_intervals
@@ -30,6 +31,7 @@ def create_dirs(dirlist):
 
 def run_metasv(args):
     logger.info("Running MetaSV %s" % __version__)
+    logger.info("Command-line %s" % (" ".join(sys.argv)))
     logger.info("Arguments are " + str(args))
     
     
@@ -286,7 +288,8 @@ def run_metasv(args):
                                                           mean_read_coverage=args.mean_read_coverage, 
                                                           min_ins_cov_frac=args.min_ins_cov_frac,
                                                           max_ins_cov_frac=args.max_ins_cov_frac,
-                                                          assembly_max_tools=args.assembly_max_tools)
+                                                          assembly_max_tools=args.assembly_max_tools,
+                                                          other_scale=args.sc_other_scale)
             logger.info("Generated intervals for assembly in %s" % assembly_bed)
 
         logger.info("Will run assembly now")

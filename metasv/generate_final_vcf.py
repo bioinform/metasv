@@ -74,8 +74,6 @@ def get_interval_info(feature,pass_calls):
         info = dict()
     if len(feature.fields) > 10:
         info.update(json.loads(base64.b64decode(feature.fields[10])))
-    if feature.fields[9] != ".":
-        info["INSERTION_SEQUENCE"] = feature.fields[9]
 
     index_to_use = 0
     is_pass = False
@@ -93,7 +91,7 @@ def get_interval_info(feature,pass_calls):
         return None
                 
     if sv_type != "INS":
-        svmethods_s = set(svmethods) - {"SC","AS"}
+        svmethods_s = set(svmethods) - {"SC", "AS"}
         is_pass = len(svmethods_s) > 1
         if "AS" in svmethods:
             pos, end, svlen = map(int, feature.fields[6:9])
@@ -105,7 +103,7 @@ def get_interval_info(feature,pass_calls):
         if sv_type == "DEL":
             svlen = -svlen
     else:
-        if ("SC" in svmethods or "AS" in svmethods):
+        if "SC" in svmethods or "AS" in svmethods:
             # TODO: I think it should be sub_types.index
             #index_to_use = [i for i,methods in enumerate(sub_methods) if ("SC" in methods) or ("AS" in svmethods)][0]
             pos, end, svlen = map(int, feature.fields[6:9])
@@ -119,7 +117,6 @@ def get_interval_info(feature,pass_calls):
         func_logger.info("Variant with pos < 1 encountered. Skipping! %s" % str(feature))
         return None
 
-
     info.update(
         {"END": end, "SVLEN": svlen, "SVTYPE": sv_type, "SVMETHOD": svmethods, "NUM_SVMETHODS": len(svmethods)})
     if "IMPRECISE" in info:
@@ -128,6 +125,7 @@ def get_interval_info(feature,pass_calls):
     interval_info={"pos": pos, "end": end, "info": info, "sv_type": sv_type, "genotype": genotype,
                    "sv_length": abs(svlen), "svmethods": svmethods, "sv_filter": sv_filter}    
     return interval_info
+
 
 def filter_confused_INS_calls(nonfilterd_bed, filterd_bed, wiggle=20):
 
@@ -140,8 +138,8 @@ def filter_confused_INS_calls(nonfilterd_bed, filterd_bed, wiggle=20):
     for interval in bedtool_good_nonINS:
         start=interval.start
         end=interval.end
-        nonINS_bp_intervals.append(pybedtools.Interval(interval.chrom,max(start-wiggle,0),start+wiggle))
-        nonINS_bp_intervals.append(pybedtools.Interval(interval.chrom,max(end-wiggle,0),end+wiggle))
+        nonINS_bp_intervals.append(pybedtools.Interval(interval.chrom, max(start-wiggle,0),start+wiggle))
+        nonINS_bp_intervals.append(pybedtools.Interval(interval.chrom, max(end-wiggle,0),end+wiggle))
 
     bedtool_bp_nonINS=pybedtools.BedTool(nonINS_bp_intervals) 
     bad_INS=bedtool_INS.window(bedtool_bp_nonINS,w=wiggle)
