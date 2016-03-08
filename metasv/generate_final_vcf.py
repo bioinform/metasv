@@ -446,13 +446,15 @@ def resolve_for_IDP_ITX_CTX(vcf_records, fasta_file, pad=0, wiggle=10,
                                                 c=True).filter(
         lambda x: x.fields[-1] == "0").sort()
 
-    ctx_bedtool = remained_del_bedtool.intersect(chr2_ins_bedtool, r=True,
-                                                 f=overlap_ratio, wa=True,
-                                                 wb=True).each(
-        partial(find_ctx, overlap_ratio=overlap_ratio)).sort()
-    remained_del_bedtool = remained_del_bedtool.intersect(ctx_bedtool, f=0.95,
-                                                          r=True, wa=True,
-                                                          v=True).sort()
+    ctx_bedtool = pybedtools.BedTool([])
+    if len(remained_del_bedtool):
+        ctx_bedtool = remained_del_bedtool.intersect(chr2_ins_bedtool, r=True,
+                                                     f=overlap_ratio, wa=True,
+                                                     wb=True).each(
+            partial(find_ctx, overlap_ratio=overlap_ratio)).sort()
+        remained_del_bedtool = remained_del_bedtool.intersect(ctx_bedtool, f=0.95,
+                                                              r=True, wa=True,
+                                                              v=True).sort()
 
     if len(remained_idp_bedtool_2) > 0:
         remained_idp_bedtool_2 = remained_idp_bedtool_2.cut(
@@ -593,6 +595,9 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None,
         for interval in bedtool:
             name_split = interval.name.split(",")
             info = json.loads(base64.b64decode(name_split[0]))
+            # Fix info
+            if "INSERTION_SEQUENCE" in info and not info["INSERTION_SEQUENCE"]:
+                del info["INSERTION_SEQUENCE"]
             sv_type = name_split[1]
             sv_id = "."
             ref = fasta_file.fetch(str(interval.chrom), interval.start,
