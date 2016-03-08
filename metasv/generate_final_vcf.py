@@ -518,10 +518,10 @@ def resolve_for_IDP_ITX_CTX(vcf_records, fasta_file, pad=0, wiggle=10,
 
 
 def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None,
-                              vcf_template_file=vcf_template, sample=None,
+                              vcf_template_file=VCF_TEMPLATE, sample=None,
                               reference=None,
                               pass_calls=True):
-    func_logger = logging.getLogger("%s" % (convert_metasv_bed_to_vcf.__name__))
+    func_logger = logging.getLogger("%s" % convert_metasv_bed_to_vcf.__name__)
     if not os.path.exists(workdir):
         os.makedirs(workdir)
 
@@ -644,8 +644,6 @@ if __name__ == "__main__":
     parser.add_argument("--sample", help="Sample name", required=True)
     parser.add_argument("--bed", help="MetaSV final BED", required=True)
     parser.add_argument("--vcf", help="Final VCF to output", required=True)
-    parser.add_argument("--vcf_template", help="VCF template",
-                        default=VCF_TEMPLATE)
     parser.add_argument("--reference", help="Reference FASTA")
     parser.add_argument("--work", help="Work directory", default="work")
     parser.add_argument("--pass_only", action="store_true",
@@ -655,7 +653,7 @@ if __name__ == "__main__":
 
     convert_metasv_bed_to_vcf(bedfile=args.bed, vcf_out=args.vcf,
                               workdir=args.work,
-                              vcf_template_file=args.vcf_template,
+                              vcf_template_file=VCF_TEMPLATE,
                               sample=args.sample,
                               reference=args.reference,
                               pass_calls=args.pass_only)
