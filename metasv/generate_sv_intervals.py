@@ -18,7 +18,7 @@ from defaults import *
 from sv_interval import *
 
 precise_methods = set(["AS", "SR", "JM"])
-
+PRECISE_TOOLS = ["Pindel", "BreakSeq", "SoftClip"]
 
 def concatenate_files(files, output):
     with open(output, 'w') as outfile:
@@ -334,8 +334,8 @@ def blind_merge(intervals,cols,ops):
         raise e
 
     
-def merge_intervals_bed(bedtool, overlap_ratio , c ,o):
-    bedtool=bedtool.sort().cut([0,1,2]+(map(lambda x: int(x)-1,c.split(',')) if c else []))
+def merge_intervals_bed(bedtool, overlap_ratio, c, o):
+    bedtool=bedtool.sort().cut([0, 1, 2]+(map(lambda x: int(x)-1,c.split(',')) if c else []))
     new_intervals = []
 
     if bedtool.count()==0:
@@ -511,6 +511,30 @@ def find_coverage_frac(score,coverage):
     scores = map(lambda x: float(x.split(";")[0]),score.split(","))
     coverages = map(lambda x: float(x),coverage.split(","))
     return sum(map(lambda k, v: k/v , scores, coverages))/len(scores)
+
+
+def decode_interval_name(name):
+    fields = name.split("-")
+    return fields[0], int(fields[1]), fields[2], int(fields[3]), int(fields[4]), fields[5]
+
+
+def fix_precise_coords(feature):
+    info = json.loads(base64.b64decode(feature.name.split(",")[0]))
+    start = feature.start
+    end = feature.end
+
+    if "SOURCES" in info:
+        source_intervals = map(lambda x: decode_interval_name(x), info["SOURCES"].split(","))
+        source_tools = map(lambda x: x[5], source_intervals)
+        for precise_tool in PRECISE_TOOLS:
+            if precise_tool not in source_tools:
+                continue
+            found_index = source_tools.find(precise_tool)
+            start = source_intervals[found_index][1]
+            end = source_intervals[found_index][3]
+            break
+
+    return pybedtools.create_interval_from_list([feature.chrom, str(start), str(end)] + feature.fields[3:])
     
     
 def add_neighbour_support(feature,bam_handle, min_mapq=SC_MIN_MAPQ,
@@ -1136,7 +1160,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
 
     sc_skip_bed = os.path.join(workdir, "sc_metasv.bed")
     if "INS" in svs_to_softclip and skip_bedtool:
-        skip_bedtool = skip_bedtool.each(partial(add_INS_padding,pad=pad)).saveas(sc_skip_bed)
+        skip_bedtool = skip_bedtool.each(partial(add_INS_padding, pad=pad)).saveas(sc_skip_bed)
     nonsc_skip_bed = os.path.join(workdir, "non_sc_metasv.bed")
     nonsc_skip_bedtool = skip_bedtool.filter(lambda x: x.name.split(',')[1] not in svs_to_softclip).saveas(nonsc_skip_bed) if skip_bedtool else []
     sc_skip_bedtool = skip_bedtool.filter(lambda x: x.name.split(',')[1] in svs_to_softclip).saveas(interval_bed) if skip_bedtool else []
@@ -1151,6 +1175,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     func_logger.info("After merging with %s %d features" % (str(skip_bed), bedtool.count()))
 
     bedtool = bedtool.each(partial(remove_INS_padding, pad=pad)).sort().saveas(interval_bed)
+    bedtool = bedtool.each(partial(fix_coords)).sort().saveas(interval_bed)
 
     pybedtools.cleanup(remove_all=True)
 
