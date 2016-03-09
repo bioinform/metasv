@@ -1175,7 +1175,7 @@ def parallel_generate_sc_intervals(bams, chromosomes, skip_bed, workdir, num_thr
     func_logger.info("After merging with %s %d features" % (str(skip_bed), bedtool.count()))
 
     bedtool = bedtool.each(partial(remove_INS_padding, pad=pad)).sort().saveas(interval_bed)
-    bedtool = bedtool.each(partial(fix_coords)).sort().saveas(interval_bed)
+    bedtool = bedtool.each(partial(fix_precise_coords)).sort().saveas(interval_bed)
 
     pybedtools.cleanup(remove_all=True)
 
