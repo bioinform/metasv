@@ -529,7 +529,7 @@ def fix_precise_coords(feature):
         for precise_tool in PRECISE_TOOLS:
             if precise_tool not in source_tools:
                 continue
-            found_index = source_tools.find(precise_tool)
+            found_index = source_tools.index(precise_tool)
             start = source_intervals[found_index][1]
             end = source_intervals[found_index][3]
             break
