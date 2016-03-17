@@ -2,8 +2,6 @@
 
 import argparse
 import logging
-import sys
-from metasv.defaults import *
 from metasv.generate_final_vcf import convert_metasv_bed_to_vcf
 
 if __name__ == "__main__":
