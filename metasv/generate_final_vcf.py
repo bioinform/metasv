@@ -431,20 +431,31 @@ def resolve_for_IDP_ITX_CTX(vcf_records, fasta_file, pad=0, wiggle=10,
 
     chr2_ins_bedtool = pybedtools.BedTool(chr2_intervals).sort()
 
-    idp_bedtool = dup_bedtool.window(del_bedtool, w=wiggle).each(
-        partial(find_idp, wiggle=wiggle)).sort()
-    remained_dup_bedtool = dup_bedtool.intersect(idp_bedtool, f=0.95, r=True,
-                                                 wa=True, v=True).sort()
-    remained_del_bedtool = del_bedtool.intersect(
-        idp_bedtool.each(partial(extract_del_interval)).sort(), f=0.95, r=True,
-        wa=True, v=True)
-    itx_bedtool = idp_bedtool.window(idp_bedtool, w=wiggle).each(
-        partial(find_itx, wiggle=wiggle)).sort()
-    remained_idp_bedtool_1 = idp_bedtool.window(itx_bedtool, w=wiggle).each(
-        partial(filter_itxs)).sort()
-    remained_idp_bedtool_2 = idp_bedtool.window(itx_bedtool, w=wiggle,
-                                                c=True).filter(
-        lambda x: x.fields[-1] == "0").sort()
+    idp_bedtool = pybedtools.BedTool([])
+    remained_dup_bedtool = pybedtools.BedTool([])
+    if len(dup_bedtool):
+        idp_bedtool = dup_bedtool.window(del_bedtool, w=wiggle).each(
+            partial(find_idp, wiggle=wiggle)).sort()
+        remained_dup_bedtool = dup_bedtool.intersect(idp_bedtool, f=0.95, r=True,
+                                                     wa=True, v=True).sort()
+
+    remained_del_bedtool = pybedtools.BedTool([])
+    if len(del_bedtool):
+        remained_del_bedtool = del_bedtool.intersect(
+            idp_bedtool.each(partial(extract_del_interval)).sort(), f=0.95, r=True,
+            wa=True, v=True)
+
+    itx_bedtool = pybedtools.BedTool([])
+    remained_idp_bedtool_1 = pybedtools.BedTool([])
+    remained_idp_bedtool_2 = pybedtools.BedTool([])
+    if len(idp_bedtool):
+        itx_bedtool = idp_bedtool.window(idp_bedtool, w=wiggle).each(
+            partial(find_itx, wiggle=wiggle)).sort()
+        remained_idp_bedtool_1 = idp_bedtool.window(itx_bedtool, w=wiggle).each(
+            partial(filter_itxs)).sort()
+        remained_idp_bedtool_2 = idp_bedtool.window(itx_bedtool, w=wiggle,
+                                                    c=True).filter(
+            lambda x: x.fields[-1] == "0").sort()
 
     ctx_bedtool = pybedtools.BedTool([])
     if len(remained_del_bedtool):
