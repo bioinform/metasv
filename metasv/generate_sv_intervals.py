@@ -68,8 +68,7 @@ def is_good_candidate(aln, min_avg_base_qual=20, min_mapq=5, min_soft_clip=20, m
             if soft_clip_tuple:
                 if soft_clip_tuple[0] > min_soft_clip:
                     return False
-    
-            
+
     ins_lengths = sum([0] + [length for (op, length) in aln.cigar if op == 1])
     mismatches = int(aln.opt("XM")) if "XM" in aln.tags else 0
     matches = aln.alen - ins_lengths - mismatches
@@ -120,17 +119,17 @@ def merged_interval_features(feature, bam_handle,find_svtype=False):
 
 def generate_other_bp_interval(feature, pad):
     other_bp=int(feature.name.split(",")[1])
-    return pybedtools.Interval(feature.chrom, max(other_bp-pad,0),other_bp+pad, name=feature.name, score=feature.score, strand=feature.strand, otherfields=[feature.fields[6]])
+    return pybedtools.Interval(feature.chrom, max(other_bp-pad, 0), other_bp+pad, name=feature.name, score=feature.score, strand=feature.strand, otherfields=[feature.fields[6]])
 
 
 def add_other_bp_fields(feature, pad):
-    name_fields=feature.name.split(",")
+    name_fields = feature.name.split(",")
     sv_type = feature.fields[6].split(',')[0]    
-    if sv_type=="INS":
-        other_bp_field= "0-0"
+    if sv_type == "INS":
+        other_bp_field = "0-0"
     else:
         other_bps = map(lambda x:int(name_fields[3*x+1]), range(len(name_fields)/3))
-        other_bp_field="%d-%d"%(max(min(other_bps)-pad,0),max(other_bps)+pad)
+        other_bp_field = "%d-%d"%(max(min(other_bps)-pad,0),max(other_bps)+pad)
     return pybedtools.Interval(feature.chrom, feature.start, feature.end, name='%s,%s'%(feature.name,other_bp_field), score=feature.score,
                                otherfields=feature.fields[6:])
 
