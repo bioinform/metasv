@@ -7,6 +7,7 @@ import json
 import base64
 import logging
 from functools import partial
+from itertools import chain
 
 import pybedtools
 import pysam
@@ -425,11 +426,14 @@ def resolve_for_IDP_ITX_CTX(vcf_records, fasta_file, pad=0, wiggle=10,
                              otherfields=[x.INFO["SC_CHR2_STR"] if
                                           "SC_CHR2_STR" in x.INFO else "."])
          for i, x in enumerate(ins_records)])
+
     chr2_intervals = []
     for interval in ins_bedtool:
         chr2_intervals.extend(build_chr2_ins(interval))
 
-    chr2_ins_bedtool = pybedtools.BedTool(chr2_intervals).sort()
+    chr2_ins_bedtool = pybedtools.BedTool(chr2_intervals)
+    if len(chr2_ins_bedtool):
+        chr2_ins_bedtool = chr2_ins_bedtool.sort()
 
     idp_bedtool = pybedtools.BedTool([])
     remained_dup_bedtool = pybedtools.BedTool([])
@@ -443,8 +447,8 @@ def resolve_for_IDP_ITX_CTX(vcf_records, fasta_file, pad=0, wiggle=10,
     if len(remained_dup_bedtool):
         remained_dup_bedtool = remained_dup_bedtool.sort()
 
-    remained_del_bedtool = pybedtools.BedTool([])
-    if len(del_bedtool):
+    remained_del_bedtool = del_bedtool
+    if len(del_bedtool) and len(idp_bedtool):
         remained_del_bedtool = del_bedtool.intersect(
             idp_bedtool.each(partial(extract_del_interval)).sort(), f=0.95, r=True,
             wa=True, v=True)
