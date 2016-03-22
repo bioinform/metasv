@@ -435,9 +435,13 @@ def resolve_for_IDP_ITX_CTX(vcf_records, fasta_file, pad=0, wiggle=10,
     remained_dup_bedtool = pybedtools.BedTool([])
     if len(dup_bedtool):
         idp_bedtool = dup_bedtool.window(del_bedtool, w=wiggle).each(
-            partial(find_idp, wiggle=wiggle)).sort()
+            partial(find_idp, wiggle=wiggle))
         remained_dup_bedtool = dup_bedtool.intersect(idp_bedtool, f=0.95, r=True,
-                                                     wa=True, v=True).sort()
+                                                     wa=True, v=True)
+    if len(idp_bedtool):
+        idp_bedtool = idp_bedtool.sort()
+    if len(remained_dup_bedtool):
+        remained_dup_bedtool = remained_dup_bedtool.sort()
 
     remained_del_bedtool = pybedtools.BedTool([])
     if len(del_bedtool):
@@ -450,24 +454,34 @@ def resolve_for_IDP_ITX_CTX(vcf_records, fasta_file, pad=0, wiggle=10,
     remained_idp_bedtool_2 = pybedtools.BedTool([])
     if len(idp_bedtool):
         itx_bedtool = idp_bedtool.window(idp_bedtool, w=wiggle).each(
-            partial(find_itx, wiggle=wiggle)).sort()
+            partial(find_itx, wiggle=wiggle))
         remained_idp_bedtool_1 = idp_bedtool.window(itx_bedtool, w=wiggle).each(
-            partial(filter_itxs)).sort()
+            partial(filter_itxs))
         remained_idp_bedtool_2 = idp_bedtool.window(itx_bedtool, w=wiggle,
                                                     c=True).filter(
-            lambda x: x.fields[-1] == "0").sort()
+            lambda x: x.fields[-1] == "0")
+    if len(itx_bedtool):
+        itx_bedtool = itx_bedtool.sort()
+    if len(remained_idp_bedtool_1):
+        remained_idp_bedtool_1 = remained_idp_bedtool_1.sort()
+    if len(remained_idp_bedtool_2):
+        remained_idp_bedtool_2 = remained_idp_bedtool_2.sort()
 
     ctx_bedtool = pybedtools.BedTool([])
     if len(remained_del_bedtool):
         ctx_bedtool = remained_del_bedtool.intersect(chr2_ins_bedtool, r=True,
                                                      f=overlap_ratio, wa=True,
                                                      wb=True).each(
-            partial(find_ctx, overlap_ratio=overlap_ratio)).sort()
+            partial(find_ctx, overlap_ratio=overlap_ratio))
         remained_del_bedtool = remained_del_bedtool.intersect(ctx_bedtool, f=0.95,
                                                               r=True, wa=True,
-                                                              v=True).sort()
+                                                              v=True)
+    if len(ctx_bedtool):
+        ctx_bedtool = ctx_bedtool.sort()
+    if len(remained_del_bedtool):
+        remained_del_bedtool = remained_del_bedtool.sort()
 
-    if len(remained_idp_bedtool_2) > 0:
+    if len(remained_idp_bedtool_2):
         remained_idp_bedtool_2 = remained_idp_bedtool_2.cut(
             range(idp_bedtool.field_count())).sort()
 
