@@ -902,7 +902,7 @@ def generate_sc_intervals(bam, chromosome, workdir, min_avg_base_qual=SC_MIN_AVG
         # Resolve NONE type SVs
         if unmerged_none_bed:
             bedtool_none=pybedtools.BedTool(unmerged_none_bed)
-            bedtool_none=bedtool_none.intersect(bedtool,f=overlap_ratio,r=True,wa=True,v=True).moveto(unmerged_none_bed)
+            bedtool_none=bedtool_none.intersect(bedtool,f=overlap_ratio,r=True,wa=True,v=True, nonamecheck=True).moveto(unmerged_none_bed)
             if len(bedtool_none)>0:
                 resolved_none_bed=resolve_none_svs(sam_file, workdir, unmerged_none_bed, min_mapq=min_mapq,
                                           min_soft_clip=min_soft_clip, min_support_ins=min_support_ins, 

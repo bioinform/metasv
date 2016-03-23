@@ -441,7 +441,7 @@ def resolve_for_IDP_ITX_CTX(vcf_records, fasta_file, pad=0, wiggle=10,
         idp_bedtool = dup_bedtool.window(del_bedtool, w=wiggle).each(
             partial(find_idp, wiggle=wiggle))
         remained_dup_bedtool = dup_bedtool.intersect(idp_bedtool, f=0.95, r=True,
-                                                     wa=True, v=True)
+                                                     wa=True, v=True, nonamecheck=True)
     if len(idp_bedtool):
         idp_bedtool = idp_bedtool.sort()
     if len(remained_dup_bedtool):
@@ -451,7 +451,7 @@ def resolve_for_IDP_ITX_CTX(vcf_records, fasta_file, pad=0, wiggle=10,
     if len(del_bedtool) and len(idp_bedtool):
         remained_del_bedtool = del_bedtool.intersect(
             idp_bedtool.each(partial(extract_del_interval)).sort(), f=0.95, r=True,
-            wa=True, v=True)
+            wa=True, v=True, nonamecheck=True)
 
     itx_bedtool = pybedtools.BedTool([])
     remained_idp_bedtool_1 = pybedtools.BedTool([])
@@ -475,11 +475,11 @@ def resolve_for_IDP_ITX_CTX(vcf_records, fasta_file, pad=0, wiggle=10,
     if len(remained_del_bedtool):
         ctx_bedtool = remained_del_bedtool.intersect(chr2_ins_bedtool, r=True,
                                                      f=overlap_ratio, wa=True,
-                                                     wb=True).each(
+                                                     wb=True, nonamecheck=True).each(
             partial(find_ctx, overlap_ratio=overlap_ratio))
         remained_del_bedtool = remained_del_bedtool.intersect(ctx_bedtool, f=0.95,
                                                               r=True, wa=True,
-                                                              v=True)
+                                                              v=True, nonamecheck=True)
     if len(ctx_bedtool):
         ctx_bedtool = ctx_bedtool.sort()
     if len(remained_del_bedtool):
