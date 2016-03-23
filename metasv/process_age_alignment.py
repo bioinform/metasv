@@ -8,6 +8,7 @@ from defaults import MIN_INV_SUBALIGN_LENGTH, MIN_DEL_SUBALIGN_LENGTH,AGE_WINDOW
 
 logger = logging.getLogger(__name__)
 
+
 def get_insertion_breakpoints(age_records, intervals, expected_bp_pos, window=AGE_WINDOW_SIZE, start=0, dist_to_expected_bp=50):
     func_logger = logging.getLogger("%s-%s" % (get_insertion_breakpoints.__name__, multiprocessing.current_process()))
     bedtools_intervals = [pybedtools.Interval("1", interval[0], interval[1]) for interval in sorted(intervals)]
@@ -50,7 +51,10 @@ def get_insertion_breakpoints(age_records, intervals, expected_bp_pos, window=AG
                 func_logger.info("\t\tinsertion lengths = %s" % (
                 str([age_record.insertion_length() for age_record in both_support])))
             insertion_length = max([0] + [age_record.insertion_length() for age_record in both_support])
-            insertion_sequence = both_support[0].get_insertion_sequence() if both_support else "."
+            insertion_sequence = "."
+            for age_record in both_support:
+                if age_record.insertion_length() == insertion_length:
+                    insertion_sequence = age_record.get_insertion_sequence()
             func_logger.info("\t\tInsertion length = %d %s" % (insertion_length, insertion_sequence))
             breakpoints.append((breakpoint, insertion_length, insertion_sequence))
 
@@ -356,12 +360,7 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
             func_logger.info("False deletion interval %s" % (str(breakpoints)))
             return [], dict(info)
     elif sv_type == "INS":
-        if len(breakpoints) == 1:    
-#             if sv_region.pos2 - sv_region.pos1 <= 20:
-#                 info["BA_BP_SCORE"] = abs(breakpoints[0][0] - sv_region.pos1)
-#                 if abs(breakpoints[0][0] - sv_region.pos1) > 20:
-#                     return [], dict(info)
-#             else:
+        if len(breakpoints) == 1:
             if not sc_locations:
                 sc_locations = [sv_region.pos1 + pad_ins, sv_region.pos2 - pad_ins]
             min_diff = min(map(lambda x: abs(x - breakpoints[0][0]), sc_locations))
