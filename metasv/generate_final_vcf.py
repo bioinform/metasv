@@ -625,7 +625,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None,
             name_split = interval.name.split(",")
             info = json.loads(base64.b64decode(name_split[0]))
             # Fix info
-            if "INSERTION_SEQUENCE" in info and not info["INSERTION_SEQUENCE"]:
+            if "INSERTION_SEQUENCE" in info and (not info["INSERTION_SEQUENCE"] or info["INSERTION_SEQUENCE"] == "."):
                 del info["INSERTION_SEQUENCE"]
             sv_type = name_split[1]
             sv_id = "."
