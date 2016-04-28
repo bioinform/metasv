@@ -11,7 +11,7 @@ import vcf
 import json
 import base64
 
-svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV" ,"ITX", "CTX"]
+svs_of_interest = ["DEL", "INS", "DUP", "DUP:TANDEM", "INV", "ITX", "CTX"]
 sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "BreakDancer", "CNVnator",
               "Manta", "Lumpy", "WHAM", "CNVkit"]  # order is important!
 precise_sv_sources = ["Pindel", "BreakSeq", "HaplotypeCaller", "SoftClip"]

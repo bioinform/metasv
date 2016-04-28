@@ -7,6 +7,7 @@ import json
 import base64
 import logging
 from functools import partial
+from itertools import chain
 
 import pybedtools
 import pysam
@@ -425,38 +426,66 @@ def resolve_for_IDP_ITX_CTX(vcf_records, fasta_file, pad=0, wiggle=10,
                              otherfields=[x.INFO["SC_CHR2_STR"] if
                                           "SC_CHR2_STR" in x.INFO else "."])
          for i, x in enumerate(ins_records)])
+
     chr2_intervals = []
     for interval in ins_bedtool:
         chr2_intervals.extend(build_chr2_ins(interval))
 
-    chr2_ins_bedtool = pybedtools.BedTool(chr2_intervals).sort()
+    chr2_ins_bedtool = pybedtools.BedTool(chr2_intervals)
+    if len(chr2_ins_bedtool):
+        chr2_ins_bedtool = chr2_ins_bedtool.sort()
 
-    idp_bedtool = dup_bedtool.window(del_bedtool, w=wiggle).each(
-        partial(find_idp, wiggle=wiggle)).sort()
-    remained_dup_bedtool = dup_bedtool.intersect(idp_bedtool, f=0.95, r=True,
-                                                 wa=True, v=True).sort()
-    remained_del_bedtool = del_bedtool.intersect(
-        idp_bedtool.each(partial(extract_del_interval)).sort(), f=0.95, r=True,
-        wa=True, v=True)
-    itx_bedtool = idp_bedtool.window(idp_bedtool, w=wiggle).each(
-        partial(find_itx, wiggle=wiggle)).sort()
-    remained_idp_bedtool_1 = idp_bedtool.window(itx_bedtool, w=wiggle).each(
-        partial(filter_itxs)).sort()
-    remained_idp_bedtool_2 = idp_bedtool.window(itx_bedtool, w=wiggle,
-                                                c=True).filter(
-        lambda x: x.fields[-1] == "0").sort()
+    idp_bedtool = pybedtools.BedTool([])
+    remained_dup_bedtool = pybedtools.BedTool([])
+    if len(dup_bedtool):
+        idp_bedtool = dup_bedtool.window(del_bedtool, w=wiggle).each(
+            partial(find_idp, wiggle=wiggle))
+        remained_dup_bedtool = dup_bedtool.intersect(idp_bedtool, f=0.95, r=True,
+                                                     wa=True, v=True, nonamecheck=True)
+    if len(idp_bedtool):
+        idp_bedtool = idp_bedtool.sort()
+    if len(remained_dup_bedtool):
+        remained_dup_bedtool = remained_dup_bedtool.sort()
+
+    remained_del_bedtool = del_bedtool
+    if len(del_bedtool) and len(idp_bedtool):
+        remained_del_bedtool = del_bedtool.intersect(
+            idp_bedtool.each(partial(extract_del_interval)).sort(), f=0.95, r=True,
+            wa=True, v=True, nonamecheck=True)
+
+    itx_bedtool = pybedtools.BedTool([])
+    remained_idp_bedtool_1 = pybedtools.BedTool([])
+    remained_idp_bedtool_2 = pybedtools.BedTool([])
+    if len(idp_bedtool):
+        itx_bedtool = idp_bedtool.window(idp_bedtool, w=wiggle).each(
+            partial(find_itx, wiggle=wiggle))
+        remained_idp_bedtool_1 = idp_bedtool.window(itx_bedtool, w=wiggle).each(
+            partial(filter_itxs))
+        remained_idp_bedtool_2 = idp_bedtool.window(itx_bedtool, w=wiggle,
+                                                    c=True).filter(
+            lambda x: x.fields[-1] == "0")
+    if len(itx_bedtool):
+        itx_bedtool = itx_bedtool.sort()
+    if len(remained_idp_bedtool_1):
+        remained_idp_bedtool_1 = remained_idp_bedtool_1.sort()
+    if len(remained_idp_bedtool_2):
+        remained_idp_bedtool_2 = remained_idp_bedtool_2.sort()
 
     ctx_bedtool = pybedtools.BedTool([])
     if len(remained_del_bedtool):
         ctx_bedtool = remained_del_bedtool.intersect(chr2_ins_bedtool, r=True,
                                                      f=overlap_ratio, wa=True,
-                                                     wb=True).each(
-            partial(find_ctx, overlap_ratio=overlap_ratio)).sort()
+                                                     wb=True, nonamecheck=True).each(
+            partial(find_ctx, overlap_ratio=overlap_ratio))
         remained_del_bedtool = remained_del_bedtool.intersect(ctx_bedtool, f=0.95,
                                                               r=True, wa=True,
-                                                              v=True).sort()
+                                                              v=True, nonamecheck=True)
+    if len(ctx_bedtool):
+        ctx_bedtool = ctx_bedtool.sort()
+    if len(remained_del_bedtool):
+        remained_del_bedtool = remained_del_bedtool.sort()
 
-    if len(remained_idp_bedtool_2) > 0:
+    if len(remained_idp_bedtool_2):
         remained_idp_bedtool_2 = remained_idp_bedtool_2.cut(
             range(idp_bedtool.field_count())).sort()
 
@@ -596,7 +625,7 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None,
             name_split = interval.name.split(",")
             info = json.loads(base64.b64decode(name_split[0]))
             # Fix info
-            if "INSERTION_SEQUENCE" in info and not info["INSERTION_SEQUENCE"]:
+            if "INSERTION_SEQUENCE" in info and (not info["INSERTION_SEQUENCE"] or info["INSERTION_SEQUENCE"] == "."):
                 del info["INSERTION_SEQUENCE"]
             sv_type = name_split[1]
             sv_id = "."
@@ -630,30 +659,3 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None,
 
     func_logger.info("Tabix compressing and indexing %s" % vcf_out)
     pysam.tabix_index(vcf_out, force=True, preset="vcf")
-
-
-if __name__ == "__main__":
-    FORMAT = '%(levelname)s %(asctime)-15s %(name)-20s %(message)s'
-    logging.basicConfig(level=logging.INFO, format=FORMAT)
-    logger = logging.getLogger(__name__)
-
-    parser = argparse.ArgumentParser(
-        description="Convert MetaSV final BED to VCF",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-    parser.add_argument("--sample", help="Sample name", required=True)
-    parser.add_argument("--bed", help="MetaSV final BED", required=True)
-    parser.add_argument("--vcf", help="Final VCF to output", required=True)
-    parser.add_argument("--reference", help="Reference FASTA")
-    parser.add_argument("--work", help="Work directory", default="work")
-    parser.add_argument("--pass_only", action="store_true",
-                        help="Output only PASS calls")
-
-    args = parser.parse_args()
-
-    convert_metasv_bed_to_vcf(bedfile=args.bed, vcf_out=args.vcf,
-                              workdir=args.work,
-                              vcf_template_file=VCF_TEMPLATE,
-                              sample=args.sample,
-                              reference=args.reference,
-                              pass_calls=args.pass_only)

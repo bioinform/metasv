@@ -94,9 +94,9 @@ if __name__ == "__main__":
     as_parser.add_argument("--spades_options", help="Options for SPAdes", default="")
     as_parser.add_argument("--spades_timeout", help="Maximum time (in seconds) for running SPAdes on an interval", default=SPADES_TIMEOUT, type=int)
     as_parser.add_argument("--disable_assembly", action="store_true", help="Disable assembly")
-    as_parser.add_argument("--svs_to_assemble", nargs="+", help="SVs to assemble", default=SVS_ASSEMBLY_SUPPORTED,
+    as_parser.add_argument("--svs_to_assemble", nargs="+", help="SVs to assemble", default=["INS", "INV", "DUP"],
                            choices=SVS_ASSEMBLY_SUPPORTED)
-    as_parser.add_argument("--svs_to_softclip", nargs="+", help="SVs to soft-clip", default=SVS_SOFTCLIP_SUPPORTED,
+    as_parser.add_argument("--svs_to_softclip", nargs="+", help="SVs to soft-clip", default=["INS", "INV", "DUP"],
                            choices=SVS_SOFTCLIP_SUPPORTED)
     as_parser.add_argument("--extraction_max_read_pairs", type=int, default=EXTRACTION_MAX_READ_PAIRS,
                            help="Maximum number of pairs to extract for assembly")
