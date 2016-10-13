@@ -262,8 +262,8 @@ class AgeRecord:
     def get_insertion_sequence(self):
         if len(self.start2_end2s) == 2:
             if self.start2_end2s[1][0] > self.start2_end2s[0][1]:
-                return self.assembly_contig[self.start2_end2s[0][1]: self.start2_end2s[1][0]]
-            return self.assembly_contig[self.start2_end2s[1][0]: self.start2_end2s[0][1]: -1]
+                return self.assembly_contig[self.start2_end2s[0][1]-1: self.start2_end2s[1][0]-1]
+            return get_complement(self.assembly_contig[self.start2_end2s[0][1]-1: self.start2_end2s[1][0]-1: -1])
         return "."
 
     def breakpoint_match(self, breakpoint, window=20):
