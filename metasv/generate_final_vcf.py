@@ -340,8 +340,8 @@ def merge_idp_itx(fasta_file, record_dup, records_del, del_pos, del_interval,
     info["NUM_SVTOOLS"] = len(
         set(map(lambda x: x.split('-')[-1], info["SOURCES"].split(','))))
     sv_id = "."
-    ref = fasta_file.fetch(record_dup.CHROM, pos,
-                           pos + 1) if fasta_file else "."
+    ref = fasta_file.fetch(record_dup.CHROM, max(0,pos-1) ,
+                           max(1,pos)) if fasta_file else "."
     alt = [vcf.model._SV(svtype)]
     qual = "."
     sv_filter = ["PASS"] if "LowQual" not in score else ["LowQual"]
@@ -376,8 +376,8 @@ def merge_ctx(fasta_file, record_del, record_ins, score):
     info["NUM_SVTOOLS"] = len(
         set(map(lambda x: x.split('-')[-1], info["SOURCES"].split(','))))
     sv_id = "."
-    ref = fasta_file.fetch(record_del.CHROM, pos,
-                           pos + 1) if fasta_file else "."
+    ref = fasta_file.fetch(record_del.CHROM, max(0,pos-1),
+                           max(1, pos)) if fasta_file else "."
     alt = [vcf.model._SV("CTX")]
     qual = "."
     sv_filter = ["PASS"] if "LowQual" not in score else ["LowQual"]
@@ -629,8 +629,8 @@ def convert_metasv_bed_to_vcf(bedfile=None, vcf_out=None, workdir=None,
                 del info["INSERTION_SEQUENCE"]
             sv_type = name_split[1]
             sv_id = "."
-            ref = fasta_file.fetch(str(interval.chrom), interval.start,
-                                   interval.start + 1) if fasta_file else "."
+            ref = fasta_file.fetch(str(interval.chrom), max(0,interval.start-1),
+                                   max(1, interval.start)) if fasta_file else "."
             alt = [vcf.model._SV(sv_type)]
             qual = "."
             sv_filter = [interval.fields[7]]

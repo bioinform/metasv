@@ -21,6 +21,9 @@ def get_unique_age_records(age_records):
 
     return unique_records
 
+def get_complement(string):
+    map_acgt={"A":"T", "C":"G", "G":"C", "T":"A"}
+    return "".join(map(lambda x: map_acgt[x],string))
 
 class AgeInput:
     def __init__(self, fname, length):
@@ -262,8 +265,8 @@ class AgeRecord:
     def get_insertion_sequence(self):
         if len(self.start2_end2s) == 2:
             if self.start2_end2s[1][0] > self.start2_end2s[0][1]:
-                return self.assembly_contig[self.start2_end2s[0][1]-1: self.start2_end2s[1][0]-1]
-            return get_complement(self.assembly_contig[self.start2_end2s[0][1]-1: self.start2_end2s[1][0]-1: -1])
+                return self.assembly_contig[self.start2_end2s[0][1]: self.start2_end2s[1][0]-1]
+            return get_complement(self.assembly_contig[self.start2_end2s[0][1]-2: self.start2_end2s[1][0]-1: -1])
         return "."
 
     def breakpoint_match(self, breakpoint, window=20):

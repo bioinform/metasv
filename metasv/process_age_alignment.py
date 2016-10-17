@@ -9,7 +9,7 @@ from defaults import MIN_INV_SUBALIGN_LENGTH, MIN_DEL_SUBALIGN_LENGTH,AGE_WINDOW
 logger = logging.getLogger(__name__)
 
 
-def get_insertion_breakpoints(age_records, intervals, expected_bp_pos, window=AGE_WINDOW_SIZE, start=0, dist_to_expected_bp=50):
+def get_insertion_breakpoints(age_records, intervals, expected_bp_pos, window=AGE_WINDOW_SIZE, start=0, dist_to_expected_bp=50, pad=500):
     func_logger = logging.getLogger("%s-%s" % (get_insertion_breakpoints.__name__, multiprocessing.current_process()))
     bedtools_intervals = [pybedtools.Interval("1", interval[0], interval[1]) for interval in sorted(intervals)]
     func_logger.info("bedtools_intervals %s" % (str(bedtools_intervals)))
@@ -53,8 +53,10 @@ def get_insertion_breakpoints(age_records, intervals, expected_bp_pos, window=AG
             insertion_length = max([0] + [age_record.insertion_length() for age_record in both_support])
             insertion_sequence = "."
             for age_record in both_support:
-                if age_record.insertion_length() == insertion_length:
+                if age_record.insertion_length() == insertion_length and min(age_record.flanking_regions) >  pad*0.6:
                     insertion_sequence = age_record.get_insertion_sequence()
+            if insertion_sequence == ".":
+                insertion_length = 0 
             func_logger.info("\t\tInsertion length = %d %s" % (insertion_length, insertion_sequence))
             breakpoints.append((breakpoint, insertion_length, insertion_sequence))
 
@@ -340,7 +342,7 @@ def process_age_records(age_records, sv_type="INS", ins_min_unaligned=10, min_in
         breakpoints = get_insertion_breakpoints(good_age_records, reference_intervals, 
                                                 expected_bp_pos=[pad+pad_ins,max((sv_region.pos2-sv_region.pos1)-pad_ins+pad,0)],
                                                 window=age_window,
-                                                start=sv_region.pos1 - pad)
+                                                start=sv_region.pos1 - pad, pad=pad)
     elif sv_type == "INV":
         breakpoints = get_inversion_breakpoints(good_age_records, start=sv_region.pos1 - pad ,pad=pad, min_inv_subalign_len=min_inv_subalign_len, dist_to_expected_bp=dist_to_expected_bp)
     elif sv_type == "DUP":
